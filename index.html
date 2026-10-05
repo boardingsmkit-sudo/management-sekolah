@@ -7078,6 +7078,159 @@ if(SB_ON){
  pu.init=()=>{i0();sbLoadPending()};
 }
 </script>
+<script id="sarpras-komunikasi-pengaturan-sync">
+/* ========================================================================
+   SINKRONISASI SUPABASE: Sarpras, Komunikasi Orang Tua (Pengumuman), Pengaturan
+   - Saat login: data dimuat dari tabel ais_* (SQL: supabase-sarpras-komunikasi-pengaturan.sql).
+   - Setiap perubahan (tambah/ubah/hapus) di state aplikasi terdeteksi otomatis
+     (diff) lalu disimpan ke Supabase. Jika tabel masih kosong, data bawaan
+     aplikasi (periode, permission, notifikasi, pengaturan) di-upload sebagai isi awal.
+   - Keamanan sebenarnya ada di RLS (lihat file SQL), bukan di UI.
+   ======================================================================== */
+(function(){
+if(!SB_ON) return;
+const sb=supabaseClient;
+const keyOf=r=>{ if(!r||typeof r!=='object') return null;
+  if(r.id!=null) return String(r.id); if(r.key!=null) return String(r.key);
+  if(r.role!=null&&r.module!=null) return r.role+'|'+r.module;
+  if(r.opnameId!=null&&r.assetId!=null) return r.opnameId+'|'+r.assetId;
+  if(r.ruangan!=null) return String(r.ruangan); return null; };
+const byNum=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:true});
+const COLS=[
+ {t:'ais_locations',arr:()=>locationsData},
+ {t:'ais_assets',arr:()=>assetsData},
+ {t:'ais_asset_loans',arr:()=>assetLoansData},
+ {t:'ais_damage_reports',arr:()=>damageReportsData},
+ {t:'ais_maintenance_records',arr:()=>maintenanceRecordsData},
+ {t:'ais_procurement_requests',arr:()=>procurementRequestsData},
+ {t:'ais_asset_mutations',arr:()=>assetMutationsData},
+ {t:'ais_asset_documents',arr:()=>assetDocumentsData},
+ {t:'ais_stock_opnames',arr:()=>stockOpnamesData},
+ {t:'ais_stock_opname_items',arr:()=>stockOpnameItemsData},
+ {t:'ais_announcements',arr:()=>announcementsData,order:'desc'},
+ {t:'ais_announcement_recipients',arr:()=>announcementRecipientsData},
+ {t:'ais_audit_log',arr:()=>auditLogData,order:'desc'},
+ {t:'ais_academic_periods',arr:()=>academicPeriodsData},
+ {t:'ais_role_permissions',arr:()=>permissionsData},
+ {t:'ais_notification_settings',arr:()=>notificationSettingsData}
+];
+const OBJS={schoolSettings:()=>schoolSettingsData,appIdentity:()=>appIdentityData,attendanceSettings:()=>attendanceSettingsData,academicSettings:()=>academicSettingsData};
+const snap={}; let ready=false, flushing=false, again=false, timer=null, userTouched=false, lastErr='';
+
+function resyncCounters(){
+  const mx=(arr,pre)=>arr.reduce((m,r)=>{const n=parseInt(String(r.id||'').replace(/\D/g,''),10);return Number.isFinite(n)&&String(r.id).startsWith(pre)?Math.max(m,n):m},0);
+  __spAssetCounter=Math.max(__spAssetCounter,mx(assetsData,'AST'));
+  __spLoanCounter=Math.max(__spLoanCounter,mx(assetLoansData,'LN'));
+  __spDrCounter=Math.max(__spDrCounter,mx(damageReportsData,'DR'));
+  __spMtCounter=Math.max(__spMtCounter,mx(maintenanceRecordsData,'MT'));
+  __spPrCounter=Math.max(__spPrCounter,mx(procurementRequestsData,'PR'));
+  __spMuCounter=Math.max(__spMuCounter,mx(assetMutationsData,'MU'));
+  __puAnnCounter=Math.max(__puAnnCounter,mx(announcementsData,'ANN'));
+  __puLogCounter=Math.max(__puLogCounter,mx(auditLogData,'LOG'));
+}
+function snapshotOf(c){const m=new Map();c.arr().forEach(r=>{const k=keyOf(r);if(k!=null)m.set(k,JSON.stringify(r))});return m}
+
+let loading=false;
+async function loadAll(){
+  if(loading) return; loading=true; try{ await loadAll0() } finally{ loading=false } }
+async function loadAll0(){
+  ready=false;
+  for(const c of COLS){
+    try{
+      const rows=await dbFetchAll(c.t,'id,data,created_at','created_at');
+      if(rows.length){
+        rows.sort((a,b)=>(a.created_at===b.created_at?byNum(a.id,b.id):(a.created_at<b.created_at?-1:1)));
+        let list=rows.map(r=>r.data);
+        if(c.t==='ais_audit_log') list.sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp)));
+        else if(c.order==='desc') list.sort((a,b)=>byNum(b.id,a.id));
+        c.arr().splice(0,c.arr().length,...list);
+        snap[c.t]=snapshotOf(c);
+      }else snap[c.t]=new Map();   // kosong: data bawaan lokal akan di-upload pada flush pertama
+    }catch(e){console.error('[sync] gagal memuat',c.t,e);snap[c.t]=snapshotOf(c)}   // jangan menimpa DB bila gagal baca
+  }
+  try{
+    const rows=await dbFetchAll('ais_app_settings','id,data');
+    snap.ais_app_settings=new Map();
+    rows.forEach(r=>{const o=OBJS[r.id]&&OBJS[r.id]();if(!o)return;Object.keys(o).forEach(k=>delete o[k]);Object.assign(o,r.data);snap.ais_app_settings.set(r.id,JSON.stringify(o))});
+  }catch(e){console.error('[sync] gagal memuat pengaturan',e);snap.ais_app_settings=new Map(Object.keys(OBJS).map(k=>[k,JSON.stringify(OBJS[k]())]))}
+  resyncCounters();
+  /* Daftar user di Pengaturan = tabel profiles (akun nyata) */
+  try{
+    const {data,error}=await sb.from('profiles').select('id,nama,email,role,status,created_at').neq('status','Menunggu').order('created_at');
+    if(!error&&data&&data.length){usersData.splice(0,usersData.length,...data.map(p=>({id:p.id,nama:p.nama,username:p.email,role:p.role,status:p.status,lastLogin:'-',fromProfiles:true})))}
+  }catch(e){console.error(e)}
+  ready=true;
+  const a=document.querySelector('#navList .item.active'); if(a&&a.dataset.id&&a.dataset.id!=='dash'&&!document.querySelector('.dw-field')){try{showView(a.dataset.id)}catch(e){}}
+  schedule(300);   // upload data bawaan bila tabel masih kosong
+}
+
+function toast(m){try{showAcadToast(m)}catch(e){console.warn(m)}}
+function errText(t,e){const raw=(e&&e.message)||String(e);
+  if((e&&e.code==='42501')||/row-level security|permission denied/i.test(raw)) return 'Perubahan tidak tersimpan ke database: role Anda tidak berhak menulis ke '+t+' (RLS).';
+  if((e&&e.code==='42P01')||(e&&e.code==='PGRST205')||/Could not find the table|does not exist/i.test(raw)) return 'Tabel '+t+' belum ada. Jalankan supabase-sarpras-komunikasi-pengaturan.sql di Supabase.';
+  return 'Gagal menyimpan ke database ('+t+'): '+raw}
+async function pushDiff(t,cur,prev){
+  const up=[],del=[];
+  cur.forEach((j,k)=>{if(prev.get(k)!==j)up.push({id:k,data:JSON.parse(j)})});
+  prev.forEach((_,k)=>{if(!cur.has(k))del.push(k)});
+  for(let i=0;i<up.length;i+=200){const ch=up.slice(i,i+200);
+    const {error}=await sb.from(t).upsert(ch,{onConflict:'id'});if(error)throw error;
+    ch.forEach(u=>prev.set(u.id,cur.get(u.id)))}
+  for(let i=0;i<del.length;i+=200){const ch=del.slice(i,i+200);
+    const {error}=await sb.from(t).delete().in('id',ch);if(error)throw error;
+    ch.forEach(k=>prev.delete(k))}
+}
+async function flush(){
+  if(!ready) return; if(flushing){again=true;return} flushing=true;
+  try{
+    for(const c of COLS){
+      const cur=snapshotOf(c), prev=snap[c.t]||(snap[c.t]=new Map());
+      let dirty=cur.size!==prev.size; if(!dirty) for(const [k,j] of cur){if(prev.get(k)!==j){dirty=true;break}}
+      if(!dirty) continue;
+      try{await pushDiff(c.t,cur,prev);lastErr=''}
+      catch(e){console.error('[sync]',c.t,e);const m=errText(c.t,e);if(userTouched&&m!==lastErr)toast(m);lastErr=m}
+    }
+    const cur=new Map(Object.keys(OBJS).map(k=>[k,JSON.stringify(OBJS[k]())])), prev=snap.ais_app_settings||(snap.ais_app_settings=new Map());
+    try{await pushDiff('ais_app_settings',cur,prev)}catch(e){console.error('[sync] settings',e);const m=errText('ais_app_settings',e);if(userTouched&&m!==lastErr)toast(m);lastErr=m}
+  }finally{flushing=false;userTouched=false;if(again){again=false;schedule(500)}}
+}
+function schedule(ms){clearTimeout(timer);timer=setTimeout(flush,ms||800)}
+['click','change','submit','keyup'].forEach(ev=>document.addEventListener(ev,()=>{if(ready){userTouched=true;schedule(900)}},true));
+setInterval(()=>{if(ready)flush()},5000);
+window.addEventListener('beforeunload',()=>{if(ready)flush()});
+window.aisSyncNow=()=>{userTouched=true;return flush()};
+window.aisSyncReload=()=>loadAll();
+
+/* ---- kaitkan ke login/logout ---- */
+const _sbEnter=sbEnter;
+sbEnter=async function(session){await _sbEnter(session);
+  const {data}=await sb.auth.getSession();
+  if(data&&data.session) loadAll().catch(e=>console.error('[sync]',e))};
+/* auto-login (sesi tersimpan) bisa berjalan sebelum pembungkus di atas terpasang: pastikan data tetap dimuat */
+sb.auth.getSession().then(({data})=>{if(data&&data.session)setTimeout(async()=>{if(ready||loading)return;const {data:d2}=await sb.auth.getSession();if(d2&&d2.session&&document.getElementById('main').style.display!=='none')loadAll().catch(console.error)},2500)});
+const _out=doLogout;
+doLogout=async function(){try{if(ready)await flush()}catch(e){} ready=false; return _out.apply(this,arguments)};
+
+/* ---- Manajemen user di Pengaturan memakai tabel profiles ---- */
+ptToggleUserStatus=async function(id){
+  if(!ptCanManage()){showAcadToast('Anda tidak memiliki hak untuk mengubah status user.');return}
+  const u=usersData.find(x=>x.id===id); if(!u) return;
+  const baru=u.status==='Aktif'?'Nonaktif':'Aktif';
+  if(u.fromProfiles){
+    const {data,error}=await sb.from('profiles').update({status:baru}).eq('id',id).select();
+    if(error||!data||!data.length){console.error(error);showAcadToast('Gagal mengubah status user'+(error?': '+error.message:' (ditolak RLS).'));return}
+  }
+  u.status=baru;
+  pushAuditLog('Nonaktifkan/Aktifkan User','Pengaturan','User "'+u.nama+'" diubah menjadi '+u.status+'.');
+  showAcadToast('Status user diperbarui. (Data user tidak dihapus permanen.)');
+  ptRenderPanel();
+};
+ptSubmitAddUser=function(){
+  showAcadToast('Akun baru dibuat lewat tombol "Daftar" di halaman login, lalu disetujui di panel Persetujuan Akun Baru.');
+  closeAcadDrawer();
+};
+})();
+</script>
 <script id="students-crud">
 /* ========================================================================
    CRUD SISWA <-> SUPABASE (tabel "students")
