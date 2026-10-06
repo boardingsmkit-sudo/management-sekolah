@@ -982,8 +982,9 @@ function ensureAcadConfirm(){
   document.body.appendChild(ov);
   ov.addEventListener('click',(e)=>{ if(e.target.id==='acadConfirmOverlay') closeAcadConfirm(); });
 }
-function openAcadConfirm(title,msg,onConfirm){
+function openAcadConfirm(title,msg,onConfirm,okLabel){
   ensureAcadConfirm();
+  document.getElementById('acadConfirmBtn').textContent=okLabel||'Hapus';
   document.getElementById('acadConfirmTitle').textContent=title;
   document.getElementById('acadConfirmMsg').textContent=msg;
   document.getElementById('acadConfirmBtn').onclick=()=>{ closeAcadConfirm(); onConfirm&&onConfirm(); };
@@ -6574,31 +6575,236 @@ function ptRenderNotifPanel(){
 function initPengaturanNotifPage(){ ptRenderNotifPanel(); }
 
 /* ---- pt-user page (toggle: Manajemen User | Role & Permission) ---- */
-let ptUserView='daftar';
+/* ========================================================================
+   PENGGUNA & ROLE — manajemen akun nyata (Supabase Auth + tabel profiles)
+   Alur: Daftar -> Menunggu -> Setujui/Tolak -> Aktif -> kelola role / Nonaktif / Hapus.
+   Keamanan sebenarnya ada di database (RLS + trigger profiles_guard) dan Edge Function
+   delete-user; pengecekan role di UI hanya untuk menyembunyikan tombol.
+   SQL: supabase-manajemen-akun.sql
+   ======================================================================== */
+const REG_ROLES=['Kepala Sekolah','Guru','Wali Kelas','Bendahara','Musyrif','Sarpras','Orang Tua','Siswa'];
+const ACCT_STATUSES=['Semua','Aktif','Menunggu','Nonaktif','Ditolak'];
+const acct={rows:[],loading:false,loaded:false,err:'',q:'',filter:'Semua',pending:0,myAuthId:null,nextTab:null};
+let ptUserView='pengguna';   /* 'pengguna' | 'persetujuan' | 'permission' */
+function acSb(){ return (typeof supabaseClient!=='undefined'&&supabaseClient)||null; }
+function acEsc(v){ return String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function acActor(){ return ROLE_NAME[curRole]||curRole; }
+function acCanDelete(){ return curRole==='Super Admin'; }
+function acFmtDT(ts){ if(!ts) return '-'; const d=new Date(ts); if(isNaN(d)) return '-';
+  return d.getDate()+' '+BULAN_ID[d.getMonth()].slice(0,3)+' '+d.getFullYear()+', '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); }
+function acFmtD(ts){ if(!ts) return '-'; const d=new Date(ts); if(isNaN(d)) return '-'; return d.getDate()+' '+BULAN_ID[d.getMonth()]+' '+d.getFullYear(); }
+function acBadge(st){
+  const cls={Aktif:'b-green',Menunggu:'b-amber',Nonaktif:'b-gray',Ditolak:'b-red'}[st]||'b-gray';
+  return `<span class="badge ${cls}">${acEsc(st)}</span>`;
+}
+/* Aksi terhadap akun tertentu: tidak boleh terhadap diri sendiri; Kepala Sekolah tidak boleh menyentuh Super Admin */
+function acCanAct(u){
+  if(!ptCanManage()) return false;
+  if(u.auth_user_id&&u.auth_user_id===acct.myAuthId) return false;
+  if(curRole!=='Super Admin'&&u.role==='Super Admin') return false;
+  return true;
+}
+async function acctRefreshPending(){
+  const sb=acSb(); if(!sb||!ptCanManage()){ acct.pending=0; return; }
+  const {count,error}=await sb.from('profiles').select('id',{count:'exact',head:true}).eq('status','Menunggu');
+  if(error) return;
+  const n=count||0; if(n!==acct.pending){ acct.pending=n; try{updateNotifBadge()}catch(e){} acctRenderChrome(); }
+}
+setInterval(()=>{ const m=document.getElementById('main'); if(m&&m.style.display!=='none') acctRefreshPending(); },60000);
+
+async function acctLoad(){
+  const sb=acSb();
+  if(!sb){ acct.err='Supabase belum aktif.'; acct.loaded=true; acctRenderAll(); return; }
+  acct.loading=true; acct.err=''; acctRenderAll();
+  try{ const {data}=await sb.auth.getSession(); acct.myAuthId=data&&data.session?data.session.user.id:null; }catch(e){}
+  const {data,error}=await sb.from('profiles').select('*').order('created_at',{ascending:false});
+  acct.loading=false; acct.loaded=true;
+  if(error){ console.error(error); acct.err='Gagal memuat akun: '+error.message+' (pastikan supabase-manajemen-akun.sql sudah dijalankan).'; acct.rows=[]; }
+  else{ acct.rows=(data||[]).filter(r=>!r.deleted_at); acct.pending=acct.rows.filter(r=>r.status==='Menunggu').length; }
+  acctRenderAll(); try{updateNotifBadge()}catch(e){}
+}
+
+/* ---- halaman ---- */
 function pengaturanUserPageHtml(){
-  ptUserView='daftar';
-  return `${acadPageHeaderHtml('indigo','Pengaturan','Pengguna & Role','Kelola akun pengguna serta hak akses tiap role.')}
+  ptUserView=acct.nextTab||'pengguna'; acct.nextTab=null;
+  return `${acadPageHeaderHtml('indigo','Pengaturan','Pengguna & Role','Kelola akun, role, persetujuan dan akses.')}
+    <div id="acctStats"></div>
     <div class="panel">
       <div class="acad-toolrow">
-        <div class="view-toggle" id="ptUserViewToggle"><button class="active" data-v="daftar" onclick="ptUserSetView('daftar')">Manajemen User</button><button data-v="permission" onclick="ptUserSetView('permission')">Role &amp; Permission</button></div>
+        <div class="view-toggle" id="ptUserViewToggle">
+          <button data-v="pengguna" onclick="ptUserSetView('pengguna')">Pengguna</button>
+          <button data-v="persetujuan" onclick="ptUserSetView('persetujuan')">Persetujuan Akun <span id="acctPendTab"></span></button>
+          <button data-v="permission" onclick="ptUserSetView('permission')">Role &amp; Permission</button>
+        </div>
         <span class="ti-spacer"></span>
-        <span id="ptUserAddWrap">${ptCanManage()?'<button class="btn-primary-sm" onclick="ptOpenAddUserForm()">+ Tambah User</button>':''}</span>
+      </div>
+      <div class="acad-toolrow" id="acctTools">
+        <div class="ti-search"><span>🔍</span><input type="text" id="acctSearch" placeholder="Cari nama atau email..." oninput="acctSetQuery(this.value)"></div>
+        <select id="acctFilter" onchange="acctSetFilter(this.value)">${ACCT_STATUSES.map(s=>`<option>${s}</option>`).join('')}</select>
+        <button class="btn-outline-sm" onclick="acctLoad()">↻ Muat Ulang</button>
       </div>
       <div id="ptUserBody"></div>
     </div>`;
 }
-function ptUserSetView(v){
-  ptUserView=v;
-  document.querySelectorAll('#ptUserViewToggle button').forEach(b=>b.classList.toggle('active',b.dataset.v===v));
-  document.getElementById('ptUserAddWrap').style.display=v==='daftar'?'':'none';
-  ptRenderPanel();
+function initPengaturanUserPage(){
+  const s=document.getElementById('acctSearch'); if(s) s.value=acct.q;
+  const f=document.getElementById('acctFilter'); if(f) f.value=acct.filter;
+  acctRenderChrome(); ptRenderPanel();
+  acctLoad();
 }
-function ptRenderUserTable(){
-  document.getElementById('ptUserBody').innerHTML=`<table><tr><th>Nama</th><th>Username/Email</th><th>Role</th><th>Status</th><th>Last Login</th><th>Aksi</th></tr>
-    ${usersData.map(u=>`<tr><td><b>${u.nama}</b></td><td>${u.username}</td><td>${u.role}</td><td>${acadStatusBadge(u.status)}</td><td>${u.lastLogin==='-'?'-':fmtTglID(u.lastLogin.slice(0,10))}</td>
-    <td><div class="row-actions">${ptCanManage()?`<button title="Edit" onclick="acadCrudNotice()">✏️</button><button title="${u.status==='Aktif'?'Nonaktifkan':'Aktifkan'}" onclick="ptToggleUserStatus('${u.id}')">${u.status==='Aktif'?'⏸':'▶️'}</button>`:''}</div></td></tr>`).join('')}
-    </table>`;
+function ptUserSetView(v){ ptUserView=v; acctRenderChrome(); ptRenderPanel(); }
+function acctSetQuery(v){ acct.q=v; acctRenderTable(); }
+function acctSetFilter(v){ acct.filter=v; acctRenderTable(); }
+function acctRenderChrome(){
+  document.querySelectorAll('#ptUserViewToggle button').forEach(b=>b.classList.toggle('active',b.dataset.v===ptUserView));
+  const t=document.getElementById('acctTools'); if(t) t.style.display=ptUserView==='pengguna'?'':'none';
+  const p=document.getElementById('acctPendTab'); if(p) p.textContent=acct.pending>0?'('+acct.pending+')':'';
+  const st=document.getElementById('acctStats');
+  if(st){ const c=s=>acct.rows.filter(r=>r.status===s).length;
+    st.innerHTML=acadStatRowHtml([{val:acct.rows.length,label:'Total Pengguna',color:'blue'},{val:c('Aktif'),label:'Aktif',color:'green'},
+      {val:c('Menunggu'),label:'Menunggu',color:'orange'},{val:c('Nonaktif'),label:'Nonaktif',color:'gray'},{val:c('Ditolak'),label:'Ditolak',color:'red'}]).replace('class="stat-row"','class="stat-row" style="grid-template-columns:repeat(auto-fit,minmax(110px,1fr))"'); }
 }
+function acctRenderAll(){ acctRenderChrome(); ptRenderPanel(); }
+function acctRenderTable(){ if(document.getElementById('ptUserBody')&&ptUserView==='pengguna') acctRenderUsers(); }
+
+function acctBodyState(){
+  if(acct.loading&&!acct.loaded) return '<div style="padding:18px;color:var(--sub);font-size:12.5px">Memuat akun...</div>';
+  if(acct.err) return `<div style="padding:14px;color:var(--danger);font-size:12.5px">${acEsc(acct.err)}</div>`;
+  return '';
+}
+function acctRenderUsers(){
+  const body=document.getElementById('ptUserBody'); if(!body) return;
+  const st=acctBodyState(); if(st){ body.innerHTML=st; return; }
+  const q=acct.q.trim().toLowerCase();
+  const rows=acct.rows.filter(u=>(acct.filter==='Semua'||u.status===acct.filter)&&(!q||(u.nama||'').toLowerCase().includes(q)||(u.email||'').toLowerCase().includes(q)));
+  body.innerHTML=rows.length?`<div style="overflow-x:auto"><table><tr><th>Nama</th><th>Email</th><th>Role</th><th>Status</th><th>Tanggal Daftar</th><th>Login Terakhir</th><th>Aksi</th></tr>
+    ${rows.map(u=>{
+      const can=acCanAct(u), id=acEsc(u.id);
+      let a=`<button title="Lihat" onclick="acctOpenDetail('${id}')">👁</button>`;
+      if(can){
+        if(u.status==='Menunggu') a+=`<button title="Setujui" onclick="acctOpenApprove('${id}')">✓</button><button title="Tolak" onclick="acctOpenReject('${id}')">✕</button>`;
+        else{
+          if(u.status==='Aktif') a+=`<button title="Edit Role" onclick="acctOpenEditRole('${id}')">✏️</button>`;
+          a+= u.status==='Aktif'
+            ? `<button title="Nonaktifkan" onclick="acctToggleStatus('${id}')">⏸</button>`
+            : u.status==='Nonaktif' ? `<button title="Aktifkan" onclick="acctToggleStatus('${id}')">▶️</button>`
+            : `<button title="Setujui ulang" onclick="acctOpenApprove('${id}')">✓</button>`;
+        }
+        if(acCanDelete()) a+=`<button title="Hapus" onclick="acctConfirmDelete('${id}')">🗑</button>`;
+      }
+      return `<tr><td><b>${acEsc(u.nama)}</b></td><td>${acEsc(u.email)}</td><td>${acEsc(u.role)}</td><td>${acBadge(u.status)}</td><td>${acFmtD(u.created_at)}</td><td>${u.last_login?acFmtDT(u.last_login):'-'}</td><td><div class="row-actions">${a}</div></td></tr>`;
+    }).join('')}</table></div>`:'<div style="padding:18px;color:var(--sub);font-size:12.5px">Tidak ada akun yang cocok.</div>';
+}
+function acctRenderApprovals(){
+  const body=document.getElementById('ptUserBody'); if(!body) return;
+  const st=acctBodyState(); if(st){ body.innerHTML=st; return; }
+  const rows=acct.rows.filter(u=>u.status==='Menunggu').slice().sort((a,b)=>String(a.created_at).localeCompare(String(b.created_at)));
+  body.innerHTML=rows.length?`<div style="overflow-x:auto"><table><tr><th>Nama</th><th>Email</th><th>Role yang Diminta</th><th>Tanggal Pendaftaran</th><th>Waktu</th><th>Aksi</th></tr>
+    ${rows.map(u=>{ const d=u.created_at?new Date(u.created_at):null, id=acEsc(u.id);
+      return `<tr><td><b>${acEsc(u.nama)}</b></td><td>${acEsc(u.email)}</td><td>${acEsc(u.role)}</td><td>${acFmtD(u.created_at)}</td>
+      <td>${d?String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'):'-'}</td>
+      <td>${acCanAct(u)?`<div style="display:flex;gap:6px"><button class="btn-primary-sm" onclick="acctOpenApprove('${id}')">Setujui</button><button class="btn-outline-sm" onclick="acctOpenReject('${id}')">Tolak</button></div>`:'-'}</td></tr>`; }).join('')}</table></div>`
+    :'<div style="padding:18px;color:var(--sub);font-size:12.5px">Tidak ada akun yang menunggu persetujuan.</div>';
+}
+
+/* ---- aksi: semuanya ke Supabase; perubahan 0 baris = ditolak RLS ---- */
+function acRow(id){ return acct.rows.find(r=>String(r.id)===String(id)); }
+function acRoleOptions(sel){
+  const roles=curRole==='Super Admin'?['Super Admin',...REG_ROLES]:REG_ROLES;
+  return roles.map(r=>`<option ${r===sel?'selected':''}>${r}</option>`).join('');
+}
+async function acUpdate(id,patch){
+  const sb=acSb(); if(!sb){ showAcadToast('Supabase belum aktif.'); return null; }
+  const {data,error}=await sb.from('profiles').update(patch).eq('id',id).select();
+  if(error||!data||!data.length){
+    console.error(error||'0 baris berubah (diblokir RLS)');
+    showAcadToast('Gagal: '+(error?error.message:'ditolak oleh kebijakan keamanan (RLS). Role Anda tidak berhak.')); return null; }
+  return data[0];
+}
+function acctOpenApprove(id){
+  const u=acRow(id); if(!u) return;
+  openAcadDrawer('Setujui Akun',`
+    <p style="font-size:12.5px;margin-bottom:12px;">Setujui akun <b>${acEsc(u.nama)}</b> (${acEsc(u.email)})? Akun akan bisa langsung login.</p>
+    <div class="dw-field"><label>Role (dapat diubah sebelum disetujui)</label><select id="acApproveRole">${acRoleOptions(u.role)}</select></div>
+    <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="acApproveBtn" onclick="acctDoApprove('${acEsc(id)}')">Setujui</button></div>`);
+}
+async function acctDoApprove(id){
+  const u=acRow(id); if(!u) return; const role=document.getElementById('acApproveRole').value;
+  const btn=document.getElementById('acApproveBtn'); if(btn) btn.disabled=true;
+  const r=await acUpdate(id,{status:'Aktif',role});
+  if(btn) btn.disabled=false; if(!r) return;
+  pushAuditLog('Persetujuan Akun','Pengguna & Role','Akun "'+u.nama+'" ('+u.email+') disetujui oleh '+acActor()+' sebagai '+role+(role!==u.role?' (diminta: '+u.role+')':'')+'.');
+  closeAcadDrawer(); showAcadToast('Akun berhasil disetujui.'); acctLoad();
+}
+function acctOpenReject(id){
+  const u=acRow(id); if(!u) return;
+  openAcadDrawer('Tolak Akun',`
+    <p style="font-size:12.5px;margin-bottom:12px;">Tolak pendaftaran <b>${acEsc(u.nama)}</b> (${acEsc(u.email)})?</p>
+    <div class="dw-field"><label>Alasan Penolakan *</label><textarea id="acRejectReason" rows="4" placeholder="Tuliskan alasan penolakan..."></textarea></div>
+    <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="acRejectBtn" onclick="acctDoReject('${acEsc(id)}')">Tolak Akun</button></div>`);
+}
+async function acctDoReject(id){
+  const u=acRow(id); if(!u) return; const reason=document.getElementById('acRejectReason').value.trim();
+  if(!reason){ showAcadToast('Alasan penolakan wajib diisi.'); return; }
+  const btn=document.getElementById('acRejectBtn'); if(btn) btn.disabled=true;
+  const r=await acUpdate(id,{status:'Ditolak',rejection_reason:reason});
+  if(btn) btn.disabled=false; if(!r) return;
+  pushAuditLog('Penolakan Akun','Pengguna & Role','Akun "'+u.nama+'" ('+u.email+') ditolak oleh '+acActor()+'. Alasan: '+reason);
+  closeAcadDrawer(); showAcadToast('Akun berhasil ditolak.'); acctLoad();
+}
+function acctOpenEditRole(id){
+  const u=acRow(id); if(!u) return;
+  openAcadDrawer('Edit Role',`
+    <p style="font-size:12.5px;margin-bottom:12px;">Ubah role <b>${acEsc(u.nama)}</b> (saat ini: ${acEsc(u.role)}). Akses menu mengikuti role baru saat pengguna login berikutnya.</p>
+    <div class="dw-field"><label>Role</label><select id="acEditRole">${acRoleOptions(u.role)}</select></div>
+    <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" onclick="acctDoEditRole('${acEsc(id)}')">Simpan</button></div>`);
+}
+async function acctDoEditRole(id){
+  const u=acRow(id); if(!u) return; const role=document.getElementById('acEditRole').value;
+  if(role===u.role){ closeAcadDrawer(); return; }
+  const r=await acUpdate(id,{role}); if(!r) return;
+  pushAuditLog('Perubahan Role','Pengguna & Role','Role '+u.nama+' ('+u.email+') diubah dari '+u.role+' menjadi '+role+' oleh '+acActor()+'.');
+  closeAcadDrawer(); showAcadToast('Role berhasil diubah.'); acctLoad();
+}
+function acctToggleStatus(id){
+  const u=acRow(id); if(!u) return; const aktif=u.status==='Aktif';
+  openAcadConfirm(aktif?'Nonaktifkan Akun?':'Aktifkan Akun?',
+    aktif?'Akun "'+u.nama+'" tidak akan bisa login sampai diaktifkan kembali.':'Akun "'+u.nama+'" akan bisa login kembali.',
+    async()=>{
+      const r=await acUpdate(id,{status:aktif?'Nonaktif':'Aktif'}); if(!r) return;
+      pushAuditLog(aktif?'Nonaktifkan Akun':'Aktivasi Akun','Pengguna & Role','Akun "'+u.nama+'" ('+u.email+') '+(aktif?'dinonaktifkan':'diaktifkan kembali')+' oleh '+acActor()+'.');
+      showAcadToast(aktif?'Akun berhasil dinonaktifkan.':'Akun berhasil diaktifkan.'); acctLoad(); },
+    aktif?'Nonaktifkan':'Aktifkan');
+}
+function acctConfirmDelete(id){
+  const u=acRow(id); if(!u) return;
+  openAcadConfirm('Hapus Akun?','Apakah Anda yakin ingin menghapus akun '+u.nama+'? Data akun akan dihapus dan tindakan ini tidak dapat dibatalkan.',
+    async()=>{
+      const sb=acSb(); if(!sb) return;
+      const {data,error}=await sb.functions.invoke('delete-user',{body:{profile_id:u.id}});
+      if(error||(data&&data.error)){
+        let msg=(data&&data.error)||error.message;
+        try{ if(error&&error.context&&error.context.json){ const j=await error.context.json(); if(j&&j.error) msg=j.error; } }catch(e){}
+        console.error(error||data);
+        showAcadToast('Gagal menghapus akun: '+msg+(/not found|Failed to send/i.test(msg)?' (pastikan Edge Function delete-user sudah di-deploy).':'')); return; }
+      pushAuditLog('Hapus Akun','Pengguna & Role','Akun "'+u.nama+'" ('+u.email+') dihapus secara permanen oleh '+acActor()+'.');
+      showAcadToast('Akun berhasil dihapus.'); acctLoad(); },
+    'Hapus Permanen');
+}
+function acctOpenDetail(id){
+  const u=acRow(id); if(!u) return;
+  const row=(l,v)=>`<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px"><span style="color:var(--sub)">${l}</span><span style="text-align:right;font-weight:600">${v}</span></div>`;
+  const sect=t=>`<h3 style="font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--sub);margin:16px 0 4px">${t}</h3>`;
+  const key=(u.email||'').toLowerCase(), nm='"'+(u.nama||'')+'"';
+  const logs=(typeof auditLogData!=='undefined'?auditLogData:[]).filter(l=>(key&&String(l.detail).toLowerCase().includes(key))||String(l.detail).includes(nm)).slice(0,15);
+  openAcadDrawer('Detail Pengguna',
+    sect('Profil Akun')+row('Nama',acEsc(u.nama))+row('Email',acEsc(u.email))+row('Role',acEsc(u.role))+row('Status',acBadge(u.status))+row('Tanggal Daftar',acFmtDT(u.created_at))+row('Login Terakhir',u.last_login?acFmtDT(u.last_login):'-')+
+    sect('Riwayat Akun')+row('Tanggal Daftar',acFmtDT(u.created_at))+row('Disetujui Oleh',acEsc(u.approved_by||'-'))+row('Tanggal Persetujuan',acFmtDT(u.approved_at))+
+    row('Ditolak Oleh',acEsc(u.rejected_by||'-'))+row('Tanggal Penolakan',acFmtDT(u.rejected_at))+row('Alasan Penolakan',acEsc(u.rejection_reason||'-'))+
+    row('Dinonaktifkan Oleh',acEsc(u.deactivated_by||'-'))+row('Tanggal Dinonaktifkan',acFmtDT(u.deactivated_at))+
+    sect('Riwayat Aktivitas')+(logs.length?logs.map(l=>`<div style="padding:7px 0;border-bottom:1px solid var(--line);font-size:12px"><b>${acEsc(l.action)}</b> <span style="color:var(--sub)">· ${acFmtDT(l.timestamp)}</span><div style="color:var(--sub);margin-top:2px">${acEsc(l.detail)}</div></div>`).join(''):'<div style="font-size:12px;color:var(--sub);padding:6px 0">Belum ada aktivitas tercatat.</div>'));
+}
+
 function ptRenderPermissionTable(){
   document.getElementById('ptUserBody').innerHTML=PERMISSION_MODULES.map(mod=>`
     <div style="margin-bottom:18px;"><h3 style="font-size:12.5px;font-weight:700;margin-bottom:8px;">${mod}</h3>
@@ -6607,11 +6813,11 @@ function ptRenderPermissionTable(){
     </table></div>`).join('');
 }
 function ptRenderPanel(){
-  if(document.getElementById('ptUserBody')) ptUserView==='daftar'?ptRenderUserTable():ptRenderPermissionTable();
+  if(document.getElementById('ptUserBody')) ptUserView==='permission'?ptRenderPermissionTable():(ptUserView==='persetujuan'?acctRenderApprovals():acctRenderUsers());
   if(document.getElementById('ptSettingsPanel')) ptRenderSettingsPanel();
   if(document.getElementById('ptNotifBody')) ptRenderNotifPanel();
 }
-function initPengaturanUserPage(){ ptRenderUserTable(); }
+
 
 /* ---- pt-sekolah: HUB utama dengan internal sidebar
    (Profil Sekolah | Identitas Aplikasi | Tahun Pelajaran | Semester |
@@ -6734,6 +6940,7 @@ function computeNotifications(){
   if(typeof assetLoansData!=='undefined') assetLoansData.filter(l=>l.status==='Menunggu').forEach(l=>items.push({label:'Peminjaman aset: '+l.peminjam,target:'sp-inventaris'}));
   if(typeof procurementRequestsData!=='undefined') procurementRequestsData.filter(p=>['Pengajuan','Diverifikasi'].includes(p.status)).forEach(p=>items.push({label:'Pengadaan: '+p.namaBarang,target:'sp-pengajuan'}));
   if(typeof damageReportsData!=='undefined') damageReportsData.filter(d=>d.status==='Dilaporkan').forEach(d=>items.push({label:'Laporan kerusakan baru',target:'sp-kerusakan'}));
+  if(typeof acct!=='undefined'&&acct.pending>0&&typeof ptCanManage==='function'&&ptCanManage()) items.unshift({label:acct.pending+' akun menunggu persetujuan',target:'pt-user',tab:'persetujuan'});
   puCheckScheduled();
   announcementsData.filter(a=>a.status==='Dipublikasikan'&&(a.priority==='Penting'||a.priority==='Mendesak')).slice(0,3).forEach(a=>items.push({label:'Pengumuman: '+a.title,target:'ko-pengumuman'}));
   return items;
@@ -6749,7 +6956,7 @@ function toggleNotifDropdown(){
   }
   const items=computeNotifications();
   el.innerHTML=`<div class="nd-head">Notifikasi (${items.length})</div>`+
-    (items.length? items.map(it=>`<div class="nd-item" onclick="closeNotifDropdown();showView('${it.target}')"><span>🔔</span><span>${it.label}</span></div>`).join('') : '<div class="nd-empty">Tidak ada notifikasi baru.</div>');
+    (items.length? items.map(it=>`<div class="nd-item" onclick="closeNotifDropdown();${it.tab?`acct.nextTab='${it.tab}';`:''}showView('${it.target}')"><span>🔔</span><span>${it.label}</span></div>`).join('') : '<div class="nd-empty">Tidak ada notifikasi baru.</div>');
   el.classList.toggle('show');
 }
 function closeNotifDropdown(){ const el=document.getElementById('notifDropdown'); if(el) el.classList.remove('show'); }
@@ -7016,16 +7223,18 @@ const financeService=SB_ON&&{invoices:makeService('invoices','*, students(nama)'
 function sbMsg(t,ok){let m=document.getElementById('sbMsg');if(!m){m=document.createElement('p');m.id='sbMsg';m.style.cssText='text-align:center;font-size:12px;border-radius:8px;padding:8px 10px;margin:10px 0 0';document.querySelector('#login .box').appendChild(m)}
  m.style.background=ok?'#E4F4EC':'#FBE7E4';m.style.color=ok?'#1C7B5D':'#B0352B';m.textContent=t;m.style.display=t?'block':'none'}
 async function sbEnter(session){
- const {data:prof,error}=await supabaseClient.from('profiles').select('nama,email,role,status').eq('auth_user_id',session.user.id).maybeSingle();
+ const {data:prof,error}=await supabaseClient.from('profiles').select('nama,email,role,status,deleted_at').eq('auth_user_id',session.user.id).maybeSingle();
  if(error){console.error(error);await supabaseClient.auth.signOut();throw new Error('Gagal memuat profil. Pastikan SQL sudah dijalankan.')}
- if(!prof||prof.status!=='Aktif'){await supabaseClient.auth.signOut();
-  const st=prof&&prof.status;sbMsg(st==='Menunggu'?'Akun Anda menunggu persetujuan admin. Silakan coba lagi setelah disetujui.':st==='Ditolak'?'Pendaftaran akun Anda ditolak admin.':'Akun tidak aktif / belum terdaftar.',false);return}
+ if(!prof||prof.status!=='Aktif'||prof.deleted_at){await supabaseClient.auth.signOut();
+  const st=prof&&prof.status;sbMsg(st==='Menunggu'?'Akun Anda masih menunggu persetujuan Admin.':st==='Ditolak'?'Pendaftaran akun Anda ditolak. Silakan hubungi Admin.':st==='Nonaktif'?'Akun Anda sedang dinonaktifkan oleh Admin.':'Akun tidak aktif / belum terdaftar.',false);return}
  sbMsg('');ROLE_NAME[prof.role]=prof.nama;
+ supabaseClient.from('profiles').update({last_login:new Date().toISOString()}).eq('auth_user_id',session.user.id).then(({error})=>{if(error)console.warn('last_login',error.message)});
  document.getElementById('loginRole').innerHTML='<option>'+prof.role+'</option>';
  doLoginOriginal({preventDefault(){}});
  if(typeof stReload==='function') stReload({silent:true});
  if(typeof dkReload==='function') dkReload({silent:true});
  if(typeof kscLoadAll==='function') kscLoadAll({silent:true}).then(()=>{ const a=document.querySelector('#navList .item.active'); if(a&&a.dataset.id==='dash') showView('dash'); }).catch(console.error);
+ if(typeof acctRefreshPending==='function') acctRefreshPending();
  if(typeof bdLoadSettings==='function') bdLoadSettings();
  if(typeof kgLoadSettings==='function') kgLoadSettings();
 }
@@ -7051,19 +7260,20 @@ if(SB_ON){
  const lnk=document.createElement('p');lnk.style.cssText='text-align:center;font-size:12px;margin-top:12px';
  lnk.innerHTML='<span id="sbSw" style="cursor:pointer;color:#2563EB;font-weight:600">Belum punya akun? Daftar</span>';box.appendChild(lnk);
  const reg=document.createElement('form');reg.style.display='none';reg.autocomplete='off';
- reg.innerHTML='<div><label>Nama Lengkap</label><input id="rgNama" required></div><div><label>Email</label><input id="rgEmail" type="email" required></div><div><label>Password (min. 6 karakter)</label><input id="rgPass" type="password" minlength="6" required></div><div><label>Daftar sebagai</label><select id="rgRole">'+['Super Admin','Kepala Sekolah','Guru','Wali Kelas','Bendahara','Musyrif','Sarpras','Orang Tua','Siswa'].map(r=>'<option>'+r+'</option>').join('')+'</select></div><button type="submit">Daftar</button>';
+ reg.innerHTML='<div><label>Nama Lengkap *</label><input id="rgNama" required></div><div><label>Email *</label><input id="rgEmail" type="email" required></div><div><label>Password * (min. 6 karakter)</label><input id="rgPass" type="password" minlength="6" required></div><div><label>Konfirmasi Password *</label><input id="rgPass2" type="password" minlength="6" required></div><div><label>Daftar Sebagai *</label><select id="rgRole">'+REG_ROLES.map(r=>'<option>'+r+'</option>').join('')+'</select></div><button type="submit">Daftar</button>';
  box.insertBefore(reg,lnk);const lf=box.querySelector('form');
  document.getElementById('sbSw').onclick=()=>{const on=reg.style.display==='none';reg.style.display=on?'':'none';lf.style.display=on?'none':'';document.getElementById('sbSw').textContent=on?'Sudah punya akun? Masuk':'Belum punya akun? Daftar';sbMsg('')};
  reg.onsubmit=async e=>{e.preventDefault();
+  if(rgPass.value!==rgPass2.value){sbMsg('Konfirmasi password tidak sama.',false);return}
   const {data,error}=await supabaseClient.auth.signUp({email:rgEmail.value.trim(),password:rgPass.value,options:{data:{nama:rgNama.value.trim(),role:rgRole.value}}});
   if(error){console.error(error);sbMsg('Pendaftaran gagal: '+error.message,false);return}
-  if(data.session){try{await sbEnter(data.session)}catch(x){sbMsg(x.message,false)}}   // akun pertama = Super Admin langsung masuk
-  else sbMsg('Pendaftaran berhasil. Cek email untuk konfirmasi (jika diminta), lalu tunggu persetujuan admin.',true)};
+  if(data.session){try{await sbEnter(data.session)}catch(x){sbMsg(x.message,false)}}   // akun pertama (Super Admin) langsung masuk; lainnya ditolak di sbEnter karena status Menunggu
+  else{ sbMsg('Pendaftaran berhasil. Akun Anda menunggu persetujuan Admin. (Cek email untuk konfirmasi bila diminta.)',true); reg.style.display='none';lf.style.display='';document.getElementById('sbSw').textContent='Belum punya akun? Daftar'}};
  // pesan error login ditampilkan di layar, bukan alert
  const _dl=doLogin;
  /* panel persetujuan di Pengaturan > Pengguna & Role */
  const esc=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
- const ROLES=['Kepala Sekolah','Super Admin','Guru','Wali Kelas','Bendahara','Musyrif','Sarpras','Orang Tua','Siswa'];
+ 
  window.sbLoadPending=async function(){const el=document.getElementById('sbPending');if(!el)return;
   el.innerHTML='<div style="padding:14px;color:#64748B;font-size:13px">Memuat pendaftar...</div>';
   const {data,error}=await supabaseClient.from('profiles').select('id,nama,email,role,created_at').eq('status','Menunggu').order('created_at');
@@ -7073,9 +7283,7 @@ if(SB_ON){
  window.sbDecide=async function(id,ok){const role=document.getElementById('sbr_'+id)?.value;
   const {data,error}=await supabaseClient.from('profiles').update(ok?{status:'Aktif',role}:{status:'Ditolak'}).eq('id',id).select();
   if(error||!data||!data.length){console.error(error||'0 baris berubah (diblokir RLS)');alert('Gagal memproses akun'+(error?': '+error.message:': tidak ada perubahan. Role Anda tidak berhak melakukan ini (RLS).'));return}sbLoadPending()};
- const pu=MISC_PAGES['pt-user'],h0=pu.html,i0=pu.init;
- pu.html=()=>((curRole==='Super Admin'||curRole==='Kepala Sekolah')?'<div id="sbPending" class="panel" style="margin-bottom:16px"></div>':'')+h0();
- pu.init=()=>{i0();sbLoadPending()};
+
 }
 </script>
 <script id="sarpras-komunikasi-pengaturan-sync">
@@ -7118,7 +7326,7 @@ const OBJS={schoolSettings:()=>schoolSettingsData,appIdentity:()=>appIdentityDat
 const snap={}; let ready=false, flushing=false, again=false, timer=null, userTouched=false, lastErr='';
 
 function resyncCounters(){
-  const mx=(arr,pre)=>arr.reduce((m,r)=>{const n=parseInt(String(r.id||'').replace(/\D/g,''),10);return Number.isFinite(n)&&String(r.id).startsWith(pre)?Math.max(m,n):m},0);
+  const mx=(arr,pre)=>arr.reduce((m,r)=>{const n=parseInt(String(r.id||'').replace(/\D/g,''),10);return Number.isFinite(n)&&new RegExp('^'+pre+'\\d+$').test(String(r.id))?Math.max(m,n):m},0);
   __spAssetCounter=Math.max(__spAssetCounter,mx(assetsData,'AST'));
   __spLoanCounter=Math.max(__spLoanCounter,mx(assetLoansData,'LN'));
   __spDrCounter=Math.max(__spDrCounter,mx(damageReportsData,'DR'));
@@ -7154,11 +7362,6 @@ async function loadAll0(){
     rows.forEach(r=>{const o=OBJS[r.id]&&OBJS[r.id]();if(!o)return;Object.keys(o).forEach(k=>delete o[k]);Object.assign(o,r.data);snap.ais_app_settings.set(r.id,JSON.stringify(o))});
   }catch(e){console.error('[sync] gagal memuat pengaturan',e);snap.ais_app_settings=new Map(Object.keys(OBJS).map(k=>[k,JSON.stringify(OBJS[k]())]))}
   resyncCounters();
-  /* Daftar user di Pengaturan = tabel profiles (akun nyata) */
-  try{
-    const {data,error}=await sb.from('profiles').select('id,nama,email,role,status,created_at').neq('status','Menunggu').order('created_at');
-    if(!error&&data&&data.length){usersData.splice(0,usersData.length,...data.map(p=>({id:p.id,nama:p.nama,username:p.email,role:p.role,status:p.status,lastLogin:'-',fromProfiles:true})))}
-  }catch(e){console.error(e)}
   ready=true;
   const a=document.querySelector('#navList .item.active'); if(a&&a.dataset.id&&a.dataset.id!=='dash'&&!document.querySelector('.dw-field')){try{showView(a.dataset.id)}catch(e){}}
   schedule(300);   // upload data bawaan bila tabel masih kosong
@@ -7173,8 +7376,10 @@ async function pushDiff(t,cur,prev){
   const up=[],del=[];
   cur.forEach((j,k)=>{if(prev.get(k)!==j)up.push({id:k,data:JSON.parse(j)})});
   prev.forEach((_,k)=>{if(!cur.has(k))del.push(k)});
+  const append=(t==='ais_audit_log');   /* audit log append-only: tidak pernah update/hapus */
+  if(append) del.length=0;
   for(let i=0;i<up.length;i+=200){const ch=up.slice(i,i+200);
-    const {error}=await sb.from(t).upsert(ch,{onConflict:'id'});if(error)throw error;
+    const {error}=await sb.from(t).upsert(ch,append?{onConflict:'id',ignoreDuplicates:true}:{onConflict:'id'});if(error)throw error;
     ch.forEach(u=>prev.set(u.id,cur.get(u.id)))}
   for(let i=0;i<del.length;i+=200){const ch=del.slice(i,i+200);
     const {error}=await sb.from(t).delete().in('id',ch);if(error)throw error;
@@ -7211,24 +7416,6 @@ sb.auth.getSession().then(({data})=>{if(data&&data.session)setTimeout(async()=>{
 const _out=doLogout;
 doLogout=async function(){try{if(ready)await flush()}catch(e){} ready=false; return _out.apply(this,arguments)};
 
-/* ---- Manajemen user di Pengaturan memakai tabel profiles ---- */
-ptToggleUserStatus=async function(id){
-  if(!ptCanManage()){showAcadToast('Anda tidak memiliki hak untuk mengubah status user.');return}
-  const u=usersData.find(x=>x.id===id); if(!u) return;
-  const baru=u.status==='Aktif'?'Nonaktif':'Aktif';
-  if(u.fromProfiles){
-    const {data,error}=await sb.from('profiles').update({status:baru}).eq('id',id).select();
-    if(error||!data||!data.length){console.error(error);showAcadToast('Gagal mengubah status user'+(error?': '+error.message:' (ditolak RLS).'));return}
-  }
-  u.status=baru;
-  pushAuditLog('Nonaktifkan/Aktifkan User','Pengaturan','User "'+u.nama+'" diubah menjadi '+u.status+'.');
-  showAcadToast('Status user diperbarui. (Data user tidak dihapus permanen.)');
-  ptRenderPanel();
-};
-ptSubmitAddUser=function(){
-  showAcadToast('Akun baru dibuat lewat tombol "Daftar" di halaman login, lalu disetujui di panel Persetujuan Akun Baru.');
-  closeAcadDrawer();
-};
 })();
 </script>
 <script id="students-crud">
