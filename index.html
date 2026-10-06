@@ -7472,6 +7472,11 @@ async function run(force){
   try{
     const id=activeId(); if(!id){return}
     if(drawerOpen()) return;
+    if(id==='dash'&&typeof dashReloadData==='function'){
+      const before=dashSignature(); const did=await dashReloadData(force);
+      if(did&&dashSignature()!==before&&!drawerOpen()) showView('dash');
+      return;
+    }
     /* 1) Modul lama (tabel Supabase milik modul masing-masing) */
     if(typeof KSC!=='undefined') await Promise.all(Object.keys(KSC).filter(k=>{const c=KSC[k].cfg;return document.getElementById(c.bodyId||(c.prefix+'Body'))}).map(k=>kscLoad(k,{silent:true}).catch(()=>{})));
     if(id==='ak-kelas'&&typeof dkReload==='function') await dkReload({silent:true});
@@ -7493,6 +7498,269 @@ window.addEventListener('focus',()=>run(true));
 const _sv=showView;
 showView=function(id){const r=_sv.apply(this,arguments); setTimeout(()=>run(true),400); return r};
 window.aisRefreshNow=()=>run(true);
+})();
+</script>
+<script id="dashboard-live">
+/* ========================================================================
+   DASHBOARD — membaca data nyata dari menu-menu yang ada.
+   Sumber: Siswa, Presensi KBM, Nilai, Pelanggaran, Perizinan, Jadwal, Tahfidz,
+   Catatan Musyrif, Keuangan (Tagihan/Pembayaran), Sarpras, Pengumuman, Izin Pegawai, Akun.
+   Tidak ada angka bawaan: bila belum ada data, panel menampilkan keterangan "belum ada data".
+   Hanya menampilkan data yang boleh dilihat role tersebut (database membatasi lewat RLS).
+   ======================================================================== */
+(function(){
+const pad=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayIso=()=>iso(new Date());
+const MON=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const num=v=>Number.isFinite(Number(v))?Number(v):0;
+const un=s=>typeof akUnesc==='function'?akUnesc(s):s;
+const arr=name=>{ try{ return eval(name)||[]; }catch(e){ return []; } };
+const months=n=>{ const o=[],now=new Date(); for(let i=n-1;i>=0;i--){ const d=new Date(now.getFullYear(),now.getMonth()-i,1); o.push({ym:d.getFullYear()+'-'+pad(d.getMonth()+1),label:MON[d.getMonth()]}); } return o; };
+function canSee(menuId){
+  const acc=ROLE_ACCESS[curRole]||'all'; if(acc==='all') return true;
+  return MENU.some(g=>acc.includes(g.g)&&g.items.some(it=>it[0]===menuId));
+}
+const isParent=()=>curRole==='Orang Tua'||curRole==='Siswa';
+const emptyBox=(msg)=>`<div style="padding:26px 10px;text-align:center;color:var(--sub);font-size:12px;line-height:1.6">${msg}</div>`;
+
+/* ---------- hitung semua angka dari data menu ---------- */
+function compute(){
+  const t=todayIso(), sem=(typeof akDefaultPeriod==='function')?akDefaultPeriod():{ta:'',sem:''};
+  const students=arr('studentsData'), aktif=students.filter(s=>s.status==='Aktif');
+  const S=dashboardStats;
+
+  /* Kehadiran hari ini (Presensi KBM) */
+  const att=arr('attendanceRecordsData'), attToday=att.filter(a=>a.tanggal===t);
+  const hadirToday=attToday.filter(a=>a.status==='Hadir').length;
+  S.totalSiswa={value:aktif.length,sub:'Siswa berstatus aktif',trend:''};
+  S.kehadiranHariIni=attToday.length?{value:pct(hadirToday,attToday.length)+'%',sub:hadirToday+' hadir dari '+attToday.length+' catatan',trend:''}
+                                    :{value:'-',sub:'Presensi hari ini belum diisi',trend:''};
+  /* Rata-rata nilai (semester berjalan; bila kosong pakai semua nilai) */
+  const grades=arr('gradesData').filter(g=>g.nilaiAkhir!=null&&!isNaN(g.nilaiAkhir));
+  let gUse=grades.filter(g=>g.tahunAjaran===sem.ta&&g.semester===sem.sem), gLabel='Semester '+sem.sem+' '+sem.ta;
+  if(!gUse.length){ gUse=grades; gLabel='Semua nilai tercatat'; }
+  S.rataNilai=gUse.length?{value:(Math.round(gUse.reduce((a,g)=>a+g.nilaiAkhir,0)/gUse.length*10)/10),sub:gLabel,trend:''}:{value:'-',sub:'Belum ada nilai',trend:''};
+  /* Santri asrama */
+  S.santriAsrama={value:aktif.filter(s=>s.boarding).length,sub:'Siswa tinggal di asrama',trend:''};
+  /* Tunggakan (hanya role keuangan) */
+  const inv=arr('invoicesData'); let tg=0; try{ tg=inv.reduce((a,i)=>a+invoiceComputed(i).sisa,0); }catch(e){}
+  S.tunggakan={value:tg,sub:inv.length?'Total tagihan belum lunas':'Belum ada tagihan',trend:''};
+
+  /* Grafik kehadiran 7 hari (% hadir per hari) */
+  const days=[]; for(let i=6;i>=0;i--){ const d=new Date(); d.setDate(d.getDate()-i); days.push(d); }
+  attendanceData.labels=days.map(d=>HARI_ID[d.getDay()].slice(0,3)+' '+d.getDate());
+  attendanceData.values=days.map(d=>{ const r=att.filter(a=>a.tanggal===iso(d)); return r.length?pct(r.filter(a=>a.status==='Hadir').length,r.length):null; });
+  /* Nilai per mapel, per semester */
+  ['Ganjil','Genap'].forEach(sm=>{
+    const by={}; grades.filter(g=>g.semester===sm&&(g.tahunAjaran===sem.ta||!sem.ta)).forEach(g=>{ (by[g.mapel]=by[g.mapel]||[]).push(g.nilaiAkhir); });
+    let keys=Object.keys(by).sort((a,b)=>by[b].length-by[a].length).slice(0,8);
+    if(!keys.length){ const by2={}; grades.filter(g=>g.semester===sm).forEach(g=>{ (by2[g.mapel]=by2[g.mapel]||[]).push(g.nilaiAkhir); }); keys=Object.keys(by2).slice(0,8); Object.assign(by,by2); }
+    academicData[sm.toLowerCase()]={labels:keys.map(un),values:keys.map(k=>Math.round(by[k].reduce((a,b)=>a+b,0)/by[k].length*10)/10)};
+  });
+  /* Kedisiplinan: pelanggaran siswa per tingkat */
+  const vio=arr('violationsData'), tk={Ringan:0,Sedang:0,Berat:0};
+  vio.forEach(v=>{ const k=tk[v.tingkat]!==undefined?v.tingkat:'Ringan'; tk[k]++; });
+  const colors={Ringan:'#2A9D8F',Sedang:'#C98A16',Berat:'#C0392B'};
+  disciplineData.length=0;
+  Object.keys(tk).forEach(k=>{ if(tk[k]) disciplineData.push({label:k,value:pct(tk[k],vio.length),count:tk[k],color:colors[k]}); });
+  dashboardStats._pelanggaran=vio.length;
+  /* Trend pelanggaran per bulan */
+  const ms=months(6); disciplineTrendData.labels=ms.map(m=>m.label); disciplineTrendData.values=ms.map(m=>vio.filter(v=>String(v.tanggal).startsWith(m.ym)).length);
+  /* Tahfidz: setoran (halaman) per bulan */
+  const tl=arr('tahfidzLogData'); tahfidzData.labels=ms.map(m=>m.label);
+  tahfidzData.values=ms.map(m=>Math.round(tl.filter(l=>l.jenis==='Setoran'&&String(l.tanggal).startsWith(m.ym)).reduce((a,l)=>a+num(l.halaman),0)*10)/10);
+  /* Jadwal / kegiatan hari ini */
+  scheduleData.length=0;
+  if(curRole==='Musyrif'){
+    const acts=arr('boardingActivitiesData'), ba=arr('boardingAttendanceData').filter(b=>b.tanggal===t);
+    acts.forEach(a=>{ const r=ba.filter(b=>String(b.kegiatanId)===String(a.id)); scheduleData.push({jam:'Asrama',keg:un(a.nama)+(r.length?' — '+r.filter(x=>x.status==='Hadir').length+'/'+r.length+' hadir':' — belum dicatat')}); });
+  }else{
+    const hari=HARI_ID[new Date().getDay()];
+    arr('schedulesData').filter(s=>s.hari===hari).slice().sort((a,b)=>String(a.jam).localeCompare(String(b.jam),undefined,{numeric:true}))
+      .forEach(s=>scheduleData.push({jam:un(s.jam||'-'),keg:un(s.mapel)+(s.classId!=null&&typeof akClassName==='function'?' — '+un(akClassName(s.classId)):'')}));
+  }
+  /* Pengumuman terbaru (yang sudah dipublikasikan) */
+  announcementData.length=0;
+  arr('announcementsData').filter(a=>a.status==='Dipublikasikan').slice().sort((a,b)=>String(b.publishDate).localeCompare(String(a.publishDate))).slice(0,6)
+    .forEach(a=>announcementData.push({icon:'📢',judul:a.title,tanggal:fmtTglID(a.publishDate),kategori:a.category,status:a.priority==='Mendesak'?'Segera':(a.priority==='Penting'?'Penting':'Umum')}));
+  /* Perlu tindak lanjut: hanya hal yang butuh aksi, dengan jumlah dan tautan ke menu */
+  attentionData.length=0;
+  const add=(menu,nama,ket,prio,n)=>{ if(n>0&&canSee(menu)) attentionData.push({nama,ket,prioritas:prio,waktu:'Buka →',target:menu}); };
+  const ym=t.slice(0,7);
+  add('ak-presensi','Siswa tidak hadir hari ini',attToday.filter(a=>a.status!=='Hadir').length+' siswa (izin/sakit/alpa)','warn',attToday.filter(a=>a.status!=='Hadir').length);
+  add('ks-izin','Perizinan siswa menunggu persetujuan',arr('permitsData').filter(p=>p.status==='Pending').length+' pengajuan','warn',arr('permitsData').filter(p=>p.status==='Pending').length);
+  const berat=vio.filter(v=>v.tingkat==='Berat'&&String(v.tanggal).startsWith(ym)).length;
+  add('ks-pelanggaran','Pelanggaran berat bulan ini',berat+' kasus','urgent',berat);
+  const open=arr('musyrifNotesData').filter(n=>n.status==='Open').length;
+  add('bd-catatan','Catatan musyrif belum selesai',open+' catatan','warn',open);
+  let late=0; try{ late=inv.filter(i=>{const s=invoiceComputed(i).status;return s==='Terlambat'||s==='Jatuh Tempo';}).length; }catch(e){}
+  add('kg-tagihan','Tagihan jatuh tempo / terlambat',late+' tagihan','urgent',late);
+  const dr=arr('damageReportsData').filter(d=>d.status==='Dilaporkan').length;
+  add('sp-kerusakan','Laporan kerusakan baru',dr+' laporan','urgent',dr);
+  const ln=arr('assetLoansData').filter(l=>l.status==='Menunggu').length;
+  add('sp-inventaris','Peminjaman aset menunggu',ln+' pengajuan','warn',ln);
+  const pr=arr('procurementRequestsData').filter(p=>['Pengajuan','Diverifikasi'].includes(p.status)).length;
+  add('sp-pengajuan','Pengajuan barang diproses',pr+' pengajuan','warn',pr);
+  const lv=arr('employeeLeavesData').filter(l=>l.status==='Menunggu').length;
+  add('pg-izin','Izin/cuti pegawai menunggu',lv+' pengajuan','warn',lv);
+  if(typeof acct!=='undefined'&&acct.pending>0&&typeof ptCanManage==='function'&&ptCanManage()) attentionData.push({nama:'Akun menunggu persetujuan',ket:acct.pending+' akun baru',prioritas:'urgent',waktu:'Buka →',target:'pt-user',tab:'persetujuan'});
+}
+
+/* ---------- kartu ringkasan per role ---------- */
+function card(ic,bg,fg,val,label,sub,go){
+  return `<div onclick="${go?`showView('${go}')`:''}" style="${go?'cursor:pointer':''}">${statCard5Html(ic,bg,fg,val,label,sub,'','up')}</div>`;
+}
+stat5GridHtml=function(){
+  compute(); const s=dashboardStats; let cards=[];
+  const siswa=card('👥','#E7F0F7','#1D6FA3',s.totalSiswa.value,'Total Siswa',s.totalSiswa.sub,canSee('ks-siswa')?'ks-siswa':'');
+  const hadir=card('✅','#E4F5EE','#1C7B5D',s.kehadiranHariIni.value,'Kehadiran Hari Ini',s.kehadiranHariIni.sub,canSee('ak-presensi')?'ak-presensi':'');
+  const nilai=card('📝','#FCF1DE','#A5730C',s.rataNilai.value,'Rata-rata Nilai',s.rataNilai.sub,canSee('ak-nilai')?'ak-nilai':'');
+  const asrama=card('🏠','#EDE7F7','#5B3FA5',s.santriAsrama.value,'Santri Asrama',s.santriAsrama.sub,canSee('bd-presensi')?'bd-presensi':'');
+  const tunggak=card('💰','#FBE7E5','#C0392B',kgRupiah(s.tunggakan.value),'Tunggakan Keuangan',s.tunggakan.sub,'kg-tagihan');
+  if(curRole==='Kepala Sekolah'||curRole==='Super Admin') cards=[siswa,hadir,nilai,asrama,tunggak];
+  else if(curRole==='Guru'||curRole==='Wali Kelas') cards=[siswa,hadir,nilai];
+  else if(curRole==='Musyrif'){
+    const ba=arr('boardingAttendanceData').filter(b=>b.tanggal===todayIso());
+    const tl=arr('tahfidzLogData').filter(l=>l.tanggal===todayIso()&&l.jenis==='Setoran').length;
+    cards=[asrama,
+      card('🕌','#E4F5EE','#1C7B5D',ba.length?pct(ba.filter(b=>b.status==='Hadir').length,ba.length)+'%':'-','Hadir Kegiatan Asrama',ba.length?ba.length+' catatan hari ini':'Belum dicatat hari ini','bd-presensi'),
+      card('📖','#FCF1DE','#A5730C',tl,'Setoran Tahfidz Hari Ini','Jumlah setoran tercatat','bd-tahfidz'),
+      card('🗒','#E7F0F7','#1D6FA3',arr('musyrifNotesData').filter(n=>n.status==='Open').length,'Catatan Belum Selesai','Catatan musyrif status Open','bd-catatan')];
+  }else if(curRole==='Sarpras'){
+    const as=arr('assetsData');
+    cards=[card('📦','#E7F0F7','#1D6FA3',as.length,'Total Aset','Terdata di inventaris','sp-inventaris'),
+      card('🔧','#FBE7E5','#C0392B',as.filter(a=>/Rusak|Perbaikan|Hilang/.test(a.kondisi||'')).length,'Aset Bermasalah','Rusak / diperbaiki / hilang','sp-inventaris'),
+      card('⚠️','#FCF1DE','#A5730C',arr('damageReportsData').filter(d=>d.status==='Dilaporkan').length,'Laporan Kerusakan Baru','Belum diverifikasi','sp-kerusakan'),
+      card('🤝','#EDE7F7','#5B3FA5',arr('assetLoansData').filter(l=>l.status==='Dipinjam').length,'Sedang Dipinjam','Aset yang belum kembali','sp-inventaris'),
+      card('🛒','#E4F5EE','#1C7B5D',arr('procurementRequestsData').filter(p=>['Pengajuan','Diverifikasi'].includes(p.status)).length,'Pengajuan Barang','Sedang diproses','sp-pengajuan')];
+  }else return '';   /* Bendahara: ringkasan keuangan sudah ada di panelKeuanganStatsHtml */
+  return `<div class="stat5-grid" style="grid-template-columns:repeat(auto-fit,minmax(190px,1fr))">${cards.join('')}</div>`;
+};
+
+/* ---------- panel: judul & keterangan jelas, ada keterangan bila data kosong ---------- */
+panelKehadiranHtml=function(){
+  const ok=attendanceData.values.some(v=>v!=null);
+  return `<div class="panel"><div class="panel-head"><h2>Kehadiran Siswa</h2></div><p class="desc">Persentase siswa hadir per hari (Presensi KBM), 7 hari terakhir</p>${ok?'<div class="chart-wrap"><canvas id="chartKehadiran"></canvas></div>':emptyBox('Belum ada data presensi dalam 7 hari terakhir.<br>Isi di menu Presensi KBM.')}</div>`;
+};
+panelNilaiHtml=function(){
+  const sm=((typeof akDefaultPeriod==='function'?akDefaultPeriod().sem:'Ganjil')||'Ganjil').toLowerCase();
+  const d=academicData[sm]; const ok=d&&d.values.length;
+  return `<div class="panel"><div class="panel-head"><h2>Nilai Akademik</h2><select class="mini-select" id="selSemester" onchange="onSemesterChange()"><option value="ganjil" ${sm==='ganjil'?'selected':''}>Semester Ganjil</option><option value="genap" ${sm==='genap'?'selected':''}>Semester Genap</option></select></div><p class="desc">Rata-rata nilai akhir per mata pelajaran (menu Nilai)</p>${ok?'<div class="chart-wrap"><canvas id="chartNilai"></canvas></div>':emptyBox('Belum ada nilai pada semester ini.<br>Isi di menu Nilai.')}</div>`;
+};
+onSemesterChange=function(){
+  const sel=document.getElementById('selSemester'); if(!sel) return; const d=academicData[sel.value];
+  const w=document.getElementById('chartNilai'); const panel=sel.closest('.panel');
+  if(!d||!d.values.length){ if(dashCharts.chartNilai){dashCharts.chartNilai.destroy();delete dashCharts.chartNilai} if(w){w.parentElement.outerHTML=emptyBox('Belum ada nilai pada semester ini.')} return; }
+  if(!w){ panel.querySelector('.desc').insertAdjacentHTML('afterend','<div class="chart-wrap"><canvas id="chartNilai"></canvas></div>'); panel.lastElementChild&&panel.querySelectorAll('div[style*="padding:26px"]').forEach(e=>e.remove()); buildBarChart('chartNilai',d.labels,d.values,'#2A9D8F','Nilai',''); return; }
+  if(dashCharts.chartNilai){ dashCharts.chartNilai.data.labels=d.labels; dashCharts.chartNilai.data.datasets[0].data=d.values; dashCharts.chartNilai.update(); }
+};
+panelKedisiplinanHtml=function(){
+  const total=disciplineData.reduce((a,d)=>a+d.count,0);
+  if(!total) return `<div class="panel"><h2>Kedisiplinan Siswa</h2><p class="desc">Pelanggaran siswa menurut tingkat (menu Pelanggaran)</p>${emptyBox('Belum ada pelanggaran tercatat. 👍')}</div>`;
+  return `<div class="panel"><h2>Kedisiplinan Siswa</h2><p class="desc">Pelanggaran siswa menurut tingkat (menu Pelanggaran)</p><div class="donut-wrap chart-wrap sm"><canvas id="chartKedisiplinan"></canvas><div class="donut-center"><b>${total}</b><span>Pelanggaran</span></div></div><div class="donut-legend">${disciplineData.map(d=>`<span><i style="background:${d.color}"></i>${d.label}: ${d.count}</span>`).join('')}</div></div>`;
+};
+panelTahfidzHtml=function(){
+  const ok=tahfidzData.values.some(v=>v>0);
+  return `<div class="panel"><h2>Setoran Tahfidz</h2><p class="desc">Total halaman setoran per bulan (menu Tahfidz), 6 bulan terakhir</p>${ok?'<div class="chart-wrap"><canvas id="chartTahfidz"></canvas></div>':emptyBox('Belum ada setoran tahfidz tercatat.')}</div>`;
+};
+panelTrendDisiplinHtml=function(){
+  const ok=disciplineTrendData.values.some(v=>v>0);
+  return `<div class="panel"><h2>Trend Pelanggaran</h2><p class="desc">Jumlah pelanggaran siswa per bulan, 6 bulan terakhir</p>${ok?'<div class="chart-wrap"><canvas id="chartTrendDisiplin"></canvas></div>':emptyBox('Belum ada pelanggaran tercatat.')}</div>`;
+};
+panelKegiatanHtml=function(){
+  const asr=curRole==='Musyrif';
+  return `<div class="panel"><h2>${asr?'Kegiatan Asrama':'Jadwal Pelajaran Hari Ini'}</h2><p class="desc">${fmtTanggalHariIni()}</p>${scheduleData.length?`<div class="timeline">${timelineHtml()}</div>`:emptyBox(asr?'Belum ada kegiatan asrama terdaftar.':'Tidak ada jadwal pelajaran hari ini.')}</div>`;
+};
+attentionListHtml=function(limit){
+  return attentionData.slice(0,limit||attentionData.length).map(a=>`<div class="att-item" style="cursor:pointer" onclick="${a.tab?`acct.nextTab='${a.tab}';`:''}showView('${a.target}')"><span class="att-dot ${a.prioritas}"></span><div class="att-body"><div class="att-nama">${a.nama}</div><div class="att-ket">${a.ket}</div></div><span class="att-time">${a.waktu}</span></div>`).join('');
+};
+panelPerhatianHtml=function(limit){
+  limit=limit||6;
+  return `<div class="panel"><h2>⚠ Perlu Tindak Lanjut</h2><p class="desc">Hal yang menunggu keputusan atau penanganan Anda</p><div id="attWrap">${attentionData.length?attentionListHtml(limit):emptyBox('Semua aman. Tidak ada yang perlu ditindaklanjuti. ✅')}</div></div>`;
+};
+panelPengumumanHtml=function(limit){
+  return `<div class="panel"><h2>Pengumuman Terbaru</h2><div id="annWrap">${announcementData.length?announcementListHtml(limit):emptyBox('Belum ada pengumuman yang dipublikasikan.')}</div></div>`;
+};
+const _roleHtml=roleDashboardPanelsHtml;
+roleDashboardPanelsHtml=function(role){
+  if(role==='Sarpras') return `<div class="row2">${panelPerhatianHtml(6)}${panelCepatHtml(['sp-inventaris','sp-kerusakan','sp-perbaikan','sp-pengajuan'])}</div>${panelPengumumanHtml(4)}`;
+  return _roleHtml(role);
+};
+
+/* ---------- Orang Tua / Siswa: data anak sendiri (dibatasi database) ---------- */
+personalDashboardHtml=function(role){
+  compute(); const kids=arr('studentsData').slice(0,5), t=todayIso();
+  const sem=(typeof akDefaultPeriod==='function')?akDefaultPeriod():{};
+  const blocks=kids.map(s=>{
+    const id=String(s.id);
+    const att=arr('attendanceRecordsData').filter(a=>String(a.studentId)===id);
+    const hadir=att.length?pct(att.filter(a=>a.status==='Hadir').length,att.length)+'%':'-';
+    const gr=arr('gradesData').filter(g=>String(g.studentId)===id&&g.nilaiAkhir!=null);
+    const avg=gr.length?(Math.round(gr.reduce((a,g)=>a+g.nilaiAkhir,0)/gr.length*10)/10):'-';
+    const vio=arr('violationsData').filter(v=>String(v.studentId)===id);
+    const disc=vio.length?vio.length+' pelanggaran ('+vio.reduce((a,v)=>a+num(v.poin),0)+' poin)':'Baik';
+    let tf='-'; if(s.boarding){ const tg=arr('tahfidzTargetsData').find(x=>String(x.studentId)===id); const setor=arr('tahfidzLogData').filter(l=>String(l.studentId)===id&&l.jenis==='Setoran').reduce((a,l)=>a+num(l.halaman),0);
+      const juz=Math.round(((tg?tg.awal:0)+setor/20)*10)/10; tf=(tg||setor)?juz+(tg&&tg.target?' / '+tg.target+' Juz':' Juz'):'-'; }
+    const invs=arr('invoicesData').filter(i=>String(i.studentId)===id); let tagihan='-';
+    if(invs.length){ try{ const sisa=invs.reduce((a,i)=>a+invoiceComputed(i).sisa,0); tagihan=sisa>0?'Belum lunas ('+kgRupiah(sisa)+')':'Lunas'; }catch(e){} }
+    return `<div class="panel"><h2>${role==='Orang Tua'?'Data Anak — ':'Data Saya — '}${s.nama}</h2><p class="desc">${s.kelas}</p>
+    <div class="pstat-grid">
+      <div class="pstat"><div class="p-ic">✅</div><div class="p-val">${hadir}</div><div class="p-label">Kehadiran</div></div>
+      <div class="pstat"><div class="p-ic">📝</div><div class="p-val">${avg}</div><div class="p-label">Rata-rata Nilai</div></div>
+      <div class="pstat"><div class="p-ic">📏</div><div class="p-val">${disc}</div><div class="p-label">Kedisiplinan</div></div>
+      <div class="pstat"><div class="p-ic">📖</div><div class="p-val">${tf}</div><div class="p-label">Tahfidz</div></div>
+      <div class="pstat"><div class="p-ic">💳</div><div class="p-val">${tagihan}</div><div class="p-label">Status Tagihan</div></div>
+    </div></div>`; });
+  const classIds=new Set(kids.map(k=>String(k.classId)));
+  scheduleData.length=0;
+  arr('schedulesData').filter(x=>x.hari===HARI_ID[new Date().getDay()]&&classIds.has(String(x.classId))).slice().sort((a,b)=>String(a.jam).localeCompare(String(b.jam),undefined,{numeric:true}))
+    .forEach(x=>scheduleData.push({jam:un(x.jam||'-'),keg:un(x.mapel)}));
+  const mine=announcementData.slice();
+  return `${welcomeCardHtml()}
+  ${blocks.length?blocks.join(''):`<div class="panel"><h2>${role==='Orang Tua'?'Data Anak':'Data Saya'}</h2>${emptyBox('Data siswa belum tertaut dengan akun ini.<br>Hubungi admin sekolah.')}</div>`}
+  <div class="row2">
+    <div class="panel"><h2>Jadwal Hari Ini</h2>${scheduleData.length?`<div class="timeline">${timelineHtml()}</div>`:emptyBox('Tidak ada jadwal pelajaran hari ini.')}</div>
+    <div class="panel"><h2>Pengumuman Terbaru</h2>${mine.length?announcementListHtml(4):emptyBox('Belum ada pengumuman.')}</div>
+  </div>`;
+};
+
+/* ---------- grafik ---------- */
+initDashboardCharts=function(){
+  destroyDashCharts();
+  if(isParent()) return;
+  if(document.getElementById('chartKehadiran')) buildLineChart('chartKehadiran',attendanceData.labels,attendanceData.values,'#1D6FA3','Kehadiran','%');
+  if(document.getElementById('chartNilai')){ const sel=document.getElementById('selSemester'); const d=academicData[sel?sel.value:'ganjil']||academicData.ganjil; buildBarChart('chartNilai',d.labels,d.values,'#2A9D8F','Nilai',''); }
+  if(document.getElementById('chartKedisiplinan')) buildDonutChart('chartKedisiplinan',disciplineData);
+  if(document.getElementById('chartTahfidz')) buildBarChart('chartTahfidz',tahfidzData.labels,tahfidzData.values,'#C9A227','Setoran',' hlm');
+  if(document.getElementById('chartTrendDisiplin')) buildBarChart('chartTrendDisiplin',disciplineTrendData.labels,disciplineTrendData.values,'#1D6FA3','Pelanggaran','');
+  if(document.getElementById('chartKeuangan')){
+    const pemasukan=kgComputeMonthlyPemasukan(6), tunggakan=kgComputeMonthlyTunggakan(6);
+    buildGroupedBarChart('chartKeuangan',pemasukan.labels,[
+      {label:'Pemasukan (jt)',data:pemasukan.values,backgroundColor:'#2A9D8F',borderRadius:6,maxBarThickness:26},
+      {label:'Tunggakan (jt)',data:tunggakan.values,backgroundColor:'#C0392B',borderRadius:6,maxBarThickness:26}]);
+  }
+};
+/* donut: tooltip menampilkan jumlah, bukan % */
+buildDonutChart=function(canvasId,items){
+  const ctx=document.getElementById(canvasId); if(!ctx||typeof Chart==='undefined') return;
+  dashCharts[canvasId]=new Chart(ctx,{type:'doughnut',data:{labels:items.map(i=>i.label),datasets:[{data:items.map(i=>i.count!=null?i.count:i.value),backgroundColor:items.map(i=>i.color),borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'72%',plugins:{legend:{display:false}}}});
+};
+
+/* ---------- dipanggil auto-refresh: muat ulang data dasar dashboard & beri tahu bila angkanya berubah ---------- */
+const DASH_KEYS=['pk','nl','pl','pz','jd','bt','btg','bc','ba','bn','ki','kp','el'];
+let lastLoad=0;
+window.dashSignature=function(){ try{ compute(); return JSON.stringify([dashboardStats,attendanceData,academicData,disciplineData,disciplineTrendData,tahfidzData,scheduleData,announcementData,attentionData]); }catch(e){ return ''; } };
+window.dashReloadData=async function(force){
+  if(!force&&Date.now()-lastLoad<20000) return false; lastLoad=Date.now();
+  const jobs=[];
+  if(typeof stReload==='function') jobs.push(stReload({silent:true}).catch(()=>{}));
+  if(typeof KSC!=='undefined') DASH_KEYS.filter(k=>KSC[k]).forEach(k=>jobs.push(kscLoad(k,{silent:true}).catch(()=>{})));
+  if(typeof aisPullMine==='function') jobs.push(aisPullMine().catch(()=>{}));
+  await Promise.all(jobs); return true;
+};
 })();
 </script>
 <script id="students-crud">
