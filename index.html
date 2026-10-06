@@ -813,7 +813,7 @@ function siswaHTML(){
 
 const ROLE_ACCESS={
 'Super Admin':'all','Kepala Sekolah':'all',
-'Guru':['UTAMA','AKADEMIK','KESISWAAN','BOARDING / ASRAMA'],
+'Guru':['UTAMA','AKADEMIK'],
 'Wali Kelas':['UTAMA','AKADEMIK','KESISWAAN'],
 'Bendahara':['UTAMA','KEUANGAN'],
 'Musyrif':['UTAMA','BOARDING / ASRAMA','KESISWAAN'],
@@ -6943,6 +6943,8 @@ function computeNotifications(){
   if(typeof acct!=='undefined'&&acct.pending>0&&typeof ptCanManage==='function'&&ptCanManage()) items.unshift({label:acct.pending+' akun menunggu persetujuan',target:'pt-user',tab:'persetujuan'});
   puCheckScheduled();
   announcementsData.filter(a=>a.status==='Dipublikasikan'&&(a.priority==='Penting'||a.priority==='Mendesak')).slice(0,3).forEach(a=>items.push({label:'Pengumuman: '+a.title,target:'ko-pengumuman'}));
+  const acc=ROLE_ACCESS[curRole]||'all';
+  if(acc!=='all'){ const okIds=new Set(); MENU.forEach(g=>{ if(acc.includes(g.g)) g.items.forEach(it=>okIds.add(it[0])); }); return items.filter(it=>okIds.has(it.target)); }
   return items;
 }
 function toggleNotifDropdown(){
@@ -7336,6 +7338,13 @@ function resyncCounters(){
   __puAnnCounter=Math.max(__puAnnCounter,mx(announcementsData,'ANN'));
   __puLogCounter=Math.max(__puLogCounter,mx(auditLogData,'LOG'));
 }
+function orderedList(c,rows){
+  rows.sort((a,b)=>(a.created_at===b.created_at?byNum(a.id,b.id):(a.created_at<b.created_at?-1:1)));
+  const list=rows.map(r=>r.data);
+  if(c.t==='ais_audit_log') list.sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp)));
+  else if(c.order==='desc') list.sort((a,b)=>byNum(b.id,a.id));
+  return list; }
+const sameMap=(a,b)=>{ if(a.size!==b.size) return false; for(const [k,v] of a){ if(b.get(k)!==v) return false } return true };
 function snapshotOf(c){const m=new Map();c.arr().forEach(r=>{const k=keyOf(r);if(k!=null)m.set(k,JSON.stringify(r))});return m}
 
 let loading=false;
@@ -7347,10 +7356,7 @@ async function loadAll0(){
     try{
       const rows=await dbFetchAll(c.t,'id,data,created_at','created_at');
       if(rows.length){
-        rows.sort((a,b)=>(a.created_at===b.created_at?byNum(a.id,b.id):(a.created_at<b.created_at?-1:1)));
-        let list=rows.map(r=>r.data);
-        if(c.t==='ais_audit_log') list.sort((a,b)=>String(b.timestamp).localeCompare(String(a.timestamp)));
-        else if(c.order==='desc') list.sort((a,b)=>byNum(b.id,a.id));
+        const list=orderedList(c,rows);
         c.arr().splice(0,c.arr().length,...list);
         snap[c.t]=snapshotOf(c);
       }else snap[c.t]=new Map();   // kosong: data bawaan lokal akan di-upload pada flush pertama
@@ -7403,6 +7409,32 @@ function schedule(ms){clearTimeout(timer);timer=setTimeout(flush,ms||800)}
 ['click','change','submit','keyup'].forEach(ev=>document.addEventListener(ev,()=>{if(ready){userTouched=true;schedule(900)}},true));
 setInterval(()=>{if(ready)flush()},5000);
 window.addEventListener('beforeunload',()=>{if(ready)flush()});
+/* Ambil perubahan dari pengguna/role lain (tanpa menimpa perubahan lokal yang belum tersimpan). Return true bila ada yang berubah. */
+async function pullMine(){
+  if(!ready||flushing||loading) return false;
+  await flush();
+  let changed=false;
+  for(const c of COLS){
+    try{
+      const rows=await dbFetchAll(c.t,'id,data,created_at','created_at');
+      const prev=snap[c.t]||new Map();
+      const list=rows.length?orderedList(c,rows):[];
+      const remote=new Map(); list.forEach(r=>{const k=keyOf(r);if(k!=null)remote.set(k,JSON.stringify(r))});
+      if(!sameMap(snapshotOf(c),prev)) continue;   // ada perubahan lokal yang belum terkirim
+      if(sameMap(remote,prev)) continue;           // tidak ada yang baru
+      if(!rows.length) continue;                    // tabel kosong: jangan kosongkan data lokal
+      c.arr().splice(0,c.arr().length,...list); snap[c.t]=remote; changed=true;
+    }catch(e){console.warn('[sync] pull',c.t,e)}
+  }
+  try{
+    const rows=await dbFetchAll('ais_app_settings','id,data'); const prev=snap.ais_app_settings||new Map();
+    const cur=new Map(Object.keys(OBJS).map(k=>[k,JSON.stringify(OBJS[k]())]));
+    if(sameMap(cur,prev)){ rows.forEach(r=>{const o=OBJS[r.id]&&OBJS[r.id]();if(!o)return;const j=JSON.stringify(r.data);if(prev.get(r.id)!==j){Object.keys(o).forEach(k=>delete o[k]);Object.assign(o,r.data);prev.set(r.id,JSON.stringify(o));changed=true}}) }
+  }catch(e){}
+  if(changed) resyncCounters();
+  return changed;
+}
+window.aisPullMine=pullMine;
 window.aisSyncNow=()=>{userTouched=true;return flush()};
 window.aisSyncReload=()=>loadAll();
 
@@ -7416,6 +7448,51 @@ sb.auth.getSession().then(({data})=>{if(data&&data.session)setTimeout(async()=>{
 const _out=doLogout;
 doLogout=async function(){try{if(ready)await flush()}catch(e){} ready=false; return _out.apply(this,arguments)};
 
+})();
+</script>
+<script id="auto-refresh">
+/* ========================================================================
+   PENYEGARAN OTOMATIS
+   Penyebab "harus restart dulu baru data baru muncul": data diambil dari Supabase
+   hanya SEKALI saat login. Sekarang halaman yang sedang dibuka diambil ulang:
+   - saat pindah menu, saat tab kembali aktif, dan tiap 15 detik;
+   - ditunda bila drawer/dialog terbuka atau pengguna sedang mengetik.
+   ======================================================================== */
+(function(){
+if(typeof SB_ON==='undefined'||!SB_ON) return;
+let busy=false,last=0;
+const activeId=()=>{const a=document.querySelector('#navList .item.active');return a?a.dataset.id:null};
+const loggedIn=()=>{const m=document.getElementById('main');return m&&m.style.display!=='none'};
+const drawerOpen=()=>!!document.querySelector('#acadDrawer.show,#acadConfirmOverlay.show');
+const typing=()=>{const e=document.activeElement;return !!(e&&/^(INPUT|TEXTAREA|SELECT)$/.test(e.tagName)&&e.closest('#content'))};
+async function run(force){
+  if(busy||!loggedIn()||document.hidden) return;
+  if(!force&&Date.now()-last<4000) return;
+  busy=true; last=Date.now();
+  try{
+    const id=activeId(); if(!id){return}
+    if(drawerOpen()) return;
+    /* 1) Modul lama (tabel Supabase milik modul masing-masing) */
+    if(typeof KSC!=='undefined') await Promise.all(Object.keys(KSC).filter(k=>{const c=KSC[k].cfg;return document.getElementById(c.bodyId||(c.prefix+'Body'))}).map(k=>kscLoad(k,{silent:true}).catch(()=>{})));
+    if(id==='ak-kelas'&&typeof dkReload==='function') await dkReload({silent:true});
+    else if(id.startsWith('ks-')&&typeof stReload==='function') await stReload({silent:true});
+    /* 2) Sarpras, Pengumuman, Pengaturan */
+    if(typeof aisPullMine==='function'&&/^(sp-|ko-|pt-)/.test(id)){
+      const changed=await aisPullMine();
+      if(changed&&!drawerOpen()&&!typing()&&!document.getElementById('ptUserBody')) showView(id);
+    }
+    /* 3) Daftar akun */
+    if(document.getElementById('ptUserBody')&&typeof acctLoad==='function'&&!typing()) await acctLoad();
+    else if(typeof acctRefreshPending==='function') acctRefreshPending();
+  }catch(e){console.warn('[auto-refresh]',e)}
+  finally{busy=false}
+}
+setInterval(()=>run(false),15000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)run(true)});
+window.addEventListener('focus',()=>run(true));
+const _sv=showView;
+showView=function(id){const r=_sv.apply(this,arguments); setTimeout(()=>run(true),400); return r};
+window.aisRefreshNow=()=>run(true);
 })();
 </script>
 <script id="students-crud">
