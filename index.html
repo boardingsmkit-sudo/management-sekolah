@@ -2281,7 +2281,7 @@ async function kscLoad(key,opts){
     if(c.sortFn) mapped.sort(c.sortFn); else mapped.sort((x,y)=>String(y[c.sortKey]||'').localeCompare(String(x[c.sortKey]||'')));
     c.arr.length=0; mapped.forEach(m=>c.arr.push(m));
     if(document.getElementById(bodyId)){
-      if(!silent) kscShowMsg(key, rows.length?'':'Tabel '+c.table+' terhubung, tetapi belum ada data. Klik tombol tambah untuk mulai mencatat.', rows.length?'ok':'info');
+      if(!silent) kscShowMsg(key, rows.length?'':(key==='rp'?'Belum ada status rapor yang disimpan. Semua siswa tampil "Belum Lengkap" sampai statusnya diubah lewat ikon pensil di baris siswa.':'Tabel '+c.table+' terhubung, tetapi belum ada data. Klik tombol tambah untuk mulai mencatat.'), rows.length?'ok':'info');
       c.refresh();
     }
     return true;
