@@ -924,7 +924,8 @@ function acadScopeNoticeHtml(){
     const how=curRole==='Guru'
       ? 'Kelas baru muncul setelah Super Admin menambahkan <b>Jadwal</b> mengajar dengan kolom Guru Pengampu berisi nama akun Anda ("'+nm+'").'
       : 'Kelas baru muncul setelah kolom Wali Kelas pada Data Kelas berisi nama akun Anda ("'+nm+'").';
-    return `<p class="desc" style="color:var(--danger);">Belum ada kelas yang ditugaskan kepada akun ini. ${how}</p>`;
+    setTimeout(acadSyncNotices,0);
+    return `<p class="desc acad-noclass" style="color:var(--danger);display:none">Belum ada kelas yang ditugaskan kepada akun ini. ${how}</p>`;
   }
   return `<p class="desc" style="color:var(--acc-blue);">Menampilkan data sesuai akses Anda: ${scope.join(', ')}.</p>`;
 }
@@ -2290,6 +2291,15 @@ async function kscLoad(key,opts){
     return false;
   }finally{ M.loading=false; }
 }
+/* Pesan "belum ada kelas ditugaskan" hanya boleh tampil SETELAH jadwal/kelas selesai dimuat dari server, dan harus ikut diperbarui. */
+function acadSyncNotices(){
+  const ready=(curRole==='Guru'?window.__jdLoaded:true)&&window.__dkLoaded;
+  document.querySelectorAll('.acad-noclass').forEach(el=>{ const sc=acadScopeKelasList(); el.style.display=(ready&&sc&&!sc.length)?'':'none'; });
+}
+(function(){
+  const _k=kscLoad; kscLoad=async function(key){ const r=await _k.apply(this,arguments); if(key==='jd'&&r) window.__jdLoaded=true; try{acadSyncNotices();}catch(e){} return r; };
+  const _d=dkReload; dkReload=async function(){ const r=await _d.apply(this,arguments); if(r) window.__dkLoaded=true; try{acadSyncNotices();}catch(e){} return r; };
+})();
 function kscLoadAll(opts){ Object.values(KSC).forEach(M=>M.cfg.arr.length=0); return Promise.all(Object.keys(KSC).map(k=>kscLoad(k,opts))); }
 
 /* ---- Form generik (Drawer) ---- */
