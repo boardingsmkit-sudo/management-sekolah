@@ -891,11 +891,22 @@ const reportCardsData=[];
 /* ---- Scope akses per role (permission bukan cuma di menu, tapi di data) ---- */
 const CURRENT_GURU_NAME='Ahmad Fauzi';
 const CURRENT_WALI_KELAS='X TKJ 1';
+/* Kunci nama untuk mencocokkan nama akun dengan nama yang diketik Admin di Jadwal / Data Kelas:
+   abaikan huruf besar-kecil, spasi ganda/ujung, tanda baca, dan aksen. (Sebelumnya perbandingan persis -> kelas "hilang" bagi guru
+   bila Admin mengetik nama sedikit berbeda.) Gelar/sebutan (Ust., Bpk., S.Pd) TIDAK dibuang agar tidak salah cocok antar orang. */
+function acadNameKey(s){
+  let t=String(s==null?'':s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+  try{ t=t.normalize('NFKD').replace(/[\u0300-\u036f]/g,''); }catch(e){}
+  return t.toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+}
 function acadScopeKelasList(){
   const db=(typeof dkState!=='undefined'&&dkState.fromDb);   /* mode Supabase: pakai nama akun yang login (profiles.nama) */
-  const me=db?String(ROLE_NAME[curRole]||'').trim().toLowerCase():'';
-  if(curRole==='Wali Kelas') return db? classesData.filter(c=>dkState.raw[c.id]&&String(dkState.raw[c.id].wali_kelas||'').trim().toLowerCase()===me).map(c=>c.nama) : [CURRENT_WALI_KELAS];
-  if(curRole==='Guru'){ const nm=db?dkEsc(ROLE_NAME[curRole]||''):CURRENT_GURU_NAME; return [...new Set(schedulesData.filter(s=>s.guru===nm).map(s=>s.kelas))]; }
+  const me=db?acadNameKey(ROLE_NAME[curRole]):'';
+  if(curRole==='Wali Kelas') return db? classesData.filter(c=>dkState.raw[c.id]&&me&&acadNameKey(dkState.raw[c.id].wali_kelas)===me).map(c=>c.nama) : [CURRENT_WALI_KELAS];
+  if(curRole==='Guru'){
+    if(!db) return [...new Set(schedulesData.filter(s=>s.guru===CURRENT_GURU_NAME).map(s=>s.kelas))];
+    return [...new Set(schedulesData.filter(s=>me&&acadNameKey(s.guru)===me).map(s=>s.kelas))];
+  }
   if(curRole==='Orang Tua'||curRole==='Siswa') return db? [...new Set(studentsData.map(s=>s.kelas))].filter(k=>k&&k!=='-') : [(personalData[curRole]||personalData['Siswa']).kelas];
   return null; // null = akses semua kelas (Kepsek/Super Admin)
 }
@@ -907,6 +918,14 @@ function acadFilterByScope(rows,kelasField){
 function acadScopeNoticeHtml(){
   const scope=acadScopeKelasList();
   if(!scope) return '';
+  const db=(typeof dkState!=='undefined'&&dkState.fromDb);
+  if(db&&!scope.length&&(curRole==='Guru'||curRole==='Wali Kelas')){
+    const nm=dkEsc(ROLE_NAME[curRole]||'');
+    const how=curRole==='Guru'
+      ? 'Kelas baru muncul setelah Super Admin menambahkan <b>Jadwal</b> mengajar dengan kolom Guru Pengampu berisi nama akun Anda ("'+nm+'").'
+      : 'Kelas baru muncul setelah kolom Wali Kelas pada Data Kelas berisi nama akun Anda ("'+nm+'").';
+    return `<p class="desc" style="color:var(--danger);">Belum ada kelas yang ditugaskan kepada akun ini. ${how}</p>`;
+  }
   return `<p class="desc" style="color:var(--acc-blue);">Menampilkan data sesuai akses Anda: ${scope.join(', ')}.</p>`;
 }
 
@@ -1180,7 +1199,7 @@ async function dkSubmit(id){
   const dup=Object.values(dkState.raw).some(x=>String(x.id)!==String(id||'')&&String(x.nama||'').trim().toLowerCase()===nama.toLowerCase());
   if(dup){ dkFormError('Nama kelas "'+nama+'" sudah ada. Gunakan nama lain.'); return; }
   const payload={nama, tingkat:orNull(val('dkfTingkat')||dkTingkatFromNama(nama)), jurusan:orNull(val('dkfJurusan')), wali_kelas:orNull(val('dkfWali')), tahun_ajaran:orNull(val('dkfTahun'))};
-  dkState.missing.forEach(c=>{ delete payload[c]; });
+  dkState.missing.forEach(c=>{ if(c!=='jurusan') delete payload[c]; });   /* jurusan tidak boleh dibuang diam-diam */
   dkFormError('');
   __dkSubmitting=true; const btn=document.getElementById('dkfSubmit'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
@@ -1192,6 +1211,7 @@ async function dkSubmit(id){
       if(dkIsMissingColErr(e)){
         const m=/'([^']+)' column/i.exec(e.message||'')||/column "?(?:classes\.)?([A-Za-z0-9_]+)"? /i.exec(e.message||'');
         const col=m&&m[1];
+        if(col==='jurusan'&&payload.jurusan!=null){ throw {code:'42703',message:'Kolom "jurusan" belum ada di tabel classes, jadi jurusan tidak bisa disimpan. Jalankan di Supabase SQL Editor: alter table public.classes add column if not exists jurusan text;'}; }
         if(col&&DK_OPTIONAL_COLS.includes(col)&&(col in payload)){ delete payload[col]; skipped.push(col); dkState.missing.add(col); continue; }
       }
       break;
@@ -1200,7 +1220,9 @@ async function dkSubmit(id){
     if(!res.data||!res.data.length){
       throw {code:'42501',message:id?'Tidak ada baris yang berubah: data tidak ditemukan atau update diblokir RLS.':'Insert tidak mengembalikan data: kebijakan RLS (INSERT/SELECT) kemungkinan memblokir.'};
     }
+    const savedRow=res.data[0]; const jurLost=payload.jurusan!=null&&String(savedRow.jurusan==null?'':savedRow.jurusan).trim()!==String(payload.jurusan).trim();
     closeAcadDrawer();
+    if(jurLost) dkShowMsg('Peringatan: kelas tersimpan tetapi jurusan yang dikembalikan database ('+(savedRow.jurusan||'kosong')+') berbeda dari input ('+payload.jurusan+'). Periksa trigger/kebijakan kolom jurusan.','warn');
     showAcadToast((id?'Data kelas berhasil diperbarui.':'Kelas baru berhasil disimpan.')+(skipped.length?' Kolom tidak ada di database dan dilewati: '+skipped.join(', ')+'. Jalankan supabase-classes-setup.sql.':''));
     await dkReload({silent:true});
     dkAfterChange();
@@ -2932,6 +2954,7 @@ async function bdLoadSettings(){
     rows.forEach(r=>{ const v=r.value; if(!v||typeof v!=='object') return;
       if(r.key==='bpWeights') bdMergeNum(bpWeights,v);
       else if(r.key==='biWeights') bdMergeNum(biWeights,v);
+      else if(r.key==='rawatibConfig'){ const m=Number(v.max); biRawatibMax=(v.max!=null&&Number.isInteger(m)&&m>=0)?m:null; }
       else if(r.key==='bkDailyWeights') Object.keys(bkDailyWeights).forEach(k=>{ if(v[k]&&typeof v[k]==='object') bdMergeNum(bkDailyWeights[k],v[k]); });
     });
     return true;
@@ -3143,14 +3166,25 @@ async function initBoardingPresensiPage(){ bpRefresh(); await Promise.all([kscLo
    ======================================================================== */
 const BI_SHALAT=[['subuh','Subuh'],['dzuhur','Dzuhur'],['ashar','Ashar'],['maghrib','Maghrib'],['isya','Isya']];
 const BI_SHALAT_STATUS=['Tepat Waktu','Masbuk','Terlambat','Izin','Sakit','Alpa'];
-const BI_LAIN=[['tahajud','Tahajud','Hadir/Tidak Hadir/Izin/Sakit'],['witir','Witir','Hadir/Tidak Hadir/Izin/Sakit'],['dhuha','Dhuha','Hadir/Tidak Hadir/Izin/Sakit'],['rawatib','Rawatib','Hadir/Tidak Hadir'],['tilawah','Tilawah','Setor/Tidak Setor'],['dzikir','Dzikir','Hadir/Tidak Hadir'],['puasaSenKam','Puasa Senin/Kamis','Puasa/Tidak Puasa/Uzur']];
+const BI_LAIN=[['tahajud','Tahajud','Hadir/Tidak Hadir/Izin/Sakit'],['witir','Witir','Hadir/Tidak Hadir/Izin/Sakit'],['dhuha','Dhuha','Hadir/Tidak Hadir/Izin/Sakit'],['rawatib','Rawatib','Jumlah (angka)'],['tilawah','Tilawah','Setor/Tidak Setor'],['dzikir','Dzikir','Hadir/Tidak Hadir'],['puasaSenKam','Puasa Senin/Kamis','Puasa/Tidak Puasa/Uzur']];
 const BI_COLS=BI_SHALAT.concat(BI_LAIN);
-const biDb=k=>k==='puasaSenKam'?'puasa_sen_kam':k;
-function biOptsFor(k){ if(BI_SHALAT.some(c=>c[0]===k)) return BI_SHALAT_STATUS; return BI_LAIN.find(c=>c[0]===k)[2].split('/'); }
+const biDb=k=>k==='puasaSenKam'?'puasa_sen_kam':(k==='rawatib'?'rawatib_jumlah':k);
+/* Kolom bertipe JUMLAH (bukan status). Rawatib disimpan di worship_records.rawatib_jumlah (smallint, NULL = belum dicatat).
+   Kolom lama worship_records.rawatib (teks Hadir/Tidak Hadir) TIDAK diubah/dihapus -> riwayat lama aman, hanya tidak dihitung. */
+const BI_COUNT=['rawatib'];
+const biIsCount=k=>BI_COUNT.includes(k);
+const BI_COUNT_TECH_MAX=32767;            /* batas teknis tipe smallint, bukan aturan bisnis */
+let biRawatibMax=null;                    /* batas harian per santri; null = belum ditetapkan (disimpan di boarding_settings.rawatibConfig) */
+function biCountLimit(){ return biRawatibMax!=null?Math.min(biRawatibMax,BI_COUNT_TECH_MAX):BI_COUNT_TECH_MAX; }
+function biOptsFor(k){ if(biIsCount(k)) return []; if(BI_SHALAT.some(c=>c[0]===k)) return BI_SHALAT_STATUS; return BI_LAIN.find(c=>c[0]===k)[2].split('/'); }
 KSC.bi={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
   key:'bi',prefix:'bi',table:'worship_records',title:'Ibadah Harian',arr:worshipRecordsData,sortKey:'tanggal',filter:bdSince120,
   writeRoles:BD_WRITE,deleteRoles:BD_WRITE,fields:[],
-  fromRow:r=>{ const o={id:r.id,studentId:r.student_id,tanggal:kscD(r.tanggal)}; BI_COLS.forEach(c=>{ const v=r[biDb(c[0])]; o[c[0]]=v?dkEsc(v):'-'; }); return o; },
+  fromRow:r=>{ const o={id:r.id,studentId:r.student_id,tanggal:kscD(r.tanggal)};
+    BI_COLS.forEach(c=>{ const v=r[biDb(c[0])];
+      if(biIsCount(c[0])){ const n=(v==null||v==='')?null:Number(v); o[c[0]]=(n!=null&&Number.isFinite(n))?n:'-'; o[c[0]+'Lama']=r[c[0]]?dkEsc(r[c[0]]):''; }   /* Lama = status teks lama, hanya ditampilkan */
+      else o[c[0]]=v?dkEsc(v):'-'; });
+    return o; },
   refresh:()=>biRefresh()
 }};
 let biFilter={tanggal:'',asrama:''}; let biTab='shalat'; let biPage=1; const BI_PER_PAGE=15;
@@ -3159,13 +3193,19 @@ function biRows(){ let rows=ksFilterByStudentId(worshipRecordsData); const f=biF
 function biStatusBadgeCls(v){ if(['Tepat Waktu','Hadir','Setor','Puasa'].includes(v)) return 'st-hadir'; if(['Masbuk','Terlambat','Izin','Uzur'].includes(v)) return 'b-amber'; if(v==='Sakit') return 'st-sakit'; return 'st-alpa'; }
 function biBadge(v){ return `<span class="badge ${biStatusBadgeCls(v)}">${v}</span>`; }
 function biSwitchTab(t){ biTab=t; document.querySelectorAll('#biTabs button').forEach(b=>b.classList.toggle('active',b.dataset.t===t)); biRenderTable(); }
+function biCountCell(w,k){
+  const n=w[k];
+  if(n!=='-'&&n!=null) return `<td><b>${n}</b>×</td>`;
+  const lama=w[k+'Lama'];
+  return `<td><span style="color:var(--sub)">-</span>${lama?` <span title="Data lama (status) sebelum Rawatib dicatat berupa jumlah; tidak ikut dihitung" style="font-size:10px;color:var(--sub)">(lama: ${lama})</span>`:''}</td>`;
+}
 function biRenderTable(){
   const body=document.getElementById('biBody'); if(!body) return;
   const cols = biTab==='shalat' ? BI_SHALAT : BI_LAIN;
   const all=biRows(); const {rows,page,totalPages,total}=acadPaginate(all,biPage,BI_PER_PAGE); biPage=page;
   body.innerHTML=rows.length?`<table><tr><th>Tanggal</th><th>Santri</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}<th>Nilai Rata</th><th>Aksi</th></tr>
-  ${rows.map(w=>{const s=studentOf(w.studentId); const vals=cols.map(c=>w[c[0]]).filter(v=>v&&v!=='-'); const avg=vals.length?Math.round(vals.reduce((a,v)=>a+(biWeights[v]??0),0)/vals.length):0;
-    return `<tr><td>${fmtTglID(w.tanggal)}</td><td><b>${s?s.nama:'-'}</b></td>${cols.map(c=>`<td>${w[c[0]]&&w[c[0]]!=='-'?biBadge(w[c[0]]):'<span style="color:var(--sub)">-</span>'}</td>`).join('')}<td>${vals.length?avg:'-'}</td>
+  ${rows.map(w=>{const s=studentOf(w.studentId); const vals=cols.filter(c=>!biIsCount(c[0])).map(c=>w[c[0]]).filter(v=>v&&v!=='-'); const avg=vals.length?Math.round(vals.reduce((a,v)=>a+(biWeights[v]??0),0)/vals.length):0;
+    return `<tr><td>${fmtTglID(w.tanggal)}</td><td><b>${s?s.nama:'-'}</b></td>${cols.map(c=>biIsCount(c[0])?biCountCell(w,c[0]):`<td>${w[c[0]]&&w[c[0]]!=='-'?biBadge(w[c[0]]):'<span style="color:var(--sub)">-</span>'}</td>`).join('')}<td>${vals.length?avg:'-'}</td>
     <td><div class="row-actions">${kscCan('bi','write')?`<button title="Edit" onclick="biOpenInput('${dkEsc(w.tanggal)}','${biTab}')">✏️</button>`:''}${kscCan('bi','delete')?`<button title="Hapus" onclick="kscConfirmDelete('bi','${dkEsc(w.id)}')">🗑</button>`:''}</div></td></tr>`;}).join('')}
   </table>`:acadEmptyStateHtml('Belum ada data ibadah','Coba ubah filter tanggal atau asrama.');
   const pg=document.getElementById('biPagination'); if(pg) pg.innerHTML=acadPaginationHtml(page,totalPages,total,'biGotoPage');
@@ -3189,7 +3229,7 @@ function biRefresh(){
 }
 function biOpenWeights(){
   const ro=!bdCanManage();
-  openAcadDrawer('Bobot Nilai — Ibadah Harian',AK_ERRBOX+`<p class="desc" style="margin-bottom:10px">Atur nilai untuk setiap status shalat berjamaah maupun ibadah lainnya.</p>${bdWeightRowsHtml(biWeights,ro)}${BD_WEIGHT_FOOT(ro).replace('%FN%','biSaveWeights()')}`);
+  openAcadDrawer('Bobot Nilai — Ibadah Harian',AK_ERRBOX+`<p class="desc" style="margin-bottom:10px">Atur nilai untuk setiap status shalat berjamaah maupun ibadah lainnya. <b>Rawatib</b> dicatat sebagai jumlah (bukan status) sehingga tidak memakai bobot ini; skor Rawatib belum dihitung sampai formula/bobot per jumlah ditetapkan.</p>${bdWeightRowsHtml(biWeights,ro)}${BD_WEIGHT_FOOT(ro).replace('%FN%','biSaveWeights()')}`);
 }
 function biSaveWeights(){ return bdSaveWeightsGeneric('biWeights','#acadDrawer .bd-weight-inp',v=>{ Object.assign(biWeights,v); return biWeights; },biRenderTable,'ibadah harian'); }
 /* ---- Form input ibadah: satu tanggal, semua santri; kolom "-" = belum dicatat ---- */
@@ -3203,7 +3243,7 @@ function biOpenInput(tgl,tab){
     <div class="dw-field"><label>Tanggal *</label><input type="date" id="biInTanggal" value="${dkEsc(tgl||ksToday())}" onchange="biInRender()"></div>
     <div class="dw-field"><label>Asrama</label><select id="biInAsrama" onchange="biInRender()"><option value="">Semua Asrama</option>${bdUniq(list.map(s=>s.asrama)).map(a=>`<option>${a}</option>`).join('')}</select></div>
     <div class="dw-tabs" id="biInTabs" style="margin:0 0 10px"><button data-t="shalat" onclick="biInTab('shalat')">Shalat Berjamaah</button><button data-t="lain" onclick="biInTab('lain')">Ibadah Lainnya</button></div>
-    <div style="margin:0 0 8px"><button class="btn-outline-sm" onclick="biInFillAll()">Isi semua kolom tab ini dengan status baik</button> <span class="dw-hint" style="font-size:10.5px;color:var(--sub)">Tepat Waktu / Hadir / Setor / Puasa. Kolom "-" = belum dicatat.</span></div>
+    <div style="margin:0 0 8px"><button class="btn-outline-sm" onclick="biInFillAll()">Isi semua kolom tab ini dengan status baik</button> <span class="dw-hint" style="font-size:10.5px;color:var(--sub)">Tepat Waktu / Hadir / Setor / Puasa. Kolom "-" = belum dicatat. <b>Rawatib</b> diisi angka jumlah pelaksanaan hari itu (kosong = belum dicatat, 0 = dicatat tidak melaksanakan).</span></div>
     <div id="biInList" style="overflow-x:auto"></div>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="biInSubmit" onclick="biInSave()">Simpan Ibadah</button></div>`);
   biInRender(); biInTab(biInTabCur);
@@ -3212,7 +3252,9 @@ function biInStudents(){ const as=document.getElementById('biInAsrama').value; r
 function biInRender(){
   const el=document.getElementById('biInList'); if(!el) return;
   const tgl=document.getElementById('biInTanggal').value; const studs=biInStudents(); const ex=biExisting(tgl); const nEx=studs.filter(s=>ex[String(s.id)]).length;
-  const tbl=(group,cols)=>`<table data-grp="${group}"><tr><th>Santri</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${studs.map(s=>{const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>${cols.map(c=>`<td><select id="bi_${c[0]}_${dkEsc(s.id)}"><option value="-">-</option>${akOptHtml(biOptsFor(c[0]),e&&e[c[0]]!=='-'?e[c[0]]:'')}</select></td>`).join('')}</tr>`;}).join('')}</table>`;
+  const tbl=(group,cols)=>`<table data-grp="${group}"><tr><th>Santri</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${studs.map(s=>{const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>${cols.map(c=>biIsCount(c[0])
+      ? `<td><input type="number" class="bi-count" id="bi_${c[0]}_${dkEsc(s.id)}" min="0" max="${biCountLimit()}" step="1" inputmode="numeric" placeholder="-" value="${e&&e[c[0]]!=='-'&&e[c[0]]!=null?e[c[0]]:''}" style="width:72px;border:1px solid var(--line);border-radius:6px;padding:5px 6px;font-size:12px;background:var(--bg);color:var(--ink)"></td>`
+      : `<td><select id="bi_${c[0]}_${dkEsc(s.id)}"><option value="-">-</option>${akOptHtml(biOptsFor(c[0]),e&&e[c[0]]!=='-'?e[c[0]]:'')}</select></td>`).join('')}</tr>`;}).join('')}</table>`;
   el.innerHTML=(nEx?`<p class="viewonly-banner">Sudah ada catatan ibadah pada tanggal ini untuk ${nEx} santri — menyimpan akan memperbarui data tersebut.</p>`:'')+tbl('shalat',BI_SHALAT)+tbl('lain',BI_LAIN);
   biInTab(biInTabCur);
 }
@@ -3222,24 +3264,98 @@ function biInTab(t){
 }
 function biInFillAll(){
   const cols=biInTabCur==='shalat'?BI_SHALAT:BI_LAIN;
-  biInStudents().forEach(s=>cols.forEach(c=>{ const el=document.getElementById('bi_'+c[0]+'_'+s.id); if(el) el.value=biOptsFor(c[0])[0]; }));
+  biInStudents().forEach(s=>cols.forEach(c=>{ if(biIsCount(c[0])) return; const el=document.getElementById('bi_'+c[0]+'_'+s.id); if(el) el.value=biOptsFor(c[0])[0]; }));
 }
 async function biInSave(){
   const M=KSC.bi; if(M.submitting) return;
   if(!kscCan('bi','write')){ akFormErr('akfError','Anda tidak memiliki izin untuk menyimpan ibadah.'); return; }
   const tgl=document.getElementById('biInTanggal').value; if(!tgl){ akFormErr('akfError','Tanggal wajib diisi.'); return; }
-  const studs=biInStudents(); const ex=biExisting(tgl); const ins=[], upd=[];
+  const studs=biInStudents(); const ex=biExisting(tgl); const ins=[], upd=[]; let badCount=null;
   studs.forEach(s=>{
     const row={student_id:s.id,tanggal:tgl}; let any=false;
-    BI_COLS.forEach(c=>{ const v=document.getElementById('bi_'+c[0]+'_'+s.id).value; row[biDb(c[0])]=v==='-'?null:v; if(v!=='-') any=true; });
+    BI_COLS.forEach(c=>{
+      const el=document.getElementById('bi_'+c[0]+'_'+s.id);
+      if(biIsCount(c[0])){
+        const raw=String(el.value).trim();
+        if(el.validity&&el.validity.badInput){ badCount=badCount||{s,why:'berisi teks/angka tidak valid'}; return; }
+        if(raw===''){ row[biDb(c[0])]=null; return; }
+        if(!/^\d+$/.test(raw)){ badCount=badCount||{s,why:'harus bilangan bulat 0 atau lebih (tanpa desimal/negatif)'}; return; }
+        const n=Number(raw);
+        if(n>biCountLimit()){ badCount=badCount||{s,why:'melebihi batas '+biCountLimit()+(biRawatibMax!=null?' (batas harian yang ditetapkan)':' (batas teknis database)')}; return; }
+        row[biDb(c[0])]=n; any=true; return;
+      }
+      const v=el.value; row[biDb(c[0])]=v==='-'?null:v; if(v!=='-') any=true;
+    });
     const e=ex[String(s.id)]; if(e){ row.id=e.id; upd.push(row); } else if(any) ins.push(row);
   });
+  if(badCount){ akFormErr('akfError','Jumlah Rawatib untuk '+badCount.s.nama+' '+badCount.why+'.'); return; }
   if(!ins.length&&!upd.length){ akFormErr('akfError','Belum ada ibadah yang dicatat.'); return; }
   akFormErr('akfError','');
   M.submitting=true; const btn=document.getElementById('biInSubmit'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{ await bdBulkSave('worship_records',ins,upd); closeAcadDrawer(); showAcadToast('Ibadah '+(ins.length+upd.length)+' santri berhasil disimpan.'); await kscLoad('bi',{silent:true}); }
-  catch(e){ console.error('biInSave',e); akFormErr('akfError','Gagal menyimpan: '+kscErrMsg(e,'tambah',M.cfg)); showAcadToast('Gagal menyimpan ibadah.'); }
+  catch(e){ console.error('biInSave',e);
+    const miss=dkIsMissingColErr(e)&&/rawatib_jumlah/i.test((e&&e.message)||'');
+    akFormErr('akfError','Gagal menyimpan: '+(miss?'kolom worship_records.rawatib_jumlah belum ada. Jalankan supabase-rawatib-migration.sql di Supabase SQL Editor, lalu coba lagi.':kscErrMsg(e,'tambah',M.cfg))); showAcadToast('Gagal menyimpan ibadah.'); }
   finally{ M.submitting=false; const b=document.getElementById('biInSubmit'); if(b){ b.disabled=false; b.textContent='Simpan Ibadah'; } }
+}
+
+/* ---- Rekap Rawatib (harian & bulanan) — dihitung dari jumlah yang tercatat; data diambil langsung dari database untuk tanggal/bulan terpilih ---- */
+let biRcMode='harian';
+function biMonthRange(ym){ const m=/^(\d{4})-(\d{2})$/.exec(ym||''); if(!m) return null; const y=Number(m[1]), mo=Number(m[2]); const last=new Date(y,mo,0).getDate(); return [ym+'-01', ym+'-'+String(last).padStart(2,'0')]; }
+async function biFetchRawatib(from,to){
+  if(!dkClient()||typeof dbFetchAll!=='function') throw {message:'Supabase belum terhubung.'};
+  const rows=await dbFetchAll('worship_records','student_id,tanggal,rawatib_jumlah','tanggal',q=>q.gte('tanggal',from).lte('tanggal',to));
+  return ksFilterByStudentId(rows.map(r=>({studentId:r.student_id,tanggal:kscD(r.tanggal),jumlah:(r.rawatib_jumlah==null||r.rawatib_jumlah==='')?null:Number(r.rawatib_jumlah)})));
+}
+function biOpenRawatibRecap(){
+  const t=ksToday();
+  openAcadDrawer('Rekap Rawatib',`<div id="rcMsg"></div>
+    <div class="dw-tabs" id="rcTabs" style="margin:0 0 10px"><button class="active" data-t="harian" onclick="biRcSwitch('harian')">Harian</button><button data-t="bulanan" onclick="biRcSwitch('bulanan')">Bulanan</button></div>
+    <div class="dw-field"><label id="rcLabel">Tanggal</label><input type="date" id="rcDate" value="${dkEsc(t)}" onchange="biRcRender()"><input type="month" id="rcMonth" value="${dkEsc(t.slice(0,7))}" onchange="biRcRender()" style="display:none"></div>
+    <div id="rcBody"></div>`);
+  biRcMode='harian'; biRcRender();
+}
+function biRcSwitch(m){
+  biRcMode=m; document.querySelectorAll('#rcTabs button').forEach(b=>b.classList.toggle('active',b.dataset.t===m));
+  document.getElementById('rcDate').style.display=m==='harian'?'':'none'; document.getElementById('rcMonth').style.display=m==='bulanan'?'':'none';
+  document.getElementById('rcLabel').textContent=m==='harian'?'Tanggal':'Bulan'; biRcRender();
+}
+async function biRcRender(){
+  const body=document.getElementById('rcBody'); if(!body) return;
+  const harian=biRcMode==='harian';
+  const range=harian?[document.getElementById('rcDate').value,document.getElementById('rcDate').value]:biMonthRange(document.getElementById('rcMonth').value);
+  if(!range||!range[0]){ body.innerHTML='<p class="desc">Pilih '+(harian?'tanggal':'bulan')+' terlebih dahulu.</p>'; return; }
+  const token=(biRcRender.tok=(biRcRender.tok||0)+1); body.innerHTML='<p class="desc">Memuat...</p>';
+  let rows; try{ rows=await biFetchRawatib(range[0],range[1]); }
+  catch(e){ if(token!==biRcRender.tok) return; const miss=dkIsMissingColErr(e); body.innerHTML='<div style="background:#FBE7E5;color:#C0392B;border-radius:8px;padding:9px 12px;font-size:12px">Gagal memuat rekap: '+dkEsc(miss?'kolom rawatib_jumlah belum ada — jalankan supabase-rawatib-migration.sql.':kscErrMsg(e,'muat',null))+'</div>'; return; }
+  if(token!==biRcRender.tok) return;
+  const studs=bdBoardingStudents(); const by={};
+  rows.forEach(r=>{ if(r.jumlah==null) return; const k=String(r.studentId); const b=(by[k]=by[k]||{total:0,hari:0}); b.total+=r.jumlah; b.hari++; });
+  const list=studs.map(s=>({s,b:by[String(s.id)]||null})).sort((a,b)=>akUnesc(a.s.nama).localeCompare(akUnesc(b.s.nama)));
+  const grand=list.reduce((a,x)=>a+(x.b?x.b.total:0),0), tercatat=list.filter(x=>x.b).length;
+  if(!list.length){ body.innerHTML='<p class="desc">Belum ada santri boarding yang dapat Anda akses.</p>'; return; }
+  body.innerHTML=`<div style="display:flex;gap:10px;margin:4px 0 10px;flex-wrap:wrap"><div class="mini-stat c-teal" style="flex:1;min-width:120px"><div class="ms-val">${grand}</div><div class="ms-label">Total ${harian?'hari ini':'bulan ini'}</div></div><div class="mini-stat c-blue" style="flex:1;min-width:120px"><div class="ms-val">${tercatat}/${list.length}</div><div class="ms-label">Santri tercatat</div></div></div>
+  <table><tr><th>Santri</th>${harian?'<th>Jumlah</th>':'<th>Hari Tercatat</th><th>Total</th><th>Rata-rata/hari</th>'}</tr>
+  ${list.map(x=>harian
+    ? `<tr><td>${x.s.nama}</td><td>${x.b?'<b>'+x.b.total+'</b>':'<span style="color:var(--sub)">-</span>'}</td></tr>`
+    : `<tr><td>${x.s.nama}</td><td>${x.b?x.b.hari:0}</td><td>${x.b?'<b>'+x.b.total+'</b>':0}</td><td>${x.b?(Math.round(x.b.total/x.b.hari*10)/10):'-'}</td></tr>`).join('')}</table>
+  <p class="desc" style="margin-top:8px">Rekap hanya menjumlahkan angka yang dicatat. Catatan lama berupa status (Hadir/Tidak Hadir) tidak diubah menjadi angka dan tidak ikut dihitung.</p>`;
+}
+function biOpenRawatibConfig(){
+  const ro=!bdCanManage();
+  openAcadDrawer('Batas Rawatib per Hari',AK_ERRBOX+`<p class="desc" style="margin-bottom:10px">Batas maksimal jumlah Rawatib per santri per hari. Kosongkan bila belum ditetapkan (sistem hanya menerima bilangan bulat 0 atau lebih, maksimal ${BI_COUNT_TECH_MAX} sebagai batas teknis database).</p>
+    <div class="dw-field"><label>Maksimal per hari</label><input type="number" id="rwMax" min="0" step="1" inputmode="numeric" value="${biRawatibMax==null?'':biRawatibMax}" ${ro?'disabled':''}></div>
+    ${ro?'<p class="viewonly-banner">Mode lihat saja — hanya Super Admin, Kepala Sekolah, dan Musyrif yang dapat mengubah.</p>':'<button class="btn-primary-sm" id="rwSave" style="width:100%" onclick="biSaveRawatibConfig()">Simpan Batas</button>'}`);
+}
+async function biSaveRawatibConfig(){
+  if(!bdCanManage()){ akFormErr('akfError','Anda tidak memiliki izin.'); return; }
+  const el=document.getElementById('rwMax'); const raw=String(el.value).trim();
+  let max=null;
+  if(raw!==''){ if(!/^\d+$/.test(raw)||(el.validity&&el.validity.badInput)||Number(raw)>BI_COUNT_TECH_MAX){ akFormErr('akfError','Batas harus bilangan bulat 0–'+BI_COUNT_TECH_MAX+', atau kosong.'); return; } max=Number(raw); }
+  const btn=document.getElementById('rwSave'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
+  try{ await bdSaveSetting('rawatibConfig',{max}); biRawatibMax=max; closeAcadDrawer(); showAcadToast(max==null?'Batas Rawatib dikosongkan.':'Batas Rawatib per hari: '+max+'.'); }
+  catch(e){ console.error('biSaveRawatibConfig',e); akFormErr('akfError','Gagal menyimpan: '+kscErrMsg(e,'ubah',null)); }
+  finally{ const b=document.getElementById('rwSave'); if(b){ b.disabled=false; b.textContent='Simpan Batas'; } }
 }
 function boardingIbadahPageHtml(){
   biFilter={tanggal:'',asrama:''}; biTab='shalat'; biPage=1; const can=bdCanManage();
@@ -3252,6 +3368,8 @@ function boardingIbadahPageHtml(){
       <span class="ti-spacer"></span>
       ${can?'<button class="btn-primary-sm" onclick="biOpenInput(null)">+ Input Ibadah</button>':''}
       <button class="btn-outline-sm" onclick="biOpenWeights()">⚙️ Bobot Nilai</button>
+      <button class="btn-outline-sm" onclick="biOpenRawatibRecap()">📊 Rekap Rawatib</button>
+      <button class="btn-outline-sm" onclick="biOpenRawatibConfig()">⚙️ Batas Rawatib</button>
       <button class="btn-outline-sm" onclick="kscLoad('bi',{silent:false})">Muat Ulang</button>
     </div>
     ${can?'':'<p class="viewonly-banner">Mode lihat saja — hanya Super Admin, Kepala Sekolah, dan Musyrif yang dapat menginput ibadah harian.</p>'}
