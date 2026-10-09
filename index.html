@@ -1294,6 +1294,8 @@ const AK_ADMIN=['Super Admin','Kepala Sekolah'];
 function akDbMode(){ return typeof dkState!=='undefined'&&dkState.fromDb; }
 function akMyName(){ return akDbMode()?(ROLE_NAME[curRole]||''):CURRENT_GURU_NAME; }
 function akMe(){ return dkEsc(akMyName()); }
+/* Cocokkan nama guru secara toleran (huruf besar/kecil, spasi, tanda baca) — sama dengan logika scope kelas. */
+function akIsMine(namaGuru){ const me=acadNameKey(akMyName()); return !!me && acadNameKey(namaGuru)===me; }
 function akDefaultPeriod(){ const d=new Date(), y=d.getFullYear(), m=d.getMonth()+1; return m>=7?{ta:y+'/'+(y+1),sem:'Ganjil'}:{ta:(y-1)+'/'+y,sem:'Genap'}; }
 function akPeriodRange(ta,sem){ const m=/^(\d{4})\/(\d{4})$/.exec(String(ta||'')); if(!m||!sem) return null; return sem==='Ganjil'?[m[1]+'-07-01',m[1]+'-12-31']:[m[2]+'-01-01',m[2]+'-06-30']; }
 function akUnesc(s){ return String(s==null?'':s).replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&'); }
@@ -1337,7 +1339,7 @@ const CAL_COLORS=['blue','purple','green','teal','indigo','emerald'];
 function subjectColor(mapel){ let h=0; for(let i=0;i<mapel.length;i++) h+=mapel.charCodeAt(i); return CAL_COLORS[h%CAL_COLORS.length]; }
 function jdFilteredRows(){
   let rows=acadFilterByScope(schedulesData,'kelas');
-  if(curRole==='Guru') rows=rows.filter(s=>s.guru===akMe());
+  if(curRole==='Guru') rows=rows.filter(s=>akIsMine(s.guru));
   const f=jdFilter;
   return rows.filter(s=>(!f.hari||s.hari===f.hari)&&(!f.kelas||s.kelas===f.kelas)&&(!f.guru||s.guru===f.guru)&&(!f.ruang||s.ruang===f.ruang)&&(!f.ta||s.tahunAjaran===f.ta)&&(!f.sem||s.semester===f.sem));
 }
@@ -1377,7 +1379,7 @@ function jdRefresh(){
   const sc=acadFilterByScope(schedulesData,'kelas');
   const uniq=a=>[...new Set(a)].filter(x=>x&&x!=='-').sort();
   kscFillSelect('jdKelas',uniq(akScopedClasses().map(c=>c.nama)).map(k=>({value:k,label:k})));
-  kscFillSelect('jdGuru',(curRole==='Guru'?[akMe()]:uniq(sc.map(s=>s.guru))).map(k=>({value:k,label:k})));
+  kscFillSelect('jdGuru',(curRole==='Guru'?uniq(sc.filter(s=>akIsMine(s.guru)).map(s=>s.guru)):uniq(sc.map(s=>s.guru))).map(k=>({value:k,label:k})));
   kscFillSelect('jdRuang',uniq(sc.map(s=>s.ruang)).map(k=>({value:k,label:k})));
   kscFillSelect('jdTA',uniq(sc.map(s=>s.tahunAjaran)).map(k=>({value:k,label:'TA '+k})));
   jdRenderBody();
@@ -1411,7 +1413,7 @@ let pkFilter={tanggal:'',kelas:'',mapel:'',guru:''};
 let pkPage=1; const PK_PER_PAGE=15;
 function pkScopedRows(){
   let rows=acadFilterByScope(attendanceRecordsData,'kelas');
-  if(curRole==='Guru') rows=rows.filter(r=>r.guru===akMe());
+  if(curRole==='Guru') rows=rows.filter(r=>akIsMine(r.guru));
   return rows;
 }
 function pkFilteredRows(){
@@ -1458,7 +1460,7 @@ function pkRefresh(){
   const rows=pkScopedRows(); const uniq=a=>[...new Set(a)].filter(x=>x&&x!=='-').sort();
   kscFillSelect('pkKelas',uniq(rows.map(r=>r.kelas)).map(k=>({value:k,label:k})));
   kscFillSelect('pkMapel',uniq(rows.map(r=>r.mapel)).map(k=>({value:k,label:k})));
-  kscFillSelect('pkGuru',(curRole==='Guru'?[akMe()]:uniq(rows.map(r=>r.guru))).map(k=>({value:k,label:k})));
+  kscFillSelect('pkGuru',(curRole==='Guru'?uniq(rows.filter(r=>akIsMine(r.guru)).map(r=>r.guru)):uniq(rows.map(r=>r.guru))).map(k=>({value:k,label:k})));
   pkRenderTable(); pkUpdateTrend(); pkBuildChart();
 }
 function presensiKbmPageHtml(){
@@ -1585,7 +1587,7 @@ async function pkSessSave(){
 let jgFilter={q:'',guru:'',kelas:'',mapel:'',tanggal:''};
 function jgScopedRows(){
   let rows=acadFilterByScope(teacherJournalsData,'kelas');
-  if(curRole==='Guru') rows=rows.filter(j=>j.guru===akMe());
+  if(curRole==='Guru') rows=rows.filter(j=>akIsMine(j.guru));
   return rows;
 }
 function jgFilteredRows(){
@@ -1625,7 +1627,7 @@ function jgStatsArray(){
 function jgRefresh(){
   const st=document.getElementById('jgStats'); if(st) st.innerHTML=acadStatRowHtml(jgStatsArray());
   const rows=jgScopedRows(); const uniq=a=>[...new Set(a)].filter(x=>x&&x!=='-').sort();
-  kscFillSelect('jgGuru',(curRole==='Guru'?[akMe()]:uniq(rows.map(j=>j.guru))).map(k=>({value:k,label:k})));
+  kscFillSelect('jgGuru',(curRole==='Guru'?uniq(rows.filter(j=>akIsMine(j.guru)).map(j=>j.guru)):uniq(rows.map(j=>j.guru))).map(k=>({value:k,label:k})));
   kscFillSelect('jgKelas',uniq(rows.map(j=>j.kelas)).map(k=>({value:k,label:k})));
   kscFillSelect('jgMapel',uniq(rows.map(j=>j.mapel)).map(k=>({value:k,label:k})));
   jgRenderTable();
@@ -1660,7 +1662,7 @@ function nlFinal(o){ const v=NL_COMPS.map(k=>o[k]).filter(x=>x!=null&&x!==''&&!i
 let nlFilter={kelas:'',mapel:'',ta:'',sem:''};
 function nlScopedRows(){
   let rows=acadFilterByScope(gradesData,'kelas');
-  if(curRole==='Guru') rows=rows.filter(g=>schedulesData.some(s=>s.kelas===g.kelas&&s.mapel===g.mapel&&s.guru===akMe()));
+  if(curRole==='Guru') rows=rows.filter(g=>schedulesData.some(s=>s.kelas===g.kelas&&s.mapel===g.mapel&&akIsMine(s.guru)));
   return rows;
 }
 function nlFilteredRows(){
@@ -4897,11 +4899,11 @@ async function pgSavePerformance(){
 }
 
 /* ---- Integrasi Jadwal Mengajar: REUSE schedulesData milik Akademik ---- */
-function pgSchedulesOf(employeeId){ const e=employeeOf(employeeId); if(!e) return []; return schedulesData.filter(s=>s.guru===e.nama); }
+function pgSchedulesOf(employeeId){ const e=employeeOf(employeeId); if(!e) return []; return schedulesData.filter(s=>acadNameKey(s.guru)===acadNameKey(e.nama)); }
 function pgBebanMengajar(){
   const gurus=employeesData.filter(e=>e.jenisPegawai==='Guru' && e.statusAktif==='Aktif');
   return gurus.map(e=>{
-    const rows=schedulesData.filter(s=>s.guru===e.nama);
+    const rows=schedulesData.filter(s=>acadNameKey(s.guru)===acadNameKey(e.nama));
     return {nama:e.nama,jumlahMapel:new Set(rows.map(s=>s.mapel)).size,jumlahKelas:new Set(rows.map(s=>s.kelas)).size,totalJam:rows.length};
   }).filter(x=>x.totalJam>0);
 }
