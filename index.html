@@ -6954,6 +6954,7 @@ function acctRenderUsers(){
         if(u.status==='Menunggu') a+=`<button title="Setujui" onclick="acctOpenApprove('${id}')">✓</button><button title="Tolak" onclick="acctOpenReject('${id}')">✕</button>`;
         else{
           if(u.status==='Aktif') a+=`<button title="Edit Role" onclick="acctOpenEditRole('${id}')">✏️</button>`;
+          if(u.status==='Aktif'||u.status==='Nonaktif') a+=`<button title="Ganti Sandi" onclick="acctOpenResetPass('${id}')">🔑</button>`;
           a+= u.status==='Aktif'
             ? `<button title="Nonaktifkan" onclick="acctToggleStatus('${id}')">⏸</button>`
             : u.status==='Nonaktif' ? `<button title="Aktifkan" onclick="acctToggleStatus('${id}')">▶️</button>`
@@ -7041,6 +7042,32 @@ async function acctDoEditRole(id){
   const r=await acUpdate(id,acRoleDb(role,u)); if(!r) return;
   pushAuditLog('Perubahan Role','Pengguna & Role','Role '+u.nama+' ('+u.email+') diubah dari '+acRoleSel(u)+' menjadi '+role+' oleh '+acActor()+'.');
   closeAcadDrawer(); showAcadToast('Role berhasil diubah.'); acctLoad();
+}
+/* Ganti sandi akun lain: lewat Edge Function set-user-password (butuh service role, tidak bisa dari browser). */
+function acctOpenResetPass(id){
+  const u=acRow(id); if(!u) return;
+  openAcadDrawer('Ganti Sandi',`
+    <p style="font-size:12.5px;margin-bottom:12px;">Atur sandi baru untuk <b>${acEsc(u.nama)}</b> (${acEsc(u.email)}). Sandi lama langsung tidak berlaku. Sampaikan sandi baru langsung kepada yang bersangkutan.</p>
+    <div class="dw-field"><label>Sandi Baru * (min. 6 karakter)</label><input type="password" id="acPwNew" autocomplete="new-password" maxlength="72"></div>
+    <div class="dw-field"><label>Konfirmasi Sandi Baru *</label><input type="password" id="acPwNew2" autocomplete="new-password" maxlength="72"></div>
+    <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="acPwBtn" onclick="acctDoResetPass('${acEsc(id)}')">Simpan Sandi</button></div>`);
+}
+async function acctDoResetPass(id){
+  const u=acRow(id); if(!u) return; const sb=acSb(); if(!sb){ showAcadToast('Supabase belum aktif.'); return; }
+  const p1=document.getElementById('acPwNew').value, p2=document.getElementById('acPwNew2').value;
+  if(p1.length<6){ showAcadToast('Sandi baru minimal 6 karakter.'); return; }
+  if(p1!==p2){ showAcadToast('Konfirmasi sandi tidak sama.'); return; }
+  const btn=document.getElementById('acPwBtn'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
+  const {data,error}=await sb.functions.invoke('set-user-password',{body:{profile_id:u.id,password:p1}});
+  if(error||(data&&data.error)){
+    let msg=(data&&data.error)||error.message;
+    try{ if(error&&error.context&&error.context.json){ const j=await error.context.json(); if(j&&j.error) msg=j.error; } }catch(e){}
+    console.error(error||data);
+    showAcadToast('Gagal mengganti sandi: '+msg+(/not found|Failed to send/i.test(msg)?' (pastikan Edge Function set-user-password sudah di-deploy).':''));
+    if(btn){ btn.disabled=false; btn.textContent='Simpan Sandi'; }
+    return; }
+  pushAuditLog('Ganti Sandi','Pengguna & Role','Sandi akun "'+u.nama+'" ('+u.email+') diganti oleh '+acActor()+'.');
+  closeAcadDrawer(); showAcadToast('Sandi berhasil diganti.');
 }
 function acctToggleStatus(id){
   const u=acRow(id); if(!u) return; const aktif=u.status==='Aktif';
