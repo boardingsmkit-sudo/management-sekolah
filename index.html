@@ -1517,17 +1517,31 @@ function pkSessExisting(tanggal,classId,mapel){
   const m={}; attendanceRecordsData.forEach(r=>{ if(r.tanggal===tanggal&&String(r.classId)===String(classId)&&akUnesc(r.mapel).toLowerCase()===String(mapel||'').toLowerCase()) m[String(r.studentId)]=r; });
   return m;
 }
+/* Mapel yang boleh dipresensi = mapel yang dijadwalkan pada HARI dari tanggal yang dipilih (untuk kelas itu; guru hanya jadwalnya sendiri). */
+let pkSessRec=null, pkSessInit='';
+const PK_HARI_NAMA=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+function pkHariOf(tgl){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(String(tgl||'')); return m?PK_HARI_NAMA[new Date(+m[1],+m[2]-1,+m[3]).getDay()]:''; }
+function pkMapelOfDay(cid,tgl){
+  const hari=pkHariOf(tgl); if(!cid||!hari) return [];
+  let rows=schedulesData.filter(s=>String(s.classId)===String(cid)&&s.hari===hari);
+  if(curRole==='Guru') rows=rows.filter(s=>akIsMine(s.guru));
+  const out=rows.map(s=>akUnesc(s.mapel));
+  if(pkSessRec&&String(pkSessRec.classId)===String(cid)&&pkSessRec.tanggal===tgl) out.push(akUnesc(pkSessRec.mapel));
+  return [...new Set(out)].sort();
+}
 function pkOpenSession(id){
   if(!kscCan('pk','write')){ showAcadToast('Anda tidak memiliki izin untuk menginput presensi KBM.'); return; }
   const rec=id?attendanceRecordsData.find(r=>String(r.id)===String(id)):null;
   if(id&&!rec){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
   const classes=akScopedClasses();
   if(!classes.length){ showAcadToast('Belum ada data kelas yang dapat Anda akses.'); return; }
+  pkSessRec=rec||null;
   const tgl=rec?rec.tanggal:ksToday(), cid=rec?rec.classId:'', mapel=rec?akUnesc(rec.mapel):'', guru=rec?akUnesc(rec.guru==='-'?'':rec.guru):akMyName(), jam=rec&&rec.jam!=='-'?akUnesc(rec.jam):'';
+  pkSessInit=mapel;
   openAcadDrawer(rec?'Edit Presensi KBM':'Input Presensi KBM',AK_ERRBOX+`
-    <div class="dw-field"><label>Tanggal *</label><input type="date" id="pksTanggal" value="${dkEsc(tgl)}" onchange="pkSessRender()"></div>
+    <div class="dw-field"><label>Tanggal *</label><input type="date" id="pksTanggal" value="${dkEsc(tgl)}" onchange="pkSessClassChanged()"></div>
     <div class="dw-field"><label>Kelas *</label><select id="pksKelas" onchange="pkSessClassChanged()"><option value="">— Pilih kelas —</option>${classes.map(c=>`<option value="${dkEsc(c.id)}"${String(cid)===String(c.id)?' selected':''}>${c.nama}</option>`).join('')}</select></div>
-    <div class="dw-field"><label>Mata Pelajaran *</label><input type="text" id="pksMapel" list="pksMapelDl" maxlength="80" value="${dkEsc(mapel)}" oninput="pkSessRender()"><datalist id="pksMapelDl"></datalist></div>
+    <div class="dw-field"><label>Mata Pelajaran *</label><select id="pksMapel" onchange="pkSessRender()"></select><p class="dw-hint" id="pksMapelHint"></p></div>
     <div class="dw-field"><label>Guru *</label><input type="text" id="pksGuru" maxlength="80" value="${dkEsc(guru)}"${curRole==='Guru'?' readonly':''}></div>
     <div class="dw-field"><label>Jam</label><input type="text" id="pksJam" maxlength="30" placeholder="mis. 07:00–08:30" value="${dkEsc(jam)}"></div>
     <div id="pksList"></div>
@@ -1536,7 +1550,14 @@ function pkOpenSession(id){
 }
 function pkSessClassChanged(){
   const cid=document.getElementById('pksKelas').value;
-  const dl=document.getElementById('pksMapelDl'); if(dl) dl.innerHTML=akMapelOfClass(cid).map(m=>'<option value="'+dkEsc(m)+'"></option>').join('');
+  const sel=document.getElementById('pksMapel');
+  if(sel){
+    const tgl=document.getElementById('pksTanggal').value, hari=pkHariOf(tgl), list=pkMapelOfDay(cid,tgl);
+    const keep=String(sel.value||pkSessInit||'').toLowerCase(); pkSessInit='';
+    sel.innerHTML=`<option value="">${list.length?'— Pilih mata pelajaran —':'— Tidak ada jadwal —'}</option>`+list.map(m=>`<option value="${dkEsc(m)}"${m.toLowerCase()===keep?' selected':''}>${dkEsc(m)}</option>`).join('');
+    const h=document.getElementById('pksMapelHint');
+    if(h) h.textContent=!cid?'Pilih kelas dan tanggal untuk melihat mapel yang dijadwalkan.':(list.length?'Hanya mapel yang dijadwalkan pada hari '+hari+'.':'Tidak ada jadwal pelajaran'+(curRole==='Guru'?' Anda':'')+' untuk kelas ini pada hari '+(hari||'tersebut')+'.');
+  }
   pkSessRender();
 }
 function pkSessRender(){
@@ -1562,6 +1583,7 @@ async function pkSessSave(){
   if(!tanggal){ akFormErr('akfError','Tanggal wajib diisi.'); return; }
   if(!classId){ akFormErr('akfError','Kelas wajib dipilih.'); return; }
   if(!mapel){ akFormErr('akfError','Mata pelajaran wajib diisi.'); return; }
+  if(!pkMapelOfDay(classId,tanggal).some(m=>m.toLowerCase()===mapel.toLowerCase())){ akFormErr('akfError','Mata pelajaran "'+mapel+'" tidak dijadwalkan pada hari '+(pkHariOf(tanggal)||'tersebut')+' untuk kelas ini.'); return; }
   if(!guru){ akFormErr('akfError','Nama guru wajib diisi.'); return; }
   const studs=akStudentsOfClass(classId); if(!studs.length){ akFormErr('akfError','Tidak ada siswa aktif di kelas ini.'); return; }
   const ex=pkSessExisting(tanggal,classId,mapel); const ins=[], upd=[];
