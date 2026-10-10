@@ -2817,7 +2817,9 @@ KSC.jd={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
     const low=s=>String(s||'').trim().toLowerCase();
     /* Gabungan kelas (mapel umum): jadwal lain dengan jam persis sama, mapel sama, guru sama, dan ruang sama
        dianggap kelas yang digabung — bukan bentrok guru/ruang. Bentrok KELAS tetap dicek. */
-    const gabung=s=>low(akUnesc(s.mapel))===low(p.mapel)&&low(akUnesc(s.guru))===low(p.guru)
+    /* Mapel kejuruan TIDAK boleh digabung: dikenali dari kata di namanya. Tambah kata lain di sini jika perlu (pisahkan dengan |). */
+    const kejuruan=/kejuruan|produktif/.test(low(p.mapel));
+    const gabung=s=>!kejuruan&&low(akUnesc(s.mapel))===low(p.mapel)&&low(akUnesc(s.guru))===low(p.guru)
       &&s.jamMulai===p.jam_mulai&&s.jamSelesai===p.jam_selesai
       &&low(akUnesc(s.ruang)).replace(/^-$/,'')===low(p.ruang);
     const clash=schedulesData.find(s=>String(s.id)!==String(id||'')&&s.hari===dkEsc(p.hari)&&s.tahunAjaran===dkEsc(p.tahun_ajaran)&&s.semester===p.semester
