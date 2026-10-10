@@ -2815,9 +2815,14 @@ KSC.jd={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
     if(!akValidTA(p.tahun_ajaran)) return 'Tahun ajaran harus berformat 2026/2027 (tahun kedua = tahun pertama + 1).';
     if(p.jam_selesai<=p.jam_mulai) return 'Jam selesai harus setelah jam mulai.';
     const low=s=>String(s||'').trim().toLowerCase();
+    /* Gabungan kelas (mapel umum): jadwal lain dengan jam persis sama, mapel sama, guru sama, dan ruang sama
+       dianggap kelas yang digabung — bukan bentrok guru/ruang. Bentrok KELAS tetap dicek. */
+    const gabung=s=>low(akUnesc(s.mapel))===low(p.mapel)&&low(akUnesc(s.guru))===low(p.guru)
+      &&s.jamMulai===p.jam_mulai&&s.jamSelesai===p.jam_selesai
+      &&low(akUnesc(s.ruang)).replace(/^-$/,'')===low(p.ruang);
     const clash=schedulesData.find(s=>String(s.id)!==String(id||'')&&s.hari===dkEsc(p.hari)&&s.tahunAjaran===dkEsc(p.tahun_ajaran)&&s.semester===p.semester
       &&s.jamMulai<p.jam_selesai&&p.jam_mulai<s.jamSelesai
-      &&(String(s.classId)===String(p.class_id)||low(akUnesc(s.guru))===low(p.guru)||(p.ruang&&low(akUnesc(s.ruang))===low(p.ruang))));
+      &&(String(s.classId)===String(p.class_id)||(!gabung(s)&&(low(akUnesc(s.guru))===low(p.guru)||(p.ruang&&low(akUnesc(s.ruang))===low(p.ruang))))));
     if(clash){
       const why=String(clash.classId)===String(p.class_id)?'kelas '+akUnesc(clash.kelas):(low(akUnesc(clash.guru))===low(p.guru)?'guru '+akUnesc(clash.guru):'ruang '+akUnesc(clash.ruang));
       return 'Jadwal bentrok: '+why+' sudah dipakai '+akUnesc(clash.mapel)+' pada '+clash.hari+' '+clash.jam+'.';
