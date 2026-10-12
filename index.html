@@ -2255,7 +2255,7 @@ function ksToday(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getM
 const KSC_ADMIN=['Super Admin','Kepala Sekolah'];
 const KSC={};
 function kscD(x){ return x?String(x).slice(0,10):''; }
-function kscCan(key,action){ const c=KSC[key].cfg; return (action==='delete'?c.deleteRoles:c.writeRoles).includes(curRole); }
+function kscCan(key,action){ const c=KSC[key].cfg; if(action==='create') return c.writeRoles.includes(curRole)||!!(c.createRoles&&c.createRoles.includes(curRole)); return (action==='delete'?c.deleteRoles:c.writeRoles).includes(curRole); }
 function kscBlocked(key){ const c=KSC[key].cfg; return !!((c.readBlockedRoles&&c.readBlockedRoles.includes(curRole))||(c.readRoles&&!c.readRoles.includes(curRole))); }
 function kscShowMsg(key,text,type){
   const el=document.getElementById(KSC[key].cfg.msgId||(KSC[key].cfg.prefix+'Msg')); if(!el) return;
@@ -2361,7 +2361,7 @@ function kscFieldHtml(key,f,raw,prefill){
 }
 function kscOpenForm(key,id,prefill){
   const M=KSC[key], c=M.cfg;
-  if(!kscCan(key,'write')){ showAcadToast('Anda tidak memiliki izin untuk mengelola data '+c.title.toLowerCase()+'.'); return; }
+  if(!kscCan(key,id?'write':'create')){ showAcadToast('Anda tidak memiliki izin untuk mengelola data '+c.title.toLowerCase()+'.'); return; }
   const raw=id?M.raw[id]:null;
   if(id&&!raw){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
   if(!id&&c.fields.some(f=>f.type==='student'&&f.boardingOnly)&&!bdBoardingStudents().length){ showAcadToast('Belum ada santri boarding. Tandai siswa sebagai Boarding di Database Siswa.'); return; }
@@ -2374,7 +2374,7 @@ function kscOpenForm(key,id,prefill){
 async function kscSubmit(key,id){
   const M=KSC[key], c=M.cfg;
   if(M.submitting) return;
-  if(!kscCan(key,'write')){ kscFormError('Anda tidak memiliki izin untuk menyimpan data ini.'); return; }
+  if(!kscCan(key,id?'write':'create')){ kscFormError('Anda tidak memiliki izin untuk menyimpan data ini.'); return; }
   const sb=dkClient(); if(!sb){ kscFormError('Supabase belum terhubung.'); return; }
   const payload={}, optional=new Set();
   for(const f of c.fields){
@@ -2443,7 +2443,7 @@ function kscRowActions(key,id,detailFn){
     +(kscCan(key,'delete')?'<button title="Hapus" onclick="kscConfirmDelete(\''+key+'\',\''+dkEsc(id)+'\')">🗑</button>':'')+'</div>';
 }
 function kscToolbarButtons(key,addLabel){
-  return (kscCan(key,'write')?'<button class="btn-primary-sm" onclick="kscOpenForm(\''+key+'\',null)">'+addLabel+'</button>':'')
+  return (kscCan(key,'create')?'<button class="btn-primary-sm" onclick="kscOpenForm(\''+key+'\',null)">'+addLabel+'</button>':'')
     +'<button class="btn-outline-sm" onclick="kscLoad(\''+key+'\',{silent:false})">Muat Ulang</button>';
 }
 const ksSame=(a,b)=>String(a)===String(b);
@@ -2627,7 +2627,7 @@ async function initPelanggaranPage(){ plRefresh(); await kscLoad('pl',{silent:fa
    ======================================================================== */
 KSC.kn={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
   key:'kn',prefix:'kn',table:'counseling',title:'Konseling',arr:counselingData,sortKey:'tanggal',
-  writeRoles:KSC_ADMIN,deleteRoles:KSC_ADMIN,readBlockedRoles:['Guru'],
+  writeRoles:KSC_ADMIN,createRoles:['Musyrif'],deleteRoles:KSC_ADMIN,readBlockedRoles:['Guru'],
   fields:[
     {k:'student_id',label:'Siswa',type:'student',req:true},
     {k:'tanggal',label:'Tanggal',type:'date',req:true,def:ksToday},
