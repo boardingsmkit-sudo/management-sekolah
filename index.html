@@ -3295,7 +3295,7 @@ function biInRender(){
   const tgl=document.getElementById('biInTanggal').value; const studs=biInStudents(); const ex=biExisting(tgl); const nEx=studs.filter(s=>ex[String(s.id)]).length;
   const tbl=(group,cols)=>`<table data-grp="${group}"><tr><th>Santri</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${studs.map(s=>{const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>${cols.map(c=>biIsCount(c[0])
       ? `<td><input type="number" class="bi-count" id="bi_${c[0]}_${dkEsc(s.id)}" min="0" max="${biCountLimit()}" step="1" inputmode="numeric" placeholder="-" value="${e&&e[c[0]]!=='-'&&e[c[0]]!=null?e[c[0]]:''}" style="width:72px;border:1px solid var(--line);border-radius:6px;padding:5px 6px;font-size:12px;background:var(--bg);color:var(--ink)"></td>`
-      : `<td><select id="bi_${c[0]}_${dkEsc(s.id)}"><option value="-">-</option>${akOptHtml(biOptsFor(c[0]),e&&e[c[0]]!=='-'?e[c[0]]:'')}</select></td>`).join('')}</tr>`;}).join('')}</table>`;
+      : `<td><select id="bi_${c[0]}_${dkEsc(s.id)}"><option value="-">-</option>${akOptHtml(biOptsFor(c[0]),e?(e[c[0]]!=='-'?e[c[0]]:''):(group==='shalat'?'Tepat Waktu':''))}</select></td>`).join('')}</tr>`;}).join('')}</table>`;
   el.innerHTML=(nEx?`<p class="viewonly-banner">Sudah ada catatan ibadah pada tanggal ini untuk ${nEx} santri — menyimpan akan memperbarui data tersebut.</p>`:'')+tbl('shalat',BI_SHALAT)+tbl('lain',BI_LAIN);
   biInTab(biInTabCur);
 }
