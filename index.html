@@ -1305,7 +1305,7 @@ function akStudentsOfClass(classId){ return studentsData.filter(s=>s.classId!=nu
 function akMapelOfClass(classId){ return [...new Set(schedulesData.filter(s=>String(s.classId)===String(classId)).map(s=>akUnesc(s.mapel)))].sort(); }
 const akSleep=ms=>new Promise(r=>setTimeout(r,ms));
 async function akEnsureClasses(){
-  if(!dkClient()||typeof dkState==='undefined'||dkState.fromDb) return;
+  if(!dkClient()||typeof dkState==='undefined') return;   /* selalu ambil data kelas terbaru dari database (bukan hanya saat belum pernah dimuat) */
   const t=Date.now(); if(!dkState.loading) dkReload({silent:true});
   await akSleep(30); while(dkState.loading&&Date.now()-t<8000) await akSleep(60);
 }
