@@ -361,6 +361,8 @@ tbody tr.clickable{cursor:pointer}
 #acadDrawer .dw-section{font-size:11px;font-weight:700;color:var(--sub);text-transform:uppercase;letter-spacing:.04em;margin:16px 0 6px}
 #acadDrawer .dw-para{font-size:12.3px;line-height:1.6;color:var(--ink)}
 #acadDrawer .dw-student{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:12px}
+/* Input presensi (KBM & asrama) dan input ibadah harian: kolom nama tetap terlihat saat tabel digeser ke kanan */
+#pksList table th:first-child,#pksList table td:first-child,#bpInList table th:first-child,#bpInList table td:first-child,#biInList table th:first-child,#biInList table td:first-child{position:sticky;left:0;z-index:2;background:var(--card);box-shadow:1px 0 0 var(--line)}
 
 /* Weekly Calendar (Jadwal) */
 .cal-wrap{overflow-x:auto}
@@ -3290,12 +3292,21 @@ function biOpenInput(tgl,tab){
   biInRender(); biInTab(biInTabCur);
 }
 function biInStudents(){ const as=document.getElementById('biInAsrama').value; return bdBoardingStudents().filter(s=>!as||s.asrama===as); }
+/* Ibadah Lainnya: Tilawah & Dzikir terisi otomatis (nilai baik) untuk santri yang belum punya catatan; Puasa Senin/Kamis hanya dinilai pada hari Senin & Kamis. */
+const BI_DEFAULT_LAIN={tilawah:'Setor',dzikir:'Hadir'};
+function biIsPuasaDay(tgl){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(tgl||''); if(!m) return true; const d=new Date(+m[1],+m[2]-1,+m[3]).getDay(); return d===1||d===4; }
+function biSelCell(c,s,e,group,puasaDay){
+  const k=c[0], has=e&&e[k]&&e[k]!=='-';
+  const off=k==='puasaSenKam'&&!puasaDay&&!has;
+  const sel=e?(e[k]!=='-'?e[k]:''):(group==='shalat'?'Tepat Waktu':(BI_DEFAULT_LAIN[k]||''));
+  return `<td><select id="bi_${k}_${dkEsc(s.id)}"${off?' disabled title="Puasa Senin/Kamis hanya dinilai pada hari Senin dan Kamis"':''}><option value="-">${off?'Hanya Sen/Kam':'-'}</option>${off?'':akOptHtml(biOptsFor(k),sel)}</select></td>`;
+}
 function biInRender(){
   const el=document.getElementById('biInList'); if(!el) return;
-  const tgl=document.getElementById('biInTanggal').value; const studs=biInStudents(); const ex=biExisting(tgl); const nEx=studs.filter(s=>ex[String(s.id)]).length;
+  const tgl=document.getElementById('biInTanggal').value; const puasaDay=biIsPuasaDay(tgl); const studs=biInStudents(); const ex=biExisting(tgl); const nEx=studs.filter(s=>ex[String(s.id)]).length;
   const tbl=(group,cols)=>`<table data-grp="${group}"><tr><th>Santri</th>${cols.map(c=>`<th>${c[1]}</th>`).join('')}</tr>${studs.map(s=>{const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>${cols.map(c=>biIsCount(c[0])
       ? `<td><input type="number" class="bi-count" id="bi_${c[0]}_${dkEsc(s.id)}" min="0" max="${biCountLimit()}" step="1" inputmode="numeric" placeholder="-" value="${e&&e[c[0]]!=='-'&&e[c[0]]!=null?e[c[0]]:''}" style="width:72px;border:1px solid var(--line);border-radius:6px;padding:5px 6px;font-size:12px;background:var(--bg);color:var(--ink)"></td>`
-      : `<td><select id="bi_${c[0]}_${dkEsc(s.id)}"><option value="-">-</option>${akOptHtml(biOptsFor(c[0]),e?(e[c[0]]!=='-'?e[c[0]]:''):(group==='shalat'?'Tepat Waktu':''))}</select></td>`).join('')}</tr>`;}).join('')}</table>`;
+      : biSelCell(c,s,e,group,puasaDay)).join('')}</tr>`;}).join('')}</table>`;
   el.innerHTML=(nEx?`<p class="viewonly-banner">Sudah ada catatan ibadah pada tanggal ini untuk ${nEx} santri — menyimpan akan memperbarui data tersebut.</p>`:'')+tbl('shalat',BI_SHALAT)+tbl('lain',BI_LAIN);
   biInTab(biInTabCur);
 }
@@ -3305,7 +3316,7 @@ function biInTab(t){
 }
 function biInFillAll(){
   const cols=biInTabCur==='shalat'?BI_SHALAT:BI_LAIN;
-  biInStudents().forEach(s=>cols.forEach(c=>{ if(biIsCount(c[0])) return; const el=document.getElementById('bi_'+c[0]+'_'+s.id); if(el) el.value=biOptsFor(c[0])[0]; }));
+  biInStudents().forEach(s=>cols.forEach(c=>{ if(biIsCount(c[0])) return; const el=document.getElementById('bi_'+c[0]+'_'+s.id); if(el&&!el.disabled) el.value=biOptsFor(c[0])[0]; }));
 }
 async function biInSave(){
   const M=KSC.bi; if(M.submitting) return;
@@ -8064,6 +8075,397 @@ window.dashReloadData=async function(force){
   if(typeof KSC!=='undefined') DASH_KEYS.filter(k=>KSC[k]).forEach(k=>jobs.push(kscLoad(k,{silent:true}).catch(()=>{})));
   if(typeof aisPullMine==='function') jobs.push(aisPullMine().catch(()=>{}));
   await Promise.all(jobs); return true;
+};
+})();
+</script>
+<style id="dashboard-main-css">
+.dx-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+.dx-head h1{font-size:23px;margin:0;font-weight:800;color:var(--ink)}
+.dx-head p{margin:3px 0 0;color:var(--sub);font-size:12.5px}
+.dx-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dx-filter select{font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--card);color:var(--ink)}
+.dx-filter button{font-size:12.5px;font-weight:600;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--card);color:var(--ink);cursor:pointer}
+.dx-note{background:#FCF1DE;color:#7A5200;border:1px solid #F1D8A6;border-radius:10px;padding:9px 12px;font-size:12px;margin-bottom:14px;line-height:1.5}
+.dx-loading{font-size:11.5px;color:var(--sub)}
+.dx-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(225px,1fr));gap:14px;margin-bottom:16px}
+.dx-card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;gap:14px;align-items:flex-start}
+.dx-ic{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dx-ic svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dx-card .dx-lb{font-size:13px;font-weight:700;color:var(--ink)}
+.dx-card .dx-val{font-size:30px;font-weight:800;line-height:1.1;margin:5px 0 4px;color:var(--ink)}
+.dx-delta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px}
+.dx-delta.up{background:#E4F5EE;color:#1C7B5D}.dx-delta.down{background:#FBE7E5;color:#C0392B}.dx-delta.flat{background:var(--line);color:var(--sub)}
+.dx-sub{font-size:11.5px;color:var(--sub);margin-top:6px;line-height:1.45}
+.dx-grid{display:grid;gap:14px;margin-bottom:16px;align-items:stretch}
+.dx-g21{grid-template-columns:2fr 1fr}.dx-g11{grid-template-columns:1fr 1fr}
+@media (max-width:900px){.dx-g21,.dx-g11{grid-template-columns:1fr}}
+.dx-grid>.panel{margin-bottom:0}
+.dx-ph{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.dx-ph h2{margin:0;font-size:15px}
+.dx-ph span{font-size:11.5px;color:var(--sub)}
+.dx-chart{position:relative;height:270px;margin-top:8px}
+.dx-donut-wrap{display:flex;gap:22px;align-items:center;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.dx-donut{position:relative;width:200px;height:200px;flex-shrink:0}
+.dx-donut-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.dx-donut-c b{font-size:26px;font-weight:800;color:var(--ink)}.dx-donut-c span{font-size:12px;color:var(--sub)}
+.dx-legend{flex:1;min-width:170px;display:flex;flex-direction:column;gap:11px}
+.dx-legend div{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink)}
+.dx-legend i{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.dx-legend b{margin-left:auto}
+.dx-sum{display:flex;flex-direction:column;gap:17px;margin-top:10px}
+.dx-sum-row{display:flex;gap:12px;align-items:center}
+.dx-sum-ic{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.dx-sum-ic svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.dx-sum-b{flex:1;min-width:0}
+.dx-sum-t{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink)}
+.dx-sum-t b{font-size:15px}
+.dx-sum-s{display:flex;justify-content:space-between;font-size:10.5px;color:var(--sub);margin-top:3px}
+.dx-bar{height:7px;border-radius:6px;background:var(--line);overflow:hidden;margin-top:6px}
+.dx-bar>i{display:block;height:100%;border-radius:6px}
+.dx-empty{padding:34px 10px;text-align:center;color:var(--sub);font-size:12.5px;line-height:1.6}
+</style>
+<script id="dashboard-main">
+/* ========================================================================
+   DASHBOARD UTAMA (redesain) ? Super Admin, Kepala Sekolah, Guru, Wali Kelas, Musyrif.
+   Semua angka dihitung dari data nyata di Supabase (tidak ada angka contoh).
+   Data diambil per bulan langsung dari tabel (hak akses/RLS tetap berlaku) karena modul
+   Ibadah & Presensi Asrama hanya memuat 120 hari terakhir di memorinya.
+
+   Rumus (persen dibulatkan ke bilangan bulat):
+   - Presensi Akademik  = catatan Hadir / seluruh catatan presensi KBM pada bulan itu.
+   - Kehadiran Asrama   = catatan Hadir / seluruh catatan presensi kegiatan asrama pada bulan itu.
+   - Ibadah Santri      = rata-rata komponen yang punya data:
+       Shalat Wajib  = Tepat Waktu / seluruh catatan shalat fardu terisi (Subuh-Isya)
+       Shalat Sunnah = Hadir / catatan terisi (Tahajud, Witir, Dhuha)
+       Tahfidz       = santri boarding yang menyetor minimal 1x pada bulan itu / santri boarding aktif
+                       (hanya dihitung bila ada setoran bulan itu)
+       Dzikir        = Hadir / catatan dzikir terisi
+   - Pembayaran SPP    = total terbayar / total nominal tagihan jenis biaya "SPP" yang jatuh tempo pada bulan itu.
+   - Perubahan (panah) = selisih poin persentase dengan bulan sebelumnya.
+   - Target dibaca dari boarding_settings (key "dashboardTargets", mis. {"ibadah":90,"presensi":90,"asrama":90,"spp":85});
+     bila belum diatur, target tidak ditampilkan.
+   ======================================================================== */
+(function(){
+const NEW_ROLES=['Super Admin','Kepala Sekolah','Guru','Wali Kelas','Musyrif'];
+const BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const BLN3=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+const HARI=['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+const DOW=[1,2,3,4,5,6,0];
+const FARDU=['subuh','dzuhur','ashar','maghrib','isya'], SUNNAH=['tahajud','witir','dhuha'];
+const pad=n=>String(n).padStart(2,'0');
+const pct=(a,b)=>b>0?Math.round(a/b*100):null;
+const arr=name=>{ try{ return eval(name)||[]; }catch(e){ return []; } };
+function canSee(menuId){
+  const acc=ROLE_ACCESS[curRole]||'all'; if(acc==='all') return true;
+  return MENU.some(g=>acc.includes(g.g)&&g.items.some(it=>it[0]===menuId));
+}
+const SRC={ ibadah:()=>canSee('bd-ibadah'), presensi:()=>canSee('ak-presensi'), asrama:()=>canSee('bd-presensi'), spp:()=>canSee('kg-tagihan') };
+
+const DX={y:null,m:null,cache:{},busy:{}};
+function dxInit(){ if(DX.y==null){ const n=new Date(); DX.y=n.getFullYear(); DX.m=n.getMonth()+1; } }
+const ckey=()=>curRole+'|'+(ROLE_NAME[curRole]||'')+'|'+DX.y+'-'+pad(DX.m);
+
+function dxMonths(y,m){
+  const out=[];
+  for(let i=5;i>=0;i--){ const d=new Date(y,m-1-i,1), yy=d.getFullYear(), mm=d.getMonth()+1, last=new Date(yy,mm,0).getDate();
+    out.push({y:yy,m:mm,key:yy+'-'+pad(mm),label:BLN3[mm-1],from:yy+'-'+pad(mm)+'-01',to:yy+'-'+pad(mm)+'-'+pad(last)}); }
+  return out;
+}
+function datesOfDow(mo,dow){ const o=[], last=Number(mo.to.slice(8)); for(let d=1;d<=last;d++){ if(new Date(mo.y,mo.m-1,d).getDay()===dow) o.push(mo.y+'-'+pad(mo.m)+'-'+pad(d)); } return o; }
+async function pool(tasks,limit){
+  const res=new Array(tasks.length); let i=0;
+  async function worker(){ while(i<tasks.length){ const k=i++; res[k]=await tasks[k](); } }
+  await Promise.all(Array.from({length:Math.min(limit,tasks.length)},worker)); return res;
+}
+function scopeClassIds(){   /* Guru / Wali Kelas: batasi ke kelasnya (sama seperti menu Presensi KBM); null = semua kelas */
+  try{ const sc=acadScopeKelasList(); if(!sc) return null; return classesData.filter(c=>sc.includes(c.nama)).map(c=>c.id); }catch(e){ return null; }
+}
+
+/* ---------- ambil data mentah dari Supabase (RLS berlaku) ---------- */
+async function dxFetch(y,m){
+  const months=dxMonths(y,m), sel=months[5], errors=[], out={months,errors,targets:{},kbm:null,asr:null,ibd:null,thf:null};
+  const sb=(typeof dkClient==='function')?dkClient():null;
+  if(!sb){ out.noClient=true; return out; }
+  const guard=async(name,fn)=>{ try{ return await fn(); }catch(e){ console.error('dashboard:',name,e); errors.push(name+': '+((e&&e.message)||e)); return null; } };
+  const count=async(table,mod)=>{ let q=sb.from(table).select('id',{count:'exact',head:true}); q=mod(q); const r=await q; if(r.error) throw r.error; return r.count||0; };
+  const rows=async(table,cols,mod)=>{
+    const q1=mod(sb.from(table).select(cols,{count:'exact'})).order('id',{ascending:true}).range(0,999);
+    const r1=await q1; if(r1.error) throw r1.error;
+    let data=(r1.data||[]).slice(); const total=r1.count||data.length;
+    const pages=Math.min(Math.ceil(total/1000),200), tasks=[];
+    for(let p=1;p<pages;p++) tasks.push(async()=>{ const r=await mod(sb.from(table).select(cols)).order('id',{ascending:true}).range(p*1000,p*1000+999); if(r.error) throw r.error; return r.data||[]; });
+    (await pool(tasks,6)).forEach(d=>{ data=data.concat(d); });
+    return data;
+  };
+  const range=(q,f,t)=>q.gte('tanggal',f).lte('tanggal',t);
+  const first=months[0].from, last=sel.to;
+  const jobs=[];
+
+  if(SRC.presensi()) jobs.push(guard('Presensi KBM',async()=>{
+    const cls=scopeClassIds(); if(cls&&!cls.length){ out.kbm={none:true}; return; }
+    const sc=q=>cls?q.in('class_id',cls):q;
+    const T='attendance_kbm', per=[], tasks=[];
+    months.forEach((mo,i)=>{ per[i]={};
+      tasks.push(async()=>{ per[i].hadir=await count(T,q=>sc(range(q,mo.from,mo.to).eq('status','Hadir'))); });
+      tasks.push(async()=>{ per[i].total=await count(T,q=>sc(range(q,mo.from,mo.to))); }); });
+    const det={};
+    ['Izin','Sakit','Alpa'].forEach(st=>tasks.push(async()=>{ det[st]=await count(T,q=>sc(range(q,sel.from,sel.to).eq('status',st))); }));
+    const wk=DOW.map(()=>({hadir:0,total:0}));
+    DOW.forEach((dw,i)=>{ const dates=datesOfDow(sel,dw); if(!dates.length) return;
+      tasks.push(async()=>{ wk[i].hadir=await count(T,q=>sc(q.in('tanggal',dates).eq('status','Hadir'))); });
+      tasks.push(async()=>{ wk[i].total=await count(T,q=>sc(q.in('tanggal',dates))); }); });
+    await pool(tasks,8); out.kbm={per,det,wk};
+  }));
+
+  if(SRC.asrama()) jobs.push(guard('Presensi Asrama',async()=>{
+    const T='boarding_attendance', per=[], tasks=[];
+    months.forEach((mo,i)=>{ per[i]={};
+      tasks.push(async()=>{ per[i].hadir=await count(T,q=>range(q,mo.from,mo.to).eq('status','Hadir')); });
+      tasks.push(async()=>{ per[i].total=await count(T,q=>range(q,mo.from,mo.to)); }); });
+    await pool(tasks,8); out.asr={per};
+  }));
+
+  if(SRC.ibadah()){
+    jobs.push(guard('Ibadah Harian',async()=>{
+      out.ibd=await rows('worship_records','id,student_id,tanggal,subuh,dzuhur,ashar,maghrib,isya,tahajud,witir,dhuha,dzikir',q=>range(q,first,last));
+    }));
+    if(canSee('bd-tahfidz')) jobs.push(guard('Tahfidz',async()=>{
+      out.thf=await rows('tahfidz_records','id,student_id,tanggal',q=>range(q,first,last).eq('jenis','Setoran'));
+    }));
+  }
+  jobs.push(guard('Target',async()=>{
+    const r=await sb.from('boarding_settings').select('*').eq('key','dashboardTargets').limit(1);
+    if(r.error) throw r.error;
+    const v=r.data&&r.data[0]&&r.data[0].value; if(v&&typeof v==='object') out.targets=v;
+  }));
+  await Promise.all(jobs);
+  return out;
+}
+
+/* ---------- hitung metrik ---------- */
+function ibdAgg(rows){
+  const A={wajib:[0,0],sunnah:[0,0],dzikir:[0,0]};
+  rows.forEach(r=>{
+    FARDU.forEach(k=>{ if(r[k]){ A.wajib[1]++; if(r[k]==='Tepat Waktu') A.wajib[0]++; } });
+    SUNNAH.forEach(k=>{ if(r[k]){ A.sunnah[1]++; if(r[k]==='Hadir') A.sunnah[0]++; } });
+    if(r.dzikir){ A.dzikir[1]++; if(r.dzikir==='Hadir') A.dzikir[0]++; }
+  });
+  return A;
+}
+function ibdScore(A,thf){
+  const c={wajib:pct(A.wajib[0],A.wajib[1]),sunnah:pct(A.sunnah[0],A.sunnah[1]),tahfidz:thf,dzikir:pct(A.dzikir[0],A.dzikir[1])};
+  const v=Object.values(c).filter(x=>x!=null);
+  return {pct:v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null,comps:c};
+}
+function sppOf(y,m){
+  const ym=y+'-'+pad(m);
+  const fees=new Set(arr('feeTypesData').filter(f=>/spp/i.test(String(f.nama||''))||/spp/i.test(String(f.kategori||''))).map(f=>String(f.id)));
+  if(!fees.size) return null;
+  const inv=arr('invoicesData').filter(i=>fees.has(String(i.feeTypeId))&&String(i.jatuhTempo||'').startsWith(ym));
+  let total=0,paid=0;
+  inv.forEach(i=>{ total+=i.nominal; try{ paid+=Math.min(i.nominal,invoiceComputed(i).dibayar); }catch(e){} });
+  return total>0?{pct:pct(paid,total),paid,total,n:inv.length}:null;
+}
+function dxCompute(raw){
+  const months=raw.months, R={months:[],sel:{},prev:{},week:null,targets:{},errors:raw.errors||[],noClient:!!raw.noClient,ym:months[5]};
+  ['ibadah','presensi','asrama','spp'].forEach(k=>{ const t=Number(raw.targets&&raw.targets[k]); if(Number.isFinite(t)&&t>0&&t<=100) R.targets[k]=t; });
+  const students=arr('studentsData'), vis=students.length?new Set(students.map(s=>String(s.id))):null;
+  const boardIds=new Set(students.filter(s=>s.status==='Aktif'&&s.boarding).map(s=>String(s.id)));
+  const ok=r=>!vis||vis.has(String(r.student_id));
+  /* ibadah per bulan */
+  const ibdBy={}, thfBy={};
+  (raw.ibd||[]).filter(ok).forEach(r=>{ (ibdBy[String(r.tanggal).slice(0,7)]=ibdBy[String(r.tanggal).slice(0,7)]||[]).push(r); });
+  (raw.thf||[]).forEach(r=>{ if(!boardIds.has(String(r.student_id))) return; (thfBy[String(r.tanggal).slice(0,7)]=thfBy[String(r.tanggal).slice(0,7)]||new Set()).add(String(r.student_id)); });
+  const ibdOf=mo=>{
+    if(raw.ibd==null) return {pct:null,comps:{}};
+    const t=thfBy[mo.key]; const thf=(t&&t.size&&boardIds.size)?Math.min(100,pct(t.size,boardIds.size)):null;
+    return ibdScore(ibdAgg(ibdBy[mo.key]||[]),thf);
+  };
+  const kbmOf=i=>{ const p=raw.kbm&&raw.kbm.per&&raw.kbm.per[i]; return p?pct(p.hadir,p.total):null; };
+  const asrOf=i=>{ const p=raw.asr&&raw.asr.per&&raw.asr.per[i]; return p?pct(p.hadir,p.total):null; };
+  months.forEach((mo,i)=>R.months.push({label:mo.label,key:mo.key,ibadah:ibdOf(mo).pct,presensi:kbmOf(i)}));
+  const sel=months[5], si=ibdOf(sel);
+  R.sel.ibadah=si;
+  const kp=raw.kbm&&raw.kbm.per&&raw.kbm.per[5], kd=(raw.kbm&&raw.kbm.det)||{};
+  R.sel.presensi={pct:kbmOf(5),hadir:kp?kp.hadir:0,total:kp?kp.total:0,izin:kd.Izin||0,sakit:kd.Sakit||0,alpa:kd.Alpa||0};
+  const ap=raw.asr&&raw.asr.per&&raw.asr.per[5];
+  R.sel.asrama={pct:asrOf(5),hadir:ap?ap.hadir:0,total:ap?ap.total:0};
+  R.sel.spp=SRC.spp()?sppOf(sel.y,sel.m):null;
+  const pm=months[4];
+  R.prev={ibadah:ibdOf(pm).pct,presensi:kbmOf(4),asrama:asrOf(4),spp:SRC.spp()?((sppOf(pm.y,pm.m)||{}).pct??null):null};
+  /* aktivitas per hari dalam seminggu (bulan terpilih) */
+  const wk={labels:HARI,ibadah:[],presensi:[]};
+  const rowsSel=ibdBy[sel.key]||[];
+  DOW.forEach((dw,i)=>{
+    if(raw.ibd==null) wk.ibadah.push(null);
+    else{ const rs=rowsSel.filter(r=>{ const s=String(r.tanggal); return new Date(+s.slice(0,4),+s.slice(5,7)-1,+s.slice(8,10)).getDay()===dw; }); wk.ibadah.push(rs.length?ibdScore(ibdAgg(rs),null).pct:null); }
+    const w=raw.kbm&&raw.kbm.wk&&raw.kbm.wk[i]; wk.presensi.push(w?pct(w.hadir,w.total):null);
+  });
+  R.week=wk;
+  return R;
+}
+
+/* ---------- tampilan ---------- */
+const ICON={
+  ibadah:'<svg viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>',
+  presensi:'<svg viewBox="0 0 24 24"><path d="M3 9l9-5 9 5-9 5-9-5z"/><path d="M7 11.5V16c0 1.2 2.2 2.5 5 2.5s5-1.3 5-2.5v-4.5"/></svg>',
+  asrama:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19c0-3.2 2.7-5 6-5s6 1.8 6 5"/><path d="M15.5 14.2c3 0 5.5 1.4 5.5 4.3"/></svg>',
+  spp:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M14.8 9.2c-.5-.9-1.5-1.4-2.8-1.4-1.6 0-2.7.8-2.7 2s1 1.7 2.7 2.1c1.8.4 2.9.9 2.9 2.2 0 1.2-1.2 2-2.9 2-1.4 0-2.5-.6-3-1.6M12 6.5v1.3M12 16.2v1.3"/></svg>'
+};
+const KPI=[
+  {id:'ibadah',label:'Ibadah Santri',color:'#16A34A',get:R=>R.sel.ibadah.pct},
+  {id:'presensi',label:'Presensi Akademik',color:'#2563EB',get:R=>R.sel.presensi.pct},
+  {id:'asrama',label:'Kehadiran Asrama',color:'#F59E0B',get:R=>R.sel.asrama.pct},
+  {id:'spp',label:'Pembayaran SPP',color:'#7C3AED',get:R=>R.sel.spp?R.sel.spp.pct:null}
+];
+const visibleKpi=()=>KPI.filter(k=>SRC[k.id]());
+const periodLabel=()=>BLN[DX.m-1]+' '+DX.y;
+const fp=v=>v==null?'-':v+'%';
+function deltaHtml(now,prev){
+  if(now==null||prev==null) return '';
+  const d=now-prev;
+  if(d>0) return `<span class="dx-delta up">&#9650; ${d} poin</span>`;
+  if(d<0) return `<span class="dx-delta down">&#9660; ${Math.abs(d)} poin</span>`;
+  return '<span class="dx-delta flat">= Tetap</span>';
+}
+function kpiCardHtml(k,R){
+  const now=R?k.get(R):null, prev=R?R.prev[k.id]:null, tg=R?R.targets[k.id]:null;
+  let sub;
+  if(!R) sub='Memuat data...';
+  else if(now==null) sub=k.id==='spp'&&!arrFeeSpp()?'Belum ada jenis biaya bernama SPP':'Belum ada data pada '+periodLabel();
+  else sub=(prev==null?'Belum ada data bulan lalu':'Bulan lalu: '+prev+'%')+(tg?' &middot; Target '+tg+'%':'');
+  return `<div class="dx-card"><div class="dx-ic" style="background:${k.color}">${ICON[k.id]}</div><div><div class="dx-lb">${k.label}</div><div class="dx-val">${R?fp(now):'...'}</div>${R?deltaHtml(now,prev):''}<div class="dx-sub">${sub}</div></div></div>`;
+}
+function arrFeeSpp(){ return arr('feeTypesData').some(f=>/spp/i.test(String(f.nama||''))||/spp/i.test(String(f.kategori||''))); }
+const emptyBox=m=>`<div class="dx-empty">${m}</div>`;
+function summaryHtml(R){
+  const ks=visibleKpi(); if(!R) return emptyBox('Memuat data...');
+  return `<div class="dx-sum">${ks.map(k=>{
+    const v=k.get(R), tg=R.targets[k.id];
+    return `<div class="dx-sum-row"><div class="dx-sum-ic" style="background:${k.color}">${ICON[k.id]}</div><div class="dx-sum-b"><div class="dx-sum-t"><span>${k.label}</span><b>${fp(v)}</b></div>
+      <div class="dx-bar"><i style="width:${v==null?0:v}%;background:${k.color}"></i></div>
+      <div class="dx-sum-s"><span>${v==null?'Belum ada data':''}</span><span>${tg?'Target '+tg+'%':''}</span></div></div></div>`; }).join('')}</div>`;
+}
+const COMP=[['wajib','Shalat Wajib','#16A34A'],['sunnah','Shalat Sunnah','#2563EB'],['tahfidz','Tahfidz','#F59E0B'],['dzikir','Dzikir','#7C3AED']];
+function ibadahDetailHtml(R){
+  const p=R&&R.sel.ibadah, any=p&&COMP.some(c=>p.comps[c[0]]!=null);
+  const body=!R?emptyBox('Memuat data...'):!any?emptyBox('Belum ada data ibadah pada '+periodLabel()+'.<br>Isi di menu Ibadah Harian.')
+    :`<div class="dx-donut-wrap"><div class="dx-donut"><canvas id="dxIbd"></canvas><div class="dx-donut-c"><b>${fp(p.pct)}</b><span>Tercapai</span></div></div>
+      <div class="dx-legend">${COMP.map(c=>`<div><i style="background:${c[2]}"></i>${c[1]}<b>${p.comps[c[0]]==null?'-':p.comps[c[0]]+'%'}</b></div>`).join('')}</div></div>`;
+  return `<div class="panel"><div class="dx-ph"><h2>Detail Ibadah</h2><span>${periodLabel()}</span></div>${body}</div>`;
+}
+const PRES=[['hadir','Hadir','#16A34A'],['izin','Izin','#2563EB'],['sakit','Sakit','#F59E0B'],['alpa','Alpa','#DC2626']];
+function presensiDetailHtml(R){
+  const p=R&&R.sel.presensi;
+  const body=!R?emptyBox('Memuat data...'):!p.total?emptyBox('Belum ada data presensi pada '+periodLabel()+'.<br>Isi di menu Presensi KBM.')
+    :`<div class="dx-donut-wrap"><div class="dx-donut"><canvas id="dxPres"></canvas><div class="dx-donut-c"><b>${fp(p.pct)}</b><span>Hadir</span></div></div>
+      <div class="dx-legend">${PRES.map(c=>`<div><i style="background:${c[2]}"></i>${c[1]}<b>${pct(p[c[0]],p.total)}% &middot; ${p[c[0]]}</b></div>`).join('')}</div></div>`;
+  return `<div class="panel"><div class="dx-ph"><h2>Detail Presensi Akademik</h2><span>${periodLabel()}</span></div>${body}</div>`;
+}
+function trendHtml(R){
+  const show=[SRC.ibadah()&&'ibadah',SRC.presensi()&&'presensi'].filter(Boolean);
+  const has=R&&R.months.some(m=>show.some(s=>m[s]!=null));
+  return `<div class="panel"><div class="dx-ph"><h2>Tren Ibadah &amp; Presensi</h2><span>6 bulan terakhir sampai ${periodLabel()}</span></div>${!R?emptyBox('Memuat data...'):has?'<div class="dx-chart"><canvas id="dxTrend"></canvas></div>':emptyBox('Belum ada data pada 6 bulan terakhir.')}</div>`;
+}
+function weekHtml(R){
+  const show=[SRC.ibadah()&&'ibadah',SRC.presensi()&&'presensi'].filter(Boolean);
+  const has=R&&R.week&&show.some(s=>R.week[s].some(v=>v!=null));
+  return `<div class="panel"><div class="dx-ph"><h2>Aktivitas Santri</h2><span>${periodLabel()} &middot; rata-rata per hari dalam seminggu</span></div>${!R?emptyBox('Memuat data...'):has?'<div class="dx-chart"><canvas id="dxWeek"></canvas></div>':emptyBox('Belum ada data pada '+periodLabel()+'.')}</div>`;
+}
+function filterHtml(){
+  const ny=new Date().getFullYear(), ys=[]; for(let y=ny-3;y<=ny;y++) ys.push(y); if(!ys.includes(DX.y)) ys.push(DX.y);
+  return `<div class="dx-head"><div><h1>Dashboard</h1><p>Ringkasan data dan aktivitas terbaru di SMK IT Al-Hidayah</p></div>
+    <div class="dx-filter"><span class="dx-loading" id="dxLoading" style="display:${DX.busy[ckey()]?'':'none'}">Memuat...</span>
+    <select id="dxMonth" onchange="dxSetPeriod()" aria-label="Bulan">${BLN.map((b,i)=>`<option value="${i+1}" ${DX.m===i+1?'selected':''}>${b}</option>`).join('')}</select>
+    <select id="dxYear" onchange="dxSetPeriod()" aria-label="Tahun">${ys.sort().map(y=>`<option value="${y}" ${DX.y===y?'selected':''}>${y}</option>`).join('')}</select>
+    <button type="button" onclick="dxReload()" title="Muat ulang data">&#8635; Muat Ulang</button></div></div>`;
+}
+function extraHtml(){
+  try{ stat5GridHtml(); }catch(e){}     /* menyegarkan data panel lama (jadwal, pengumuman, perlu tindak lanjut, dll.) */
+  const r=curRole, P=(f,a)=>{ try{ return f(a); }catch(e){ return ''; } };
+  if(r==='Super Admin'||r==='Kepala Sekolah') return `<div class="row3">${P(panelPerhatianHtml,5)}${P(panelKegiatanHtml)}${P(panelCepatHtml)}</div><div class="row3">${P(panelNilaiHtml)}${P(panelKedisiplinanHtml)}${P(panelTahfidzHtml)}</div><div class="row2">${P(panelKehadiranHtml)}${P(panelTrendDisiplinHtml)}</div>`;
+  if(r==='Guru') return `<div class="row3">${P(panelPerhatianHtml,5)}${P(panelKegiatanHtml)}${P(panelCepatHtml,['ak-nilai','ak-presensi','ak-jurnal','ak-rapor'])}</div><div class="row2">${P(panelKehadiranHtml)}${P(panelNilaiHtml)}</div>`;
+  if(r==='Wali Kelas') return `<div class="row3">${P(panelPerhatianHtml,5)}${P(panelCepatHtml,['ak-nilai','ak-presensi','ks-izin','ks-pelanggaran'])}${P(panelKedisiplinanHtml)}</div><div class="row2">${P(panelKehadiranHtml)}${P(panelNilaiHtml)}</div>`;
+  if(r==='Musyrif') return `<div class="row3">${P(panelPerhatianHtml,5)}${P(panelKegiatanHtml)}${P(panelCepatHtml,['bd-presensi','bd-ibadah','bd-tahfidz','bd-catatan'])}</div><div class="row2">${P(panelTahfidzHtml)}${P(panelKedisiplinanHtml)}</div>`;
+  return '';
+}
+function bodyHtml(){
+  dxInit(); const c=DX.cache[ckey()], R=c?c.R:null;
+  const ks=visibleKpi();
+  let note='';
+  if(R&&R.noClient) note='<div class="dx-note">Supabase belum terhubung, sehingga data dashboard belum bisa dimuat.</div>';
+  else if(R&&R.errors.length) note='<div class="dx-note">Sebagian data tidak dapat dimuat ('+R.errors.map(e=>String(e).replace(/</g,'&lt;')).join(' | ')+'). Angka terkait ditampilkan sebagai "Belum ada data".</div>';
+  return `${filterHtml()}${note}
+  ${ks.length?`<div class="dx-kpis">${ks.map(k=>kpiCardHtml(k,R)).join('')}</div>`:''}
+  <div class="dx-grid dx-g21">${trendHtml(R)}<div class="panel"><div class="dx-ph"><h2>Ringkasan Bulan Ini</h2><span>${periodLabel()}</span></div>${summaryHtml(R)}</div></div>
+  <div class="dx-grid dx-g11">${SRC.ibadah()?ibadahDetailHtml(R):''}${SRC.presensi()?presensiDetailHtml(R):''}</div>
+  <div class="dx-grid dx-g21">${weekHtml(R)}<div class="panel"><div class="dx-ph"><h2>Pengumuman Terbaru</h2></div>${typeof panelPengumumanHtml==='function'?(()=>{ try{ const h=panelPengumumanHtml(4); return h.replace(/^<div class="panel"><h2>Pengumuman Terbaru<\/h2>/,'').replace(/<\/div>$/,''); }catch(e){ return ''; } })():''}</div></div>
+  ${extraHtml()}`;
+}
+
+/* ---------- grafik ---------- */
+const labelsPlugin={id:'dxLabels',afterDatasetsDraw(chart){
+  const ctx=chart.ctx; ctx.save(); ctx.font='600 10px sans-serif'; ctx.textAlign='center';
+  chart.data.datasets.forEach((ds,di)=>{ const meta=chart.getDatasetMeta(di); if(meta.hidden) return;
+    meta.data.forEach((pt,i)=>{ const v=ds.data[i]; if(v==null) return; ctx.fillStyle=ds.borderColor||ds.backgroundColor; ctx.fillText(v+'%',pt.x,pt.y+(di===0?15:-9)); }); });
+  ctx.restore(); }};
+function axes(){ return {x:{grid:{display:false},ticks:{color:chartTextColor(),font:{size:10.5}}},y:{min:0,max:100,grid:{color:chartLineColor()},ticks:{color:chartTextColor(),font:{size:10.5},callback:v=>v+'%'}}}; }
+function dxDestroy(){ ['dxTrend','dxIbd','dxPres','dxWeek'].forEach(k=>{ if(dashCharts[k]){ try{ dashCharts[k].destroy(); }catch(e){} delete dashCharts[k]; } }); }
+function dxBuildCharts(){
+  const c=DX.cache[ckey()]; if(!c||typeof Chart==='undefined') return; const R=c.R; dxDestroy();
+  const tip={callbacks:{label:x=>`${x.dataset.label}: ${x.parsed.y==null?'-':x.parsed.y+'%'}`}};
+  const leg={position:'top',align:'end',labels:{color:chartTextColor(),font:{size:11},boxWidth:10,usePointStyle:true}};
+  let el=document.getElementById('dxTrend');
+  if(el){ const ds=[]; if(SRC.ibadah()) ds.push({label:'Ibadah',data:R.months.map(m=>m.ibadah),borderColor:'#16A34A',backgroundColor:'#16A34A22',fill:true,tension:.35,pointRadius:4,pointBackgroundColor:'#16A34A',spanGaps:false});
+    if(SRC.presensi()) ds.push({label:'Presensi Akademik',data:R.months.map(m=>m.presensi),borderColor:'#2563EB',backgroundColor:'#2563EB22',fill:false,tension:.35,pointRadius:4,pointBackgroundColor:'#2563EB',spanGaps:false});
+    dashCharts.dxTrend=new Chart(el,{type:'line',data:{labels:R.months.map(m=>m.label),datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:leg,tooltip:tip},scales:axes()},plugins:[labelsPlugin]}); }
+  el=document.getElementById('dxIbd');
+  if(el){ const p=R.sel.ibadah, cs=COMP.filter(c=>p.comps[c[0]]!=null);
+    dashCharts.dxIbd=new Chart(el,{type:'doughnut',data:{labels:cs.map(c=>c[1]),datasets:[{data:cs.map(c=>p.comps[c[0]]),backgroundColor:cs.map(c=>c[2]),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>`${x.label}: ${x.parsed}%`}}}}}); }
+  el=document.getElementById('dxPres');
+  if(el){ const p=R.sel.presensi;
+    dashCharts.dxPres=new Chart(el,{type:'doughnut',data:{labels:PRES.map(c=>c[1]),datasets:[{data:PRES.map(c=>p[c[0]]),backgroundColor:PRES.map(c=>c[2]),borderWidth:0}]},options:{responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>`${x.label}: ${x.parsed} catatan`}}}}}); }
+  el=document.getElementById('dxWeek');
+  if(el){ const ds=[]; if(SRC.ibadah()) ds.push({label:'Ibadah',data:R.week.ibadah,backgroundColor:'#16A34A',borderRadius:5,maxBarThickness:22});
+    if(SRC.presensi()) ds.push({label:'Presensi',data:R.week.presensi,backgroundColor:'#2563EB',borderRadius:5,maxBarThickness:22});
+    dashCharts.dxWeek=new Chart(el,{type:'bar',data:{labels:R.week.labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:leg,tooltip:tip},scales:axes()}}); }
+}
+
+/* ---------- muat & render ---------- */
+async function dxLoad(force){
+  dxInit(); const k=ckey(), c=DX.cache[k];
+  if(!force&&c&&Date.now()-c.ts<60000) return;
+  if(DX.busy[k]) return; DX.busy[k]=true;
+  const ind=document.getElementById('dxLoading'); if(ind) ind.style.display='';
+  try{
+    if(typeof akEnsureStudentsWait==='function') await akEnsureStudentsWait();
+    if(SRC.spp()&&!arr('feeTypesData').length&&typeof kscLoad==='function'){ await Promise.all(['kf','ki','kp'].map(x=>kscLoad(x,{silent:true}).catch(()=>{}))); }
+    const raw=await dxFetch(DX.y,DX.m); DX.cache[k]={ts:Date.now(),R:dxCompute(raw)};
+  }catch(e){
+    console.error('dashboard',e); DX.cache[k]={ts:Date.now(),R:dxCompute({months:dxMonths(DX.y,DX.m),errors:[String((e&&e.message)||e)]})};
+  }finally{ delete DX.busy[k]; }
+  if(k===ckey()) dxRerender();
+}
+function dxRerender(){
+  const root=document.getElementById('dxRoot'); if(!root) return;
+  root.innerHTML=bodyHtml(); initDashboardCharts();
+}
+window.dxSetPeriod=function(){
+  const m=+document.getElementById('dxMonth').value, y=+document.getElementById('dxYear').value; if(!m||!y) return;
+  DX.m=m; DX.y=y; dxRerender(); dxLoad(true);
+};
+window.dxReload=function(){ dxLoad(true); const i=document.getElementById('dxLoading'); if(i) i.style.display=''; };
+
+const _dashHtml=dashboardHTML;
+dashboardHTML=function(){
+  if(!NEW_ROLES.includes(curRole)) return _dashHtml();
+  return welcomeCardHtml()+'<div id="dxRoot">'+bodyHtml()+'</div>';
+};
+const _initCharts=initDashboardCharts;
+initDashboardCharts=function(){
+  _initCharts();
+  if(!NEW_ROLES.includes(curRole)||!document.getElementById('dxRoot')) return;
+  dxBuildCharts(); dxLoad(false);
 };
 })();
 </script>
