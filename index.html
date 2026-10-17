@@ -1839,44 +1839,100 @@ async function nlSessSave(){
 /* ========================================================================
    6. RAPOR  (tabel: report_cards) — nilai & kehadiran DIHITUNG dari grades & attendance_kbm
    ======================================================================== */
-let rpFilter={tingkat:'',kelas:'',status:''};
+/* Rapor Akademik: tampilan depan = KARTU PROFIL SISWA. Semua angka (kartu, detail, cetak) berasal dari SATU perhitungan: rpBuild().
+   - Nilai Akhir per mapel = nlFinal() menu Nilai (rata-rata komponen yang terisi, tanpa bobot). Rata-rata rapor = rata-rata Nilai Akhir semua mapel pada periode.
+   - Tidak ada nilai -> "-" (BUKAN 0). Kehadiran = catatan Hadir / seluruh catatan presensi KBM siswa pada periode semester (per pertemuan, bukan per hari).
+   - Rapor "lengkap" bila: ada nilai, semua mapel punya kelima komponen, dan tidak ada mapel yang sudah dinilai untuk teman sekelas tetapi belum untuk siswa ini. */
+let rpFilter={tingkat:'',kelas:'',status:'',q:''};
 const rpSel={ta:akDefaultPeriod().ta,sem:akDefaultPeriod().sem};
+let rpPage=1; const RP_PER_PAGE=12;
+let rpView={mode:'list',id:null};
+let rpLoadWarn=[];
+const RP_SCHOOL_DEFAULTS={npsn:'20223344',nss:'402021012345',address:'Jl. Pendidikan No. 1',desa:'Sirnagalih',kecamatan:'Cianjur',kabupaten:'Cianjur',provinsi:'Jawa Barat',kodePos:'43211',phone:'0263-123456',principalName:'Ahmad Salim'};
+/* Identitas sekolah dari Pengaturan > Profil Sekolah. Nilai bawaan contoh bawaan aplikasi dianggap "belum diisi" (tidak dicetak sebagai data sekolah). */
+function rpSchool(){
+  const s=schoolSettingsData||{}, ok=k=>{ const v=String(s[k]==null?'':s[k]).trim(); return !!v&&v!=='-'&&v!==RP_SCHOOL_DEFAULTS[k]; }, g=k=>ok(k)?dkEsc(String(s[k]).trim()):'';
+  const addr=[g('address'),g('desa'),g('kecamatan')&&'Kec. '+g('kecamatan'),g('kabupaten')&&'Kab. '+g('kabupaten'),g('provinsi'),g('kodePos')].filter(Boolean).join(', ');
+  return {name:dkEsc(String(s.schoolName||'SMK IT Al-Hidayah')),addr,npsn:g('npsn'),phone:g('phone'),principal:g('principalName')};
+}
+function rpLogoSrc(){
+  const v=String((schoolSettingsData&&schoolSettingsData.logoUrl)||'').trim();
+  if(!v||v==='-'||/[\s<>"']/.test(v)) return '';
+  if(/^(https?:\/\/|data:image\/)/i.test(v)) return v;
+  if(/\.(png|jpe?g|svg|webp|gif)$/i.test(v)){ try{ return new URL(v,location.href).href; }catch(e){ return ''; } }
+  return '';
+}
+const rpNum=v=>v==null?'-':String(v).replace('.',',');
+function rpTingkatOf(r){
+  const c=classesData.find(x=>String(x.id)===String(r.classId)); const t=c&&c.tingkat&&c.tingkat!=='-'?String(akUnesc(c.tingkat)).toUpperCase():'';
+  if(t) return t; const m=/^(XII|XI|X)\b/i.exec(akUnesc(r.kelas).trim()); return m?m[1].toUpperCase():'';
+}
 function rpBuild(){
-  const ta=rpSel.ta, sem=rpSel.sem, taE=dkEsc(ta); const range=akPeriodRange(ta,sem);
+  const ta=rpSel.ta, sem=rpSel.sem, taE=dkEsc(ta), range=akPeriodRange(ta,sem);
+  const byStudent={}, classMapel={};
+  gradesData.filter(g=>g.tahunAjaran===taE&&g.semester===sem).forEach(g=>{
+    (byStudent[String(g.studentId)]=byStudent[String(g.studentId)]||[]).push(g);
+    const ck=String(g.classId); (classMapel[ck]=classMapel[ck]||new Set()).add(g.mapel);
+  });
+  const attBy={};
+  attendanceRecordsData.forEach(a=>{ if(range&&!(a.tanggal>=range[0]&&a.tanggal<=range[1])) return; (attBy[String(a.studentId)]=attBy[String(a.studentId)]||[]).push(a); });
   reportCardsData.length=0;
   studentsData.filter(s=>s.classId!=null&&s.status==='Aktif').forEach(s=>{
-    const gr=gradesData.filter(g=>String(g.studentId)===String(s.id)&&g.tahunAjaran===taE&&g.semester===sem&&g.nilaiAkhir!=null);
-    const nilai=gr.length?Math.round(gr.reduce((a,g)=>a+g.nilaiAkhir,0)/gr.length*10)/10:0;
-    const att=attendanceRecordsData.filter(a=>String(a.studentId)===String(s.id)&&(!range||(a.tanggal>=range[0]&&a.tanggal<=range[1])));
-    const kehadiran=att.length?Math.round(att.filter(a=>a.status==='Hadir').length/att.length*100):0;
-    const rec=rpRecords.find(r=>String(r.studentId)===String(s.id)&&r.tahunAjaran===taE&&r.semester===sem);
-    reportCardsData.push({id:s.id,studentId:s.id,recId:rec?rec.id:null,nama:s.nama,nis:s.nis,kelas:s.kelas,classId:s.classId,nilai,jmlMapel:gr.length,kehadiran,
+    const sid=String(s.id);
+    const grades=(byStudent[sid]||[]).slice().sort((a,b)=>akUnesc(a.mapel).localeCompare(akUnesc(b.mapel)));
+    const scored=grades.filter(g=>g.nilaiAkhir!=null);
+    const nilai=scored.length?Math.round(scored.reduce((a,g)=>a+g.nilaiAkhir,0)/scored.length*10)/10:null;
+    const partial=grades.filter(g=>NL_COMPS.some(k=>g[k]==null));
+    const have=new Set(grades.map(g=>g.mapel));
+    const missing=[...(classMapel[String(s.classId)]||[])].filter(m=>!have.has(m)).sort();
+    const alasan=[];
+    if(!grades.length) alasan.push('Belum ada nilai pada periode ini');
+    if(partial.length) alasan.push('Komponen nilai belum lengkap: '+partial.map(g=>akUnesc(g.mapel)+' ('+NL_COMPS.filter(k=>g[k]==null).map(k=>NL_LABEL[k]).join(', ')+')').join('; '));
+    if(missing.length) alasan.push('Belum ada nilai untuk mapel: '+missing.map(akUnesc).join(', '));
+    const att=attBy[sid]||[], cnt={Hadir:0,Sakit:0,Izin:0,Alpa:0}; att.forEach(a=>{ if(cnt[a.status]!=null) cnt[a.status]++; });
+    const kehadiran=att.length?Math.round(cnt.Hadir/att.length*100):null;
+    const rec=rpRecords.find(r=>String(r.studentId)===sid&&r.tahunAjaran===taE&&r.semester===sem);
+    const cl=classesData.find(c=>String(c.id)===String(s.classId));
+    reportCardsData.push({id:s.id,studentId:s.id,recId:rec?rec.id:null,nama:s.nama,nis:s.nis,nisn:(s.nisn&&s.nisn!=='-')?s.nisn:'',kelas:s.kelas,classId:s.classId,
+      wali:(cl&&cl.wali&&cl.wali!=='-')?cl.wali:'',grades,nilai,jmlMapel:grades.length,partialN:partial.length,
+      att:{hadir:cnt.Hadir,sakit:cnt.Sakit,izin:cnt.Izin,alpa:cnt.Alpa,total:att.length},kehadiran,lengkap:alasan.length===0,alasan,
       status:rec?rec.status:'Belum Lengkap',catatan:rec?rec.catatan:'-',tanggalCetak:rec?rec.tanggalCetak:''});
   });
   reportCardsData.sort((a,b)=>akUnesc(a.kelas).localeCompare(akUnesc(b.kelas))||akUnesc(a.nama).localeCompare(akUnesc(b.nama)));
 }
 function rpFilteredRows(){
   let rows=acadFilterByScope(reportCardsData,'kelas');
-  const f=rpFilter;
-  return rows.filter(r=>(!f.kelas||r.kelas===f.kelas)&&(!f.status||r.status===f.status)&&(!f.tingkat||akUnesc(r.kelas).toUpperCase().split(' ')[0]===f.tingkat));
+  const f=rpFilter, q=(f.q||'').trim().toLowerCase();
+  return rows.filter(r=>(!f.kelas||r.kelas===f.kelas)&&(!f.status||r.status===f.status)&&(!f.tingkat||rpTingkatOf(r)===f.tingkat)
+    &&(!q||akUnesc(r.nama).toLowerCase().includes(q)||String(r.nis).toLowerCase().includes(q)||String(r.nisn).toLowerCase().includes(q)));
+}
+function rpCardHtml(r){
+  const ini=dkEsc(ksInitials(akUnesc(r.nama))), id=dkEsc(r.studentId);
+  const warn=(r.status!=='Belum Lengkap'&&!r.lengkap)?' title="Nilai belum lengkap, periksa rapor"':'';
+  return `<div class="rp-card"><div class="rp-card-top"><div class="rp-av">${ini}</div>
+    <div class="rp-id"><div class="rp-name">${r.nama}</div><div class="rp-sub">NIS: ${r.nis||'-'}</div>${r.nisn?`<div class="rp-sub">NISN: ${r.nisn}</div>`:''}<div class="rp-sub">Kelas ${r.kelas}</div></div>
+    <span${warn}>${acadStatusBadge(r.status)}</span></div>
+    <div class="rp-stats"><div class="rp-stat"><span>Rata-rata Nilai</span><b>${rpNum(r.nilai)}</b>${r.jmlMapel?'':'<i>Belum ada nilai</i>'}</div>
+      <div class="rp-stat"><span>Kehadiran</span><b>${r.kehadiran==null?'-':r.kehadiran+'%'}</b>${r.att.total?'':'<i>Belum ada presensi</i>'}</div></div>
+    <button class="rp-more" onclick="rpShowDetail('${id}')">Selengkapnya</button></div>`;
 }
 function rpRenderTable(){
   const el=document.getElementById('rpBody'); if(!el) return;
-  const rows=rpFilteredRows();
-  el.innerHTML = rows.length? `<table><tr><th>No</th><th>Nama Siswa</th><th>NIS</th><th>Kelas</th><th>Nilai</th><th>Kehadiran</th><th>Status Rapor</th><th>Aksi</th></tr>
-    ${rows.map((r,i)=>`<tr><td>${i+1}</td><td><b>${r.nama}</b></td><td>${r.nis}</td><td>${r.kelas}</td><td>${r.jmlMapel?r.nilai:'-'}</td><td>${r.kehadiran}%</td>
-    <td>${acadStatusBadge(r.status)}</td><td><div class="row-actions">
-      <button title="Preview" onclick="rpPreview('${dkEsc(r.studentId)}')">👁</button>
-      ${kscCan('rp','write')?`<button title="Edit" onclick="rpOpenForm('${dkEsc(r.studentId)}')">✏️</button>`:''}
-      <button title="Cetak" onclick="rpPrint('${dkEsc(r.studentId)}')">🖨</button>
-    </div></td></tr>`).join('')}
-    </table>` : acadEmptyStateHtml('Belum ada data rapor','Belum ada siswa aktif di kelas, atau ubah filter tingkat, kelas, dan status rapor.');
+  const rows=rpFilteredRows(), pg=acadPaginate(rows,rpPage,RP_PER_PAGE); rpPage=pg.page;
+  if(!rows.length){ el.innerHTML=acadEmptyStateHtml('Belum ada data rapor','Belum ada siswa aktif di kelas, atau ubah filter tahun ajaran, semester, tingkat, kelas, status, dan pencarian.'); return; }
+  const a=(pg.page-1)*RP_PER_PAGE+1, b=a+pg.rows.length-1;
+  let btns=''; for(let i=1;i<=pg.totalPages;i++) btns+=`<button class="${i===pg.page?'active':''}" onclick="rpGoPage(${i})">${i}</button>`;
+  el.innerHTML=`<div class="rp-grid">${pg.rows.map(rpCardHtml).join('')}</div>
+    <div class="acad-pagination"><span class="pg-info">Menampilkan ${a} - ${b} dari ${pg.total} siswa</span>
+      <div class="pg-btns"><button ${pg.page<=1?'disabled':''} onclick="rpGoPage(${pg.page-1})">&lsaquo;</button>${btns}<button ${pg.page>=pg.totalPages?'disabled':''} onclick="rpGoPage(${pg.page+1})">&rsaquo;</button></div></div>`;
 }
+function rpGoPage(n){ rpPage=n; rpRenderTable(); }
 function rpOnFilterChange(){
   const v=id=>{ const e=document.getElementById(id); return e?e.value:''; };
-  rpSel.ta=v('rpTA')||rpSel.ta; rpSel.sem=v('rpSem')||rpSel.sem;
-  rpFilter={tingkat:v('rpTingkat'),kelas:v('rpKelas'),status:v('rpStatus')};
-  rpBuild(); rpRenderStats(); rpRenderTable();
+  const ta=v('rpTA')||rpSel.ta, sem=v('rpSem')||rpSel.sem, changed=(ta!==rpSel.ta||sem!==rpSel.sem);
+  rpSel.ta=ta; rpSel.sem=sem;
+  rpFilter={tingkat:v('rpTingkat'),kelas:v('rpKelas'),status:v('rpStatus'),q:v('rpQ')};
+  rpPage=1; if(changed) rpBuild(); rpRenderTable();
 }
 function rpStatsArray(){
   const scoped=acadFilterByScope(reportCardsData,'kelas');
@@ -1888,70 +1944,122 @@ function rpStatsArray(){
   ];
 }
 function rpRenderStats(){ const st=document.getElementById('rpStats'); if(st) st.innerHTML=acadStatRowHtml(rpStatsArray()); }
-function rpRefresh(){
-  rpBuild(); rpRenderStats();
+function rpFillControls(){
   const uniq=a=>[...new Set(a)].filter(x=>x&&x!=='-').sort();
-  kscFillSelect('rpKelas',uniq(acadFilterByScope(reportCardsData,'kelas').map(r=>r.kelas)).map(k=>({value:k,label:k})));
+  const set=(id,val)=>{ const e=document.getElementById(id); if(e) e.value=val; };
+  const kl=document.getElementById('rpKelas');
+  if(kl){ const ks=uniq(acadFilterByScope(reportCardsData,'kelas').map(r=>r.kelas)); if(rpFilter.kelas&&!ks.includes(rpFilter.kelas)) ks.push(rpFilter.kelas);
+    kl.innerHTML='<option value="">Semua Kelas</option>'+ks.map(k=>'<option value="'+dkEsc(k)+'">'+k+'</option>').join(''); kl.value=rpFilter.kelas; }
   const tas=uniq(gradesData.map(g=>akUnesc(g.tahunAjaran)).concat(rpRecords.map(r=>akUnesc(r.tahunAjaran)),[rpSel.ta]));
-  const sel=document.getElementById('rpTA'); if(sel){ sel.innerHTML=tas.map(t=>'<option value="'+dkEsc(t)+'"'+(t===rpSel.ta?' selected':'')+'>TA '+dkEsc(t)+'</option>').join(''); }
-  const sm=document.getElementById('rpSem'); if(sm) sm.value=rpSel.sem;
-  rpRenderTable();
+  const ta=document.getElementById('rpTA'); if(ta){ ta.innerHTML=tas.map(t=>'<option value="'+dkEsc(t)+'"'+(t===rpSel.ta?' selected':'')+'>TA '+dkEsc(t)+'</option>').join(''); }
+  set('rpSem',rpSel.sem); set('rpTingkat',rpFilter.tingkat); set('rpStatus',rpFilter.status); set('rpQ',rpFilter.q);
+  const w=document.getElementById('rpWarn');
+  if(w) w.innerHTML=rpLoadWarn.length?`<div class="rp-warn">Data ${rpLoadWarn.join(' dan ')} gagal dimuat, sehingga angka pada kartu bisa belum lengkap. Klik <b>Muat Ulang</b> untuk mencoba lagi.</div>`:'';
 }
-function raporPageHtml(){
-  rpFilter={tingkat:'',kelas:'',status:''};
-  return `${acadPageHeaderHtml('emerald','Akademik','Rapor Siswa','Kelola, periksa, dan cetak rapor siswa.')}
-    <div id="rpStats">${acadStatRowHtml(rpStatsArray())}</div>
-    ${acadScopeNoticeHtml()}
-    <div class="panel">
-      <div class="acad-toolrow">
+function rpListHtml(){
+  return `<div class="panel rp-panel">
+      <div class="acad-toolrow rp-tools">
         <select id="rpTA" onchange="rpOnFilterChange()"><option value="${dkEsc(rpSel.ta)}">TA ${dkEsc(rpSel.ta)}</option></select>
         <select id="rpSem" onchange="rpOnFilterChange()"><option>Ganjil</option><option>Genap</option></select>
         <select id="rpTingkat" onchange="rpOnFilterChange()"><option value="">Semua Tingkat</option><option>X</option><option>XI</option><option>XII</option></select>
         <select id="rpKelas" onchange="rpOnFilterChange()"><option value="">Semua Kelas</option></select>
         <select id="rpStatus" onchange="rpOnFilterChange()"><option value="">Semua Status</option><option>Selesai</option><option>Belum Lengkap</option><option>Sudah Dicetak</option></select>
+        <input type="search" id="rpQ" placeholder="Cari nama siswa atau NIS..." oninput="rpOnFilterChange()" autocomplete="off">
         <span class="ti-spacer"></span>
         <button class="btn-outline-sm" onclick="rpReloadAll()">Muat Ulang</button>
       </div>
-      <p class="desc">Nilai rata-rata dan kehadiran dihitung otomatis dari menu Nilai dan Presensi KBM pada periode yang dipilih. Status rapor diisi oleh Wali Kelas/Admin.</p>
-      <div id="rpMsg"></div>
+      <p class="desc">Rata-rata nilai dan kehadiran dihitung otomatis dari menu Nilai dan Presensi KBM pada semester yang dipilih. Status rapor diisi oleh Wali Kelas/Admin.</p>
+      <div id="rpWarn"></div><div id="rpMsg"></div>
       <div id="rpBody"></div>
     </div>`;
 }
-async function rpReloadAll(){ await Promise.all([kscLoad('rp',{silent:false}),kscLoad('nl',{silent:true}),kscLoad('pk',{silent:true})]); rpRefresh(); }
-async function initRaporPage(){ rpRefresh(); await rpReloadAll(); }
-function rpGradesOf(studentId){ const taE=dkEsc(rpSel.ta); return gradesData.filter(g=>String(g.studentId)===String(studentId)&&g.tahunAjaran===taE&&g.semester===rpSel.sem).sort((a,b)=>akUnesc(a.mapel).localeCompare(akUnesc(b.mapel))); }
-function rpPreview(studentId){
-  const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r) return;
-  const gr=rpGradesOf(studentId);
-  openAcadDrawer('Preview Rapor',`
-    <div class="rapor-preview">
-      <div class="rp-head"><b>RAPOR SISWA</b><span>${dkEsc(schoolSettingsData.schoolName||'SMK IT Al-Hidayah')} — Semester ${rpSel.sem} TA ${dkEsc(rpSel.ta)}</span></div>
-      <div class="rp-meta">
-        <div><b>Nama:</b> ${r.nama}</div><div><b>NIS:</b> ${r.nis}</div>
-        <div><b>Kelas:</b> ${r.kelas}</div><div><b>Kehadiran:</b> ${r.kehadiran}%</div>
-      </div>
-      <table><tr><th>Mata Pelajaran</th><th>Nilai Akhir</th></tr>
-        ${gr.length?gr.map(g=>`<tr><td>${g.mapel}</td><td>${nlBadge(g.nilaiAkhir)}</td></tr>`).join(''):'<tr><td colspan="2">Belum ada nilai pada periode ini.</td></tr>'}
-        <tr><td><b>Rata-rata Nilai Akademik</b></td><td>${gr.length?`<span class="badge ${gradeBadgeClass(r.nilai)}">${r.nilai}</span>`:'-'}</td></tr>
-        <tr><td>Kehadiran</td><td>${r.kehadiran}%</td></tr>
-        <tr><td>Status Rapor</td><td>${acadStatusBadge(r.status)}</td></tr>
-      </table>
-      <div class="dw-section">Catatan Wali Kelas</div><p class="dw-para">${r.catatan}</p>
-      <div class="rp-sign">
-        <div><div class="sign-line">Wali Kelas</div></div>
-        <div><div class="sign-line">Kepala Sekolah</div></div>
-      </div>
-    </div>
-    <div class="acad-actionbar" style="margin-top:14px;">
-      <button class="btn-primary-sm" onclick="rpPrint('${dkEsc(r.studentId)}')">🖨 Cetak / Simpan PDF</button>
-    </div>`);
+function raporPageHtml(){
+  rpFilter={tingkat:'',kelas:'',status:'',q:''}; rpPage=1; rpView={mode:'list',id:null}; rpLoadWarn=[];
+  return `${acadPageHeaderHtml('emerald','Akademik','Rapor Akademik','Lihat dan kelola rapor akademik siswa.')}
+    ${acadScopeNoticeHtml()}
+    <div id="rpRoot">${rpListHtml()}</div>`;
 }
+function rpRenderList(){
+  const root=document.getElementById('rpRoot'); if(!root) return;
+  root.innerHTML=rpListHtml(); rpFillControls(); rpRenderTable();
+}
+function rpRefresh(){
+  rpBuild();
+  const root=document.getElementById('rpRoot'); if(!root) return;
+  if(rpView.mode==='detail'){
+    const r=reportCardsData.find(x=>String(x.studentId)===String(rpView.id));
+    if(r&&acadFilterByScope([r],'kelas').length){ root.innerHTML=rpDetailHtml(r); return; }
+    rpView={mode:'list',id:null}; rpRenderList(); return;
+  }
+  if(!document.getElementById('rpBody')) rpRenderList(); else { rpFillControls(); rpRenderTable(); }
+}
+async function rpReloadAll(){
+  const keys=['rp','nl','pk'], res=await Promise.all(keys.map((k,i)=>kscLoad(k,{silent:i!==0})));
+  rpLoadWarn=keys.map((k,i)=>({k,ok:res[i]})).filter(x=>x.ok===false&&!kscBlocked(x.k)&&dkClient()&&!KSC[x.k].loading).map(x=>({rp:'status rapor',nl:'nilai',pk:'presensi KBM'})[x.k]);
+  rpRefresh();
+}
+async function initRaporPage(){ rpRefresh(); await rpReloadAll(); }
+function rpGradesOf(studentId){ const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); return r?r.grades:[]; }
+/* ---- Detail rapor (di area konten) ---- */
+function rpDocHtml(r){
+  const sc=rpSchool(), logo=rpLogoSrc(), range=akPeriodRange(rpSel.ta,rpSel.sem), ta=dkEsc(rpSel.ta);
+  const c=v=>v==null?'-':v;
+  const rows=r.grades.length?r.grades.map((g,i)=>{ const part=NL_COMPS.some(k=>g[k]==null);
+    return `<tr><td class="c">${i+1}</td><td>${g.mapel}</td>${NL_COMPS.map(k=>`<td class="c">${c(g[k])}</td>`).join('')}<td class="c"><b>${g.nilaiAkhir==null?'-':g.nilaiAkhir}</b>${part?'*':''}</td></tr>`; }).join('')
+    :'<tr><td colspan="8" class="c">Belum ada nilai pada periode ini.</td></tr>';
+  const at=r.att;
+  return `<div class="rpd-head">${logo?`<img class="rpd-logo" src="${dkEsc(logo)}" alt="" onerror="this.style.display='none'">`:''}
+      <div class="rpd-school"><div class="rpd-name">${sc.name.toUpperCase()}</div>${sc.addr?`<div class="rpd-addr">${sc.addr}</div>`:''}${(sc.npsn||sc.phone)?`<div class="rpd-addr">${[sc.npsn&&'NPSN: '+sc.npsn,sc.phone&&'Telp: '+sc.phone].filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`:''}</div>
+      <div class="rpd-period">Tahun Ajaran ${ta}<br>Semester <b>${dkEsc(rpSel.sem)}</b></div></div>
+    <div class="rpd-title">RAPOR AKADEMIK SISWA</div>
+    <h4 class="rpd-h">A. Identitas Siswa</h4>
+    <table class="rpd-id"><tr><td>Nama</td><td>: ${r.nama}</td><td>Tahun Ajaran</td><td>: ${ta}</td></tr>
+      <tr><td>NIS</td><td>: ${r.nis||'-'}</td><td>Semester</td><td>: ${dkEsc(rpSel.sem)}</td></tr>
+      <tr><td>NISN</td><td>: ${r.nisn||'-'}</td><td>Wali Kelas</td><td>: ${r.wali||'-'}</td></tr>
+      <tr><td>Kelas</td><td>: ${r.kelas}</td><td></td><td></td></tr></table>
+    <h4 class="rpd-h">B. Nilai Akademik</h4>
+    <table class="rpd-tbl"><thead><tr><th>No</th><th>Mata Pelajaran</th><th>Tugas</th><th>Ulangan</th><th>PTS</th><th>PAS</th><th>Project</th><th>Nilai Akhir</th></tr></thead><tbody>${rows}
+      <tr class="rpd-avg"><td colspan="7"><b>Rata-rata Nilai</b></td><td class="c"><b>${rpNum(r.nilai)}</b></td></tr></tbody></table>
+    ${r.partialN?'<p class="rpd-note">* Nilai Akhir dihitung dari komponen yang sudah diinput; komponen bertanda "-" belum ada nilainya.</p>':''}
+    ${r.lengkap?'':`<p class="rpd-note rpd-warn">Nilai belum lengkap: ${r.alasan.map(dkEsc).join('. ')}.</p>`}
+    <div class="rpd-two"><div><h4 class="rpd-h">C. Rekap Kehadiran</h4>
+        <table class="rpd-tbl"><thead><tr><th>Hadir</th><th>Sakit</th><th>Izin</th><th>Alpa</th><th>Total</th></tr></thead><tbody><tr><td class="c">${at.hadir}</td><td class="c">${at.sakit}</td><td class="c">${at.izin}</td><td class="c">${at.alpa}</td><td class="c">${at.total}</td></tr></tbody></table>
+        <div class="rpd-pct"><span>Persentase Kehadiran</span><b>${r.kehadiran==null?'-':r.kehadiran+'%'}</b></div><div class="rpd-bar"><i style="width:${r.kehadiran==null?0:r.kehadiran}%"></i></div>
+        <p class="rpd-note">${at.total?`Dihitung dari ${at.total} catatan presensi KBM (per pertemuan)${range?', '+fmtTglID(range[0])+' s.d. '+fmtTglID(range[1]):''}.`:'Belum ada catatan presensi KBM pada periode ini.'}</p></div>
+      <div><h4 class="rpd-h">D. Catatan Wali Kelas</h4><div class="rpd-box">${r.catatan&&r.catatan!=='-'?r.catatan:'<span class="rpd-muted">Belum ada catatan wali kelas.</span>'}</div></div></div>
+    <h4 class="rpd-h">E. Tanda Tangan</h4>
+    <div class="rpd-sign"><div><div>Wali Kelas</div><div class="rpd-line">${r.wali?'( '+r.wali+' )':'(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)'}</div></div>
+      <div><div>Kepala Sekolah</div><div class="rpd-line">${sc.principal?'( '+sc.principal+' )':'(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)'}</div></div></div>`;
+}
+function rpDetailHtml(r){
+  const id=dkEsc(r.studentId), ini=dkEsc(ksInitials(akUnesc(r.nama))), tg=r.tanggalCetak&&r.tanggalCetak!=='-'?fmtTglID(r.tanggalCetak):'';
+  return `<div class="rp-detail">
+    <aside class="panel rp-side"><button class="rp-back" onclick="rpBackToList()">&larr; Kembali ke Daftar</button>
+      <div class="rp-side-av">${ini}</div><div class="rp-side-name">${r.nama}</div>
+      <div class="rp-side-sub">NIS: ${r.nis||'-'}</div>${r.nisn?`<div class="rp-side-sub">NISN: ${r.nisn}</div>`:''}<div class="rp-side-sub">Kelas ${r.kelas}</div>
+      <div class="rp-side-badge">${acadStatusBadge(r.status)}</div>
+      <div class="rp-meta"><div><span>Tahun Ajaran</span><b>${dkEsc(rpSel.ta)}</b></div><div><span>Semester</span><b>${dkEsc(rpSel.sem)}</b></div><div><span>Kelas</span><b>${r.kelas}</b></div>${tg?`<div><span>Dicetak</span><b>${tg}</b></div>`:''}</div>
+      ${r.lengkap?'':`<div class="rp-warn rp-warn-s">Nilai belum lengkap.<br>${r.alasan.map(dkEsc).join('<br>')}</div>`}
+      <button class="btn-primary-sm rp-wide" onclick="rpPrint('${id}')">Cetak / Simpan PDF</button>
+      ${kscCan('rp','write')?`<button class="btn-outline-sm rp-wide" onclick="rpOpenForm('${id}')">Ubah Status &amp; Catatan</button>`:''}
+    </aside>
+    <section class="panel rp-main"><div class="rp-paper">${rpDocHtml(r)}</div></section></div>`;
+}
+function rpShowDetail(studentId){
+  const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
+  const root=document.getElementById('rpRoot'); if(!root) return;
+  rpView={mode:'detail',id:r.studentId}; root.innerHTML=rpDetailHtml(r);
+  try{ root.scrollIntoView({block:'start'}); }catch(e){}
+}
+function rpBackToList(){ rpView={mode:'list',id:null}; rpRenderList(); }
+function rpPreview(studentId){ rpShowDetail(studentId); }
 function rpOpenForm(studentId){
   if(!kscCan('rp','write')){ showAcadToast('Anda tidak memiliki izin untuk mengubah status rapor.'); return; }
   const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
   const rec=rpRecords.find(x=>String(x.id)===String(r.recId));
   openAcadDrawer('Edit Rapor',AK_ERRBOX+`
     ${dwRow('Siswa',r.nama)}${dwRow('Kelas',r.kelas)}${dwRow('Periode','Semester '+rpSel.sem+' TA '+dkEsc(rpSel.ta))}
+    ${r.lengkap?'':`<div class="rp-warn rp-warn-s">Nilai belum lengkap, status "Selesai" / "Sudah Dicetak" tidak dapat disimpan.<br>${r.alasan.map(dkEsc).join('<br>')}</div>`}
     <div class="dw-field"><label>Status Rapor *</label><select id="rpfStatus">${akOptHtml(['Belum Lengkap','Selesai','Sudah Dicetak'],r.status)}</select></div>
     <div class="dw-field"><label>Catatan Wali Kelas</label><textarea id="rpfCatatan" rows="4" maxlength="1500">${dkEsc(rec&&rec.raw?rec.raw.catatan_wali||'':'')}</textarea></div>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="rpfSubmit" onclick="rpSave('${dkEsc(r.studentId)}')">Simpan</button></div>`);
@@ -1971,38 +2079,59 @@ async function rpSave(studentId){
   const M=KSC.rp; if(M.submitting) return;
   const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r) return;
   if(!kscCan('rp','write')){ akFormErr('akfError','Anda tidak memiliki izin untuk menyimpan.'); return; }
+  const st=document.getElementById('rpfStatus').value; const ct=document.getElementById('rpfCatatan').value.trim();
+  if((st==='Selesai'||st==='Sudah Dicetak')&&!r.lengkap){ akFormErr('akfError','Status "'+st+'" belum bisa disimpan karena nilai belum lengkap: '+r.alasan.join('. ')+'.'); return; }
   M.submitting=true; const btn=document.getElementById('rpfSubmit'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
-    const st=document.getElementById('rpfStatus').value; const ct=document.getElementById('rpfCatatan').value.trim();
     await rpWrite(r,st,ct===''?null:ct,st==='Sudah Dicetak'&&!r.tanggalCetak);
     closeAcadDrawer(); showAcadToast('Status rapor berhasil disimpan.');
     await kscLoad('rp',{silent:true}); rpRefresh();
   }catch(e){ console.error('rpSave',e); akFormErr('akfError','Gagal menyimpan: '+kscErrMsg(e,'ubah',M.cfg)); showAcadToast('Gagal menyimpan rapor.'); }
   finally{ M.submitting=false; const b=document.getElementById('rpfSubmit'); if(b){ b.disabled=false; b.textContent='Simpan'; } }
 }
+/* Dokumen cetak formal (A4). Isi dokumen = rpDocHtml(r), sama persis dengan detail di layar. */
 function rpPrintHtml(r){
-  const gr=rpGradesOf(r.studentId);
-  return `<!doctype html><html><head><meta charset="utf-8"><title>Rapor ${akUnesc(r.nama)}</title><style>
-    body{font-family:Arial,sans-serif;font-size:13px;color:#111;padding:28px}h2{text-align:center;margin:0 0 4px}.sub{text-align:center;margin-bottom:18px;color:#444}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:4px 24px;margin-bottom:14px}table{width:100%;border-collapse:collapse;margin:10px 0}th,td{border:1px solid #888;padding:6px 8px;text-align:left}th{background:#eee}
-    .sign{display:flex;justify-content:space-around;margin-top:60px}.sign div{text-align:center;width:40%}.sign .line{border-top:1px solid #111;margin-top:60px;padding-top:4px}</style></head><body>
-    <h2>RAPOR SISWA</h2><div class="sub">${dkEsc(schoolSettingsData.schoolName||'SMK IT Al-Hidayah')} — Semester ${rpSel.sem} TA ${dkEsc(rpSel.ta)}</div>
-    <div class="meta"><div><b>Nama:</b> ${r.nama}</div><div><b>NIS:</b> ${r.nis}</div><div><b>Kelas:</b> ${r.kelas}</div><div><b>Kehadiran:</b> ${r.kehadiran}%</div></div>
-    <table><tr><th>Mata Pelajaran</th><th>Tugas</th><th>Ulangan</th><th>PTS</th><th>PAS</th><th>Project</th><th>Nilai Akhir</th></tr>
-    ${gr.length?gr.map(g=>`<tr><td>${g.mapel}</td>${NL_COMPS.map(k=>`<td>${g[k]==null?'-':g[k]}</td>`).join('')}<td><b>${g.nilaiAkhir==null?'-':g.nilaiAkhir}</b></td></tr>`).join(''):'<tr><td colspan="7">Belum ada nilai pada periode ini.</td></tr>'}
-    <tr><td colspan="6"><b>Rata-rata</b></td><td><b>${gr.length?r.nilai:'-'}</b></td></tr></table>
-    <p><b>Catatan Wali Kelas:</b> ${r.catatan}</p>
-    <div class="sign"><div>Wali Kelas<div class="line">&nbsp;</div></div><div>Kepala Sekolah<div class="line">&nbsp;</div></div></div></body></html>`;
+  return `<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Rapor ${r.nama} - ${dkEsc(rpSel.sem)} ${dkEsc(rpSel.ta)}</title><style>
+    @page{size:A4 portrait;margin:14mm 14mm 16mm}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:#fff;color:#000}
+    body{font-family:"Times New Roman",Times,serif;font-size:11.5pt;line-height:1.35;padding:0}
+    .rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2.5px solid #000;padding-bottom:8px;margin-bottom:10px}
+    .rpd-logo{width:62px;height:62px;object-fit:contain;filter:grayscale(1)}
+    .rpd-school{flex:1}.rpd-name{font-size:15pt;font-weight:bold;letter-spacing:.3px}.rpd-addr{font-size:9.5pt}
+    .rpd-period{text-align:right;font-size:10pt;white-space:nowrap}
+    .rpd-title{text-align:center;font-size:13pt;font-weight:bold;letter-spacing:1px;margin:10px 0 8px;text-decoration:underline}
+    .rpd-h{font-size:11.5pt;margin:12px 0 5px;break-after:avoid}
+    table{width:100%;border-collapse:collapse}
+    .rpd-id td{padding:2px 4px;vertical-align:top;font-size:11pt}.rpd-id td:nth-child(1){width:16%}.rpd-id td:nth-child(2){width:36%}.rpd-id td:nth-child(3){width:16%}
+    .rpd-tbl th,.rpd-tbl td{border:1px solid #000;padding:4px 6px;font-size:10.5pt}
+    .rpd-tbl th{background:#e6e6e6;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-tbl td.c{text-align:center}.rpd-tbl thead{display:table-header-group}
+    tr{break-inside:avoid}
+    .rpd-avg td{background:#f0f0f0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-note{font-size:9.5pt;margin:5px 0}.rpd-warn{border:1px solid #000;padding:4px 6px;font-weight:bold}
+    .rpd-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;break-inside:avoid}
+    .rpd-pct{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5pt}
+    .rpd-bar{height:9px;border:1px solid #000}.rpd-bar i{display:block;height:100%;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-box{border:1px solid #000;min-height:74px;padding:6px 8px;font-size:10.5pt;white-space:pre-wrap}
+    .rpd-muted{color:#444}
+    .rpd-sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;text-align:center;margin-top:6px;break-inside:avoid;page-break-inside:avoid}
+    .rpd-line{margin-top:62px;font-weight:bold}
+    .rpd-foot{margin-top:14px;font-size:8.5pt;color:#333;text-align:right}
+    @media print{body{padding:0}}
+  </style></head><body>${rpDocHtml(r)}<div class="rpd-foot">Dicetak dari sistem AIS pada ${fmtTglID(ksToday())}</div></body></html>`;
 }
 async function rpPrint(studentId){
-  const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r) return;
-  const w=window.open('','_blank');
-  if(!w){ showAcadToast('Pop-up diblokir browser. Izinkan pop-up untuk mencetak rapor.'); return; }
-  w.document.open(); w.document.write(rpPrintHtml(r)); w.document.close();
-  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){} },300);
-  showAcadToast('Di dialog cetak, pilih "Simpan sebagai PDF" bila ingin berkas PDF.');
-  if(kscCan('rp','write')&&r.status!=='Sudah Dicetak'&&dkClient()){
-    try{ await rpWrite(r,'Sudah Dicetak',undefined,true); await kscLoad('rp',{silent:true}); rpRefresh(); }catch(e){ console.error('rpPrint status',e); showAcadToast('Rapor dicetak, tetapi status "Sudah Dicetak" gagal disimpan: '+kscErrMsg(e,'ubah',KSC.rp.cfg)); }
+  const r=reportCardsData.find(x=>String(x.studentId)===String(studentId)); if(!r){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
+  let w=null;
+  try{ w=window.open('','_blank'); }catch(e){ w=null; }
+  if(!w){ showAcadToast('Pop-up diblokir browser, rapor belum dibuka. Izinkan pop-up untuk situs ini lalu klik Cetak lagi.'); return; }
+  try{ w.document.open(); w.document.write(rpPrintHtml(r)); w.document.close(); }
+  catch(e){ console.error('rpPrint tulis dokumen',e); try{ w.close(); }catch(_){} showAcadToast('Dokumen rapor gagal dibuat, silakan coba lagi.'); return; }
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){ console.error('rpPrint dialog',e); showAcadToast('Rapor terbuka di tab baru, tetapi dialog cetak gagal dibuka. Tekan Ctrl+P di tab tersebut.'); } },300);
+  showAcadToast(r.lengkap?'Rapor dibuka di tab baru. Di dialog cetak, pilih "Simpan sebagai PDF" bila ingin berkas PDF.':'Rapor dibuka di tab baru, tetapi NILAI BELUM LENGKAP (ditandai di dokumen). Status rapor tidak diubah.');
+  if(r.lengkap&&kscCan('rp','write')&&r.status!=='Sudah Dicetak'&&dkClient()){
+    try{ await rpWrite(r,'Sudah Dicetak',undefined,true); await kscLoad('rp',{silent:true}); rpRefresh(); }catch(e){ console.error('rpPrint status',e); showAcadToast('Rapor dibuka, tetapi status "Sudah Dicetak" gagal disimpan: '+kscErrMsg(e,'ubah',KSC.rp.cfg)); }
   }
 }
 
@@ -8078,6 +8207,49 @@ window.dashReloadData=async function(force){
 };
 })();
 </script>
+<style id="rapor-cards-css">
+.rp-panel .rp-tools input[type=search]{min-width:200px;flex:1 1 200px;max-width:280px}
+.rp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(262px,1fr));gap:16px;margin-top:6px}
+@media (max-width:420px){.rp-grid{grid-template-columns:1fr}}
+.rp-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 2px 10px rgba(15,38,76,.06);display:flex;flex-direction:column;gap:14px}
+.rp-card-top{display:flex;gap:12px;align-items:flex-start}
+.rp-av{width:58px;height:58px;border-radius:14px;background:var(--acc-blue-bg);color:var(--acc-blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;flex-shrink:0}
+.rp-id{flex:1;min-width:0}.rp-name{font-weight:800;font-size:14px;color:var(--ink);line-height:1.25;word-break:break-word}
+.rp-sub{font-size:11.5px;color:var(--sub);margin-top:2px}
+.rp-card-top>span{flex-shrink:0}
+.rp-stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.rp-stat{background:var(--bg,#F4F7FB);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
+.rp-stat span{font-size:11px;color:var(--sub)}.rp-stat b{font-size:21px;color:var(--ink);line-height:1.15}.rp-stat i{font-style:normal;font-size:10px;color:var(--sub)}
+.rp-more{border:0;border-radius:11px;background:var(--navy,#14407A);color:#fff;font-weight:700;font-size:13px;padding:10px;cursor:pointer;width:100%}
+.rp-more:hover{filter:brightness(1.12)}
+.rp-warn{background:#FCF1DE;color:#7A5200;border:1px solid #F1D8A6;border-radius:10px;padding:9px 12px;font-size:12px;margin:8px 0;line-height:1.5}
+.rp-warn-s{font-size:11.5px}
+.rp-detail{display:grid;grid-template-columns:250px 1fr;gap:16px;align-items:start}
+@media (max-width:900px){.rp-detail{grid-template-columns:1fr}}
+.rp-side{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+.rp-back{align-self:flex-start;border:0;background:none;color:var(--acc-blue,#2563EB);font-weight:700;font-size:12.5px;cursor:pointer;padding:2px 0 8px}
+.rp-side-av{width:96px;height:96px;border-radius:20px;background:var(--acc-blue-bg);color:var(--acc-blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:32px}
+.rp-side-name{font-weight:800;font-size:16px;color:var(--ink);margin-top:6px;word-break:break-word}
+.rp-side-sub{font-size:12px;color:var(--sub)}.rp-side-badge{margin:6px 0}
+.rp-meta{width:100%;border-top:1px solid var(--line);margin-top:6px;padding-top:8px;display:flex;flex-direction:column;gap:7px;font-size:12px}
+.rp-meta div{display:flex;justify-content:space-between;gap:8px;text-align:right}.rp-meta span{color:var(--sub);text-align:left}
+.rp-wide{width:100%;margin-top:6px;justify-content:center}
+.rp-main{overflow-x:auto}
+.rp-paper{background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:22px 26px;min-width:560px;font-size:12.5px;line-height:1.4}
+.rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #14407A;padding-bottom:10px;margin-bottom:10px}
+.rpd-logo{width:56px;height:56px;object-fit:contain}.rpd-school{flex:1}.rpd-name{font-size:16px;font-weight:800;color:#14407A}.rpd-addr{font-size:11px;color:#444}
+.rpd-period{text-align:right;font-size:11.5px;white-space:nowrap}
+.rpd-title{text-align:center;font-weight:800;letter-spacing:.5px;font-size:14px;margin:10px 0}
+.rpd-h{font-size:12.5px;font-weight:800;margin:14px 0 6px;color:#14407A}
+.rpd-id{width:100%;border-collapse:collapse;background:#F4F7FB;border-radius:8px}.rpd-id td{padding:3px 8px;font-size:12px}
+.rpd-tbl{width:100%;min-width:0;border-collapse:collapse}.rpd-tbl th,.rpd-tbl td{border:1px solid #cfd8e6;padding:6px 8px;font-size:12px}
+.rpd-tbl th{background:#EDF2FA;font-weight:700}.rpd-tbl td.c{text-align:center}.rpd-avg td{background:#EAF3FF}
+.rpd-note{font-size:11px;color:#555;margin:6px 0}.rpd-warn{background:#FCF1DE;color:#7A5200;border-radius:8px;padding:6px 10px}
+.rpd-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:760px){.rpd-two{grid-template-columns:1fr}}
+.rpd-pct{display:flex;justify-content:space-between;margin-top:8px;font-size:12px}.rpd-bar{height:8px;border-radius:6px;background:#E3E9F2;overflow:hidden}.rpd-bar i{display:block;height:100%;background:#16A34A}
+.rpd-box{border:1px solid #cfd8e6;border-radius:8px;min-height:80px;padding:8px 10px;white-space:pre-wrap}.rpd-muted{color:#777}
+.rpd-sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;text-align:center;margin-top:6px}.rpd-line{margin-top:58px;font-weight:700}
+</style>
 <style id="dashboard-main-css">
 .dx-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
 .dx-head h1{font-size:23px;margin:0;font-weight:800;color:var(--ink)}
@@ -8811,5 +8983,695 @@ async function stSchemaCheck(){
     rows.map(r=>dwRow(stEsc(r.key)+' → '+stEsc(r.col),r.ok?'OK':'<span style="color:#C0392B">'+stEsc(r.err)+'</span>')).join('');
 }
 </script>
+<script>
+/* PATCH RAPOR AKADEMIK — tempel sebagai <script> TERAKHIR, tepat sebelum </body>.
+   Tidak mengubah kode asli, hanya membungkus fungsi yang sudah ada (pola yang sama dengan skrip lain di aplikasi).
+
+   Masalah yang diperbaiki:
+   Status rapor tersimpan ("Selesai"/"Sudah Dicetak") tetap tampil walau nilai kemudian menjadi tidak lengkap
+   (nilai dihapus, mapel baru ditambah, komponen dikosongkan). Sekarang status yang TAMPIL di kartu, detail,
+   filter, dan statistik dihitung dari kelengkapan nilai saat ini. Status tersimpan di database tidak diubah. */
+(function () {
+  if (typeof rpBuild !== 'function' || typeof rpCardHtml !== 'function' || typeof reportCardsData === 'undefined') {
+    console.warn('[rapor-patch] fungsi rapor tidak ditemukan, patch dilewati');
+    return;
+  }
+
+  var _build = rpBuild;
+  rpBuild = function () {
+    var out = _build.apply(this, arguments);
+    reportCardsData.forEach(function (r) {
+      r.statusTersimpan = r.status;
+      r.statusKadaluarsa = false;
+      if ((r.status === 'Selesai' || r.status === 'Sudah Dicetak') && !r.lengkap) {
+        r.status = 'Belum Lengkap';
+        r.statusKadaluarsa = true;
+      }
+    });
+    return out;
+  };
+
+  var _card = rpCardHtml;
+  rpCardHtml = function (r) {
+    var html = _card(r);
+    if (!r.statusKadaluarsa) return html;
+    var note = '<div class="rp-warn rp-warn-s">Status tersimpan &quot;' + r.statusTersimpan +
+      '&quot; tidak berlaku: nilai belum lengkap.</div>';
+    return html.replace('<button class="rp-more"', note + '<button class="rp-more"');
+  };
+
+  /* Badge "Belum Lengkap" berwarna kuning seperti desain acuan (bawaan: merah). */
+  var st = document.createElement('style');
+  st.id = 'rapor-patch-css';
+  st.textContent = '.rp-card .badge.b-red,.rp-side-badge .badge.b-red{background:#FCF1DE;color:#A5730C}';
+  document.head.appendChild(st);
+})();
+
+</script>
+<style id="proyek-siswa-css">
+/* ===== RAPOR AKADEMIK — GALERI HASIL PROYEK (navy + teal) ===== */
+.pj-av-img{position:relative;overflow:hidden}
+.pj-av-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pj-media{position:relative;display:block;width:100%;aspect-ratio:4/3;overflow:hidden;background:linear-gradient(135deg,var(--navy,#0B2540),var(--teal,#2A9D8F))}
+.pj-media img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;transition:transform .35s ease}
+.pj-ph{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:rgba(255,255,255,.88);font-size:11px;font-weight:600;text-align:center;padding:8px}
+.pj-ph svg{width:34%;max-width:56px;height:auto;opacity:.9}
+.pj-ph-code{background:linear-gradient(135deg,#0B2540,#1D6FA3)}.pj-ph-design{background:linear-gradient(135deg,#0E3358,#2A9D8F)}
+.pj-ph-chip{background:linear-gradient(135deg,#0B2540,#0F766E)}.pj-ph-image{background:linear-gradient(135deg,#12263A,#2A9D8F)}
+/* Ringkasan di halaman utama */
+.pj-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:4px 0 16px}
+@media (max-width:900px){.pj-summary{grid-template-columns:repeat(2,1fr)}}
+.pj-sum{border-radius:14px;padding:14px 16px;color:#fff;display:flex;align-items:center;gap:12px;box-shadow:0 4px 14px rgba(11,37,64,.12)}
+.pj-sum svg{width:30px;height:30px;flex-shrink:0;opacity:.9}
+.pj-sum b{display:block;font-size:22px;line-height:1.1}.pj-sum span{font-size:11.5px;opacity:.9}
+.pj-sum.s1{background:linear-gradient(135deg,#0B2540,#14407A)}.pj-sum.s2{background:linear-gradient(135deg,#0F766E,#2A9D8F)}
+.pj-sum.s3{background:linear-gradient(135deg,#0E3358,#1D6FA3)}.pj-sum.s4{background:linear-gradient(135deg,#155E75,#2A9D8F)}
+/* Kartu siswa */
+.pj-dev{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--sub)}
+.pj-devb{padding:3px 10px;border-radius:20px;font-size:10.8px;font-weight:700;white-space:nowrap}
+.pj-devb.d-sb{background:#DDF3EF;color:#0F766E}.pj-devb.d-b{background:#E3EEF8;color:#14407A}.pj-devb.d-p{background:#FCF1DE;color:#A5730C}.pj-devb.d-n{background:#EEF1F4;color:#5B7285}
+.pj-strip-h{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--sub);margin-bottom:6px}
+.pj-strip-h b{color:var(--teal,#2A9D8F);font-weight:700}
+.pj-strip-g{display:grid;gap:6px;grid-template-columns:repeat(3,1fr)}
+.pj-strip-g.n1{grid-template-columns:1fr}.pj-strip-g.n2{grid-template-columns:1fr 1fr}
+.pj-thumb{position:relative;border:0;padding:0;border-radius:10px;overflow:hidden;cursor:pointer;background:none;display:block}
+.pj-thumb .pj-media{aspect-ratio:1/1}.pj-strip-g.n1 .pj-thumb .pj-media{aspect-ratio:16/9}
+.pj-thumb:hover img{transform:scale(1.06)}
+.pj-thumb-cap{position:absolute;left:0;right:0;bottom:0;padding:14px 6px 5px;font-size:10px;font-weight:700;color:#fff;text-align:left;background:linear-gradient(transparent,rgba(11,37,64,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pj-strip-empty{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--sub);border:1px dashed var(--line);border-radius:10px;padding:10px 12px}
+.pj-strip-empty svg{width:18px;height:18px;flex-shrink:0}
+/* Detail: profil */
+.pj-overall{width:100%;border-top:1px solid var(--line);margin-top:8px;padding-top:10px;display:flex;flex-direction:column;gap:7px}
+.pj-ov-score{border-radius:14px;padding:12px;color:#fff;background:linear-gradient(135deg,var(--navy,#0B2540),var(--teal,#2A9D8F));display:flex;flex-direction:column;align-items:center;gap:4px}
+.pj-ov-score span{font-size:11px;opacity:.9}.pj-ov-score b{font-size:30px;line-height:1.1}
+.pj-ov-score .pj-devb{background:rgba(255,255,255,.18);color:#fff}
+.pj-ov-row{display:flex;justify-content:space-between;font-size:12px}.pj-ov-row span{color:var(--sub)}
+/* Galeri */
+.pj-gallery{overflow:visible}
+.pj-gh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.pj-gh h3{font-size:17px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px}
+.pj-gh h3 svg{width:20px;height:20px;color:var(--teal,#2A9D8F)}
+.pj-gh p{font-size:12px;color:var(--sub);margin-top:3px}
+.pj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:18px}
+@media (max-width:420px){.pj-grid{grid-template-columns:1fr}}
+.pj-card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 2px 12px rgba(11,37,64,.07);transition:box-shadow .2s,transform .2s}
+.pj-card:hover{box-shadow:0 8px 24px rgba(11,37,64,.14);transform:translateY(-2px)}
+.pj-card-media{border:0;padding:0;background:none;cursor:pointer;display:block;position:relative;width:100%}
+.pj-card-media:hover img{transform:scale(1.04)}
+.pj-star{position:absolute;top:10px;left:10px;background:rgba(201,162,39,.95);color:#fff;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:20px}
+.pj-per{position:absolute;top:10px;right:10px;background:rgba(11,37,64,.78);color:#fff;font-size:10px;font-weight:600;padding:3px 8px;border-radius:20px}
+.pj-card-body{padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.pj-chip{align-self:flex-start;background:#DDF3EF;color:#0F766E;font-size:10.8px;font-weight:700;padding:3px 10px;border-radius:20px}
+.pj-card h4{font-size:15px;font-weight:800;color:var(--ink);line-height:1.3;word-break:break-word}
+.pj-desc{font-size:12.3px;color:var(--sub);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.pj-card-meta{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:end;border-top:1px solid var(--line);padding-top:10px;margin-top:auto}
+.pj-card-meta span{display:block;font-size:10.5px;color:var(--sub);margin-bottom:2px}
+.pj-card-meta b{font-size:12px;color:var(--ink)}
+.pj-card-meta b.pj-score{font-size:20px;color:var(--navy,#0B2540);line-height:1}
+.pj-card-actions{display:flex;gap:8px}
+.pj-btn{flex:1;border:0;border-radius:10px;background:var(--navy,#0B2540);color:#fff;font-weight:700;font-size:12.5px;padding:9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.pj-btn:hover{background:var(--teal,#2A9D8F)}
+.pj-ibtn{border:1px solid var(--line);background:var(--card);color:var(--sub);border-radius:10px;width:38px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.pj-ibtn svg{width:16px;height:16px}.pj-ibtn:hover{color:var(--navy,#0B2540);border-color:var(--navy,#0B2540)}.pj-ibtn.del:hover{color:var(--danger,#C0392B);border-color:var(--danger,#C0392B)}
+.pj-empty{border:2px dashed var(--line);border-radius:16px;padding:34px 18px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--sub);font-size:12.5px}
+.pj-empty svg{width:46px;height:46px;color:var(--teal,#2A9D8F);opacity:.8}.pj-empty b{color:var(--ink);font-size:14px}
+.pj-loading{font-size:12.5px;color:var(--sub);padding:8px 0}
+/* Detail proyek */
+.pjd-back{border:0;background:none;color:var(--teal,#2A9D8F);font-weight:700;font-size:13px;cursor:pointer;padding:2px 0 12px;display:inline-flex;align-items:center;gap:6px}
+.pjd-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(260px,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.pjd-grid{grid-template-columns:1fr}}
+.pjd-main{border:0;padding:0;background:none;cursor:zoom-in;display:block;width:100%;border-radius:16px;overflow:hidden;box-shadow:0 6px 22px rgba(11,37,64,.15)}
+.pjd-main .pj-media{aspect-ratio:16/10}
+.pjd-main .pj-media img{object-fit:contain;background:#0B2540}
+.pjd-hint{font-size:11px;color:var(--sub);margin-top:6px;text-align:center}
+.pjd-info{display:flex;flex-direction:column;gap:10px}
+.pjd-info h2{font-size:20px;font-weight:800;color:var(--ink);line-height:1.3;word-break:break-word}
+.pjd-who{font-size:12.5px;color:var(--sub)}
+.pjd-score{border-radius:14px;padding:14px;color:#fff;background:linear-gradient(135deg,var(--navy,#0B2540),var(--teal,#2A9D8F));display:flex;justify-content:space-between;align-items:center}
+.pjd-score span{font-size:12px;opacity:.9}.pjd-score b{font-size:32px;line-height:1}
+.pjd-rows{display:flex;flex-direction:column;gap:8px;font-size:12.5px;border:1px solid var(--line);border-radius:12px;padding:12px}
+.pjd-rows div{display:flex;justify-content:space-between;gap:10px}.pjd-rows span{color:var(--sub)}.pjd-rows b{text-align:right;color:var(--ink)}
+.pjd-secs{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+@media (max-width:760px){.pjd-secs{grid-template-columns:1fr}}
+.pjd-sec{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--card)}
+.pjd-sec.wide{grid-column:1/-1}
+.pjd-sec h4{font-size:13px;font-weight:800;color:var(--navy,#0B2540);margin-bottom:8px;display:flex;align-items:center;gap:7px}
+.pjd-sec h4 svg{width:16px;height:16px;color:var(--teal,#2A9D8F)}
+.pjd-sec p{font-size:12.8px;line-height:1.6;color:var(--ink);white-space:pre-wrap;word-break:break-word}
+.pjd-sec p.mut{color:var(--sub);font-style:italic}
+.pjd-note{background:#F0FAF8;border-left:4px solid var(--teal,#2A9D8F)}
+.pjd-tags{display:flex;flex-wrap:wrap;gap:6px}.pjd-tags span{background:#E3EEF8;color:#14407A;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:20px}
+.pjd-proc{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:10px}
+.pjd-proc button{border:0;padding:0;background:none;border-radius:10px;overflow:hidden;cursor:zoom-in}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .pjd-note{background:#0F2F33}:root:not([data-theme="light"]) .pj-chip{background:#0F3A38;color:#7FD6C8}:root:not([data-theme="light"]) .pjd-tags span{background:#163552;color:#A9CBEA}}
+:root[data-theme="dark"] .pjd-note{background:#0F2F33}:root[data-theme="dark"] .pj-chip{background:#0F3A38;color:#7FD6C8}:root[data-theme="dark"] .pjd-tags span{background:#163552;color:#A9CBEA}
+/* Lightbox */
+#pjLightbox{position:fixed;inset:0;z-index:300;background:rgba(6,18,32,.92);display:none;align-items:center;justify-content:center;padding:24px}
+#pjLightbox.show{display:flex}
+#pjLightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+#pjLightbox button{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:16px;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:20px;width:42px;height:42px;border-radius:50%;cursor:pointer}
+/* Foto profil (edit) */
+.pj-av-wrap{position:relative;display:inline-block}
+.pj-av-edit{position:absolute;right:-6px;bottom:-6px;width:32px;height:32px;border-radius:50%;border:2px solid var(--card);background:var(--navy,#0B2540);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(11,37,64,.25)}
+.pj-av-edit svg{width:15px;height:15px}.pj-av-edit:hover{background:var(--teal,#2A9D8F)}
+.pjf-avprev{width:120px;height:120px;border-radius:20px;overflow:hidden;margin:4px auto 10px;background:var(--acc-blue-bg);color:var(--acc-blue);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:36px;position:relative}
+.pjf-avprev img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+/* Bagian E di lembar rapor: tombol tambah + aksi lihat/ubah (hanya di layar, tidak ikut dicetak) */
+.rpd-hrow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.rpd-hrow .btn-primary-sm{margin:10px 0 4px}
+.rpd-act{white-space:nowrap;text-align:center}
+.rpd-act button{border:1px solid #cfd8e6;background:#fff;color:#14407A;border-radius:7px;width:28px;height:26px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;margin:0 2px;vertical-align:middle}
+.rpd-act button svg{width:14px;height:14px}.rpd-act button:hover{background:#14407A;color:#fff;border-color:#14407A}
+/* Form */
+.pjf-photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.pjf-photo{position:relative;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.pjf-photo .pj-media{aspect-ratio:1/1}
+.pjf-photo label{position:absolute;left:0;right:0;bottom:0;background:rgba(11,37,64,.82);color:#fff;font-size:10.5px;padding:4px 6px;display:flex;gap:5px;align-items:center;cursor:pointer}
+.pjf-check{display:flex;align-items:center;gap:8px;font-size:12.5px;cursor:pointer}
+</style>
+<script id="proyek-siswa">
+/* ========================================================================
+   RAPOR AKADEMIK — GALERI HASIL PROYEK SISWA
+   - Tabel  : student_projects (1 baris = 1 proyek, relasi student_id -> students.id)
+   - Berkas : Supabase Storage bucket PRIVAT "student-projects", path = <student_id>/<project_id>/<file>.jpg
+              ditampilkan lewat signed URL (berlaku 1 jam). Skema + RLS: supabase-proyek-siswa-setup.sql
+   - Pola   : sama dengan patch rapor lain — hanya MEMBUNGKUS fungsi rapor yang sudah ada, tidak mengubah kode asli.
+   - Proyek yang tampil = proyek milik siswa itu sendiri pada Tahun Ajaran + Semester yang dipilih.
+   - Tidak ada data contoh. Bila foto belum diunggah, yang tampil hanya ilustrasi placeholder bertuliskan "Foto belum tersedia".
+   ======================================================================== */
+(function(){
+if(typeof rpBuild!=='function'||typeof rpDetailHtml!=='function'||typeof rpCardHtml!=='function'||typeof KSC==='undefined'||typeof kscLoad!=='function'){
+  console.warn('[proyek-siswa] modul rapor tidak ditemukan, fitur galeri proyek dilewati'); return;
+}
+const PJ_TABLE='student_projects', PJ_BUCKET='student-projects';
+const PJ_WRITE=['Super Admin','Kepala Sekolah','Guru','Wali Kelas'];
+const PJ_STATUS=['Selesai','Dalam Pengerjaan','Revisi'];
+const PJ_MAX_PROSES=8, PJ_MAX_IN=15*1024*1024, PJ_MAX_OUT=5*1024*1024, PJ_MAX_DIM=1600;
+const projectsData=[]; window.studentProjectsData=projectsData;
+let pjLoadFailed=false;
+const pjUrlCache={};
+
+/* ---------- Ikon (stroke, konsisten) ---------- */
+const PJ_IC={
+  image:'<path d="M4 5h16v14H4z"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 3-3 4 4"/>',
+  code:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/>',
+  design:'<path d="M12 3a9 9 0 100 18c1.1 0 1.6-.8 1.6-1.6 0-1.2-.9-1.4-.9-2.4 0-.9.7-1.5 1.6-1.5H17a4 4 0 004-4C21 6.6 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.1"/><circle cx="10" cy="7.3" r="1.1"/><circle cx="14.5" cy="7.3" r="1.1"/>',
+  chip:'<rect x="7" y="7" width="10" height="10" rx="1.5"/><path d="M10 3v4M14 3v4M10 17v4M14 17v4M3 10h4M3 14h4M17 10h4M17 14h4"/>',
+  users:'<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.2a3 3 0 010 5.6M18 14.3c1.8.8 3 2.6 3 4.7"/>',
+  folder:'<path d="M3 6.5A1.5 1.5 0 014.5 5H9l2 2h8.5A1.5 1.5 0 0121 8.5v9A1.5 1.5 0 0119.5 19h-15A1.5 1.5 0 013 17.5z"/>',
+  check:'<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.8"/>',
+  star:'<path d="M12 3.5l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8L3.6 9.6l5.8-.8z"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  trash:'<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 13h9l1-13"/>',
+  eye:'<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  back:'<path d="M15 5l-7 7 7 7"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.3"/>',
+  tool:'<path d="M14.5 6.5a4 4 0 00-5.3 5.3L3.5 17.5l3 3 5.7-5.7a4 4 0 005.3-5.3l-2.6 2.6-2.4-.6-.6-2.4z"/>',
+  doc:'<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/>',
+  note:'<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>',
+  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.8v.4"/>'
+};
+function pjIc(n){ return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+(PJ_IC[n]||PJ_IC.image)+'</svg>'; }
+
+/* ---------- Data (pola KSC yang sama dengan modul lain) ---------- */
+function pjArr(v){
+  if(Array.isArray(v)) return v.filter(x=>typeof x==='string'&&x);
+  if(typeof v==='string'&&v){ try{ const a=JSON.parse(v); return Array.isArray(a)?a.filter(x=>typeof x==='string'&&x):[]; }catch(e){ return []; } }
+  return [];
+}
+KSC.pj={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
+  key:'pj',prefix:'pj',table:PJ_TABLE,title:'Proyek Siswa',arr:projectsData,sortKey:'tanggalSelesai',needClasses:true,
+  bodyId:'rpRoot',msgId:'pjMsg',
+  writeRoles:PJ_WRITE,deleteRoles:PJ_WRITE,fields:[],
+  sortFn:(a,b)=>(b.unggulan-a.unggulan)||((b.nilai==null?-1:b.nilai)-(a.nilai==null?-1:a.nilai))||String(b.tanggalSelesai||'').localeCompare(String(a.tanggalSelesai||'')),
+  fromRow:r=>({id:r.id,studentId:r.student_id,classId:r.class_id,tahunAjaran:dkEsc(r.tahun_ajaran||''),semester:dkEsc(r.semester||''),
+    judul:dkEsc(r.judul||''),bidang:dkEsc(r.bidang||''),deskripsi:dkEsc(r.deskripsi||''),tujuan:dkEsc(r.tujuan||''),teknologi:dkEsc(r.teknologi||''),
+    proses:dkEsc(r.proses||''),catatan:dkEsc(r.catatan_guru||''),pembimbing:dkEsc(r.pembimbing||''),
+    tanggalSelesai:kscD(r.tanggal_selesai),tanggalKumpul:kscD(r.tanggal_kumpul),
+    nilai:(r.nilai==null||r.nilai==='')?null:Number(r.nilai),status:dkEsc(r.status||'Selesai'),unggulan:r.unggulan?1:0,
+    foto:(typeof r.foto_utama==='string'&&r.foto_utama)?r.foto_utama:'',fotoProses:pjArr(r.foto_proses)}),
+  refresh:()=>rpRefresh()
+}};
+const studentPhotosData=[];
+KSC.pf={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
+  key:'pf',prefix:'pf',table:'student_photos',title:'Foto Siswa',arr:studentPhotosData,sortKey:'studentId',needClasses:false,
+  bodyId:'rpRoot',msgId:'pjMsg',writeRoles:PJ_WRITE,deleteRoles:PJ_WRITE,fields:[],
+  fromRow:r=>({id:r.id,studentId:r.student_id,path:(typeof r.foto_path==='string'&&r.foto_path)?r.foto_path:''}),
+  refresh:()=>rpRefresh()
+}};
+function pjCanWrite(){ return kscCan('pj','write'); }
+async function pjLoad(){
+  const M=KSC.pj;
+  if(M.loading){ for(let i=0;i<80&&M.loading;i++) await new Promise(r=>setTimeout(r,150)); return; }
+  const [ok]=await Promise.all([kscLoad('pj',{silent:true}),KSC.pf.loading?Promise.resolve():kscLoad('pf',{silent:true})]);
+  pjLoadFailed=(ok===false&&!!dkClient()&&!kscBlocked('pj'));
+}
+function pjPeriodOf(sid){
+  const taE=dkEsc(rpSel.ta);
+  return projectsData.filter(p=>String(p.studentId)===String(sid)&&p.tahunAjaran===taE&&p.semester===rpSel.sem);
+}
+function pjAllOf(sid){ return projectsData.filter(p=>String(p.studentId)===String(sid)); }
+function pjFind(pid){ return projectsData.find(p=>String(p.id)===String(pid)); }
+function pjAvg(list){ const s=list.filter(p=>p.nilai!=null); return s.length?Math.round(s.reduce((a,p)=>a+p.nilai,0)/s.length*10)/10:null; }
+function pjText(v){ return v?String(v).replace(/\n/g,'<br>'):''; }
+
+/* Foto profil: (1) foto yang diunggah lewat menu Edit Foto (tabel student_photos + bucket privat),
+   (2) bila tidak ada, kolom URL foto bawaan di tabel students (jika ada). Selain itu inisial. */
+function pjPhotoPath(sid){ const f=studentPhotosData.find(x=>String(x.studentId)===String(sid)); return f&&f.path?f.path:''; }
+function pjAvatarImg(sid){
+  const path=pjPhotoPath(sid);
+  if(path){ const u=pjCached(path); return '<img data-pj-path="'+dkEsc(path)+'"'+(u?' src="'+dkEsc(u)+'"':'')+' alt="" onerror="this.remove()">'; }
+  const url=pjStudentPhoto(sid); return url?'<img src="'+dkEsc(url)+'" alt="" onerror="this.remove()">':'';
+}
+function pjStudentPhoto(sid){
+  const raw=(typeof stState!=='undefined'&&stState.raw)?stState.raw[sid]:null; if(!raw) return '';
+  const v=String(raw.foto_url||raw.photo_url||raw.foto||'').trim();
+  return (/^(https?:\/\/|data:image\/)/i.test(v)&&!/[\s<>"']/.test(v))?v:'';
+}
+/* Status perkembangan = turunan dari rata-rata nilai rapor (bukan input manual), memakai KKTP di Pengaturan Akademik. */
+function pjKktp(){ const k=Number((typeof schoolSettingsData!=='undefined'&&schoolSettingsData&&schoolSettingsData.kktp)||(typeof academicSettingsData!=='undefined'&&academicSettingsData&&academicSettingsData.kktp)||75); return isFinite(k)&&k>0?k:75; }
+function pjDev(nilai){
+  const k=pjKktp();
+  if(nilai==null) return {cls:'d-n',label:'Belum Ada Nilai',tip:'Belum ada nilai pada periode ini'};
+  if(nilai>=90) return {cls:'d-sb',label:'Sangat Baik',tip:'Rata-rata nilai ≥ 90'};
+  if(nilai>=k) return {cls:'d-b',label:'Baik',tip:'Rata-rata nilai ≥ KKTP ('+k+')'};
+  return {cls:'d-p',label:'Perlu Pendampingan',tip:'Rata-rata nilai di bawah KKTP ('+k+')'};
+}
+function pjDevBadge(nilai){ const d=pjDev(nilai); return '<span class="pj-devb '+d.cls+'" title="'+dkEsc(d.tip)+'">'+d.label+'</span>'; }
+function pjStatusBadge(st){ const c={'Selesai':'b-green','Dalam Pengerjaan':'b-amber','Revisi':'b-red'}[akUnesc(st)]||'b-gray'; return '<span class="badge '+c+'">'+st+'</span>'; }
+
+/* ---------- Gambar: signed URL + placeholder ---------- */
+function pjKind(bidang){
+  const b=akUnesc(bidang).toLowerCase();
+  if(/web|program|aplikasi|rpl|software|kode|coding|android|game|basis data/.test(b)) return 'code';
+  if(/desain|grafis|dkv|ilustrasi|poster|multimedia|animasi|video|foto|seni/.test(b)) return 'design';
+  if(/iot|elektro|robot|mikro|arduino|tkj|jaringan|listrik|mekatron|otomasi/.test(b)) return 'chip';
+  return 'image';
+}
+function pjCached(path){ const c=pjUrlCache[path]; return (c&&c.exp>Date.now())?c.u:''; }
+function pjMediaHtml(path,bidang){
+  const k=pjKind(bidang);
+  const ph='<span class="pj-ph pj-ph-'+k+'">'+pjIc(k)+'<span>Foto belum tersedia</span></span>';
+  if(!path) return '<span class="pj-media">'+ph+'</span>';
+  const u=pjCached(path);
+  return '<span class="pj-media">'+ph+'<img data-pj-path="'+dkEsc(path)+'"'+(u?' src="'+dkEsc(u)+'"':'')+' alt="" loading="lazy" onerror="this.remove()"></span>';
+}
+let pjHyBusy=false, pjHyAgain=false;
+async function pjHydrate(){
+  const imgs=[...document.querySelectorAll('img[data-pj-path]')];
+  imgs.forEach(img=>{ const u=pjCached(img.dataset.pjPath); if(u&&img.getAttribute('src')!==u) img.src=u; });
+  const need=[...new Set(imgs.filter(i=>!pjCached(i.dataset.pjPath)).map(i=>i.dataset.pjPath))];
+  const sb=dkClient(); if(!need.length||!sb) return;
+  if(pjHyBusy){ pjHyAgain=true; return; }
+  pjHyBusy=true;
+  try{
+    const r=await sb.storage.from(PJ_BUCKET).createSignedUrls(need,3600);
+    if(r.error) throw r.error;
+    (r.data||[]).forEach(d=>{ const u=d&&(d.signedUrl||d.signedURL); if(d&&d.path&&u&&!d.error) pjUrlCache[d.path]={u,exp:Date.now()+50*60*1000}; });
+    document.querySelectorAll('img[data-pj-path]').forEach(img=>{ const u=pjCached(img.dataset.pjPath); if(u){ if(img.getAttribute('src')!==u) img.src=u; } else if(need.includes(img.dataset.pjPath)) img.remove(); });
+  }catch(e){ console.warn('[proyek-siswa] signed URL gagal',e); }
+  finally{ pjHyBusy=false; if(pjHyAgain){ pjHyAgain=false; pjHydrate(); } }
+}
+window.pjHydrate=pjHydrate;
+
+/* ---------- Lightbox ---------- */
+window.pjLightbox=function(path){
+  let lb=document.getElementById('pjLightbox');
+  if(!lb){ lb=document.createElement('div'); lb.id='pjLightbox'; lb.innerHTML='<button aria-label="Tutup" onclick="pjCloseLightbox()">✕</button><img alt="">';
+    lb.addEventListener('click',e=>{ if(e.target===lb) pjCloseLightbox(); });
+    document.addEventListener('keydown',e=>{ if(e.key==='Escape') pjCloseLightbox(); });
+    document.body.appendChild(lb); }
+  const u=pjCached(path); if(!u){ showAcadToast('Gambar belum siap ditampilkan, coba sesaat lagi.'); pjHydrate(); return; }
+  lb.querySelector('img').src=u; lb.classList.add('show');
+};
+window.pjCloseLightbox=function(){ const lb=document.getElementById('pjLightbox'); if(lb) lb.classList.remove('show'); };
+
+/* ---------- Halaman utama: ringkasan, kartu siswa ---------- */
+function pjSummaryHtml(rows){
+  const ids=new Set(rows.map(r=>String(r.studentId)));
+  const taE=dkEsc(rpSel.ta), list=projectsData.filter(p=>ids.has(String(p.studentId))&&p.tahunAjaran===taE&&p.semester===rpSel.sem);
+  const withP=new Set(list.map(p=>String(p.studentId))).size, avg=pjAvg(list);
+  const c=(cls,ic,val,lab)=>'<div class="pj-sum '+cls+'">'+pjIc(ic)+'<div><b>'+val+'</b><span>'+lab+'</span></div></div>';
+  return '<div class="pj-summary">'+c('s1','users',rows.length,'Jumlah Siswa')+c('s2','folder',list.length,'Jumlah Proyek')+
+    c('s3','check',withP+' / '+rows.length,'Siswa Memiliki Proyek')+c('s4','star',rpNum(avg),'Rata-rata Nilai Proyek')+'</div>';
+}
+function pjStripHtml(r){
+  const list=pjPeriodOf(r.studentId), sid=dkEsc(r.studentId);
+  if(!list.length) return '<div class="pj-strip-empty">'+pjIc('image')+'<span>'+(pjLoadFailed?'Data proyek belum dapat dimuat':'Belum ada proyek yang ditampilkan')+'</span></div>';
+  const withImg=list.filter(p=>p.foto), top=(withImg.length?withImg.concat(list.filter(p=>!p.foto)):list).slice(0,3);
+  return '<div class="pj-strip"><div class="pj-strip-h"><span>Hasil Karya Terbaik</span><b>'+list.length+' proyek</b></div><div class="pj-strip-g n'+top.length+'">'+
+    top.map(p=>'<button class="pj-thumb" title="'+p.judul+'" onclick="pjOpenProject(\''+sid+'\',\''+dkEsc(p.id)+'\')">'+pjMediaHtml(p.foto,p.bidang)+'<span class="pj-thumb-cap">'+p.judul+'</span></button>').join('')+'</div></div>';
+}
+const _rpCard=rpCardHtml;
+rpCardHtml=function(r){
+  let html=_rpCard.apply(this,arguments);
+  const avImg=pjAvatarImg(r.studentId);
+  if(avImg) html=html.replace(/<div class="rp-av">([^<]*)<\/div>/,(m,ini)=>'<div class="rp-av pj-av-img">'+ini+avImg+'</div>');
+  html=html.replace('<div class="rp-sub">Kelas '+r.kelas+'</div>','<div class="rp-sub">Kelas '+r.kelas+'</div><div class="rp-sub">TA '+dkEsc(rpSel.ta)+' · Semester '+dkEsc(rpSel.sem)+'</div>');
+  const extra='<div class="pj-dev"><span>Status Perkembangan</span>'+pjDevBadge(r.nilai)+'</div>'+pjStripHtml(r);
+  html=html.replace('<button class="rp-more"',extra+'<button class="rp-more"');
+  return html.replace('>Selengkapnya</button>','>Lihat Rapor Lengkap</button>');
+};
+const _rpList=rpListHtml;
+rpListHtml=function(){
+  let html=_rpList.apply(this,arguments);
+  if(pjCanWrite()) html=html.replace('<span class="ti-spacer"></span>','<span class="ti-spacer"></span><button class="btn-primary-sm" onclick="pjOpenForm()">+ Tambah Proyek</button>');
+  return html.replace('Status rapor diisi oleh Wali Kelas/Admin.','Status rapor diisi oleh Wali Kelas/Admin. Cuplikan hasil karya diambil dari proyek siswa pada semester yang sama.');
+};
+const _rpTable=rpRenderTable;
+rpRenderTable=function(){
+  const out=_rpTable.apply(this,arguments);
+  const el=document.getElementById('rpBody');
+  if(el){ const rows=rpFilteredRows(); if(rows.length) el.insertAdjacentHTML('afterbegin',pjSummaryHtml(rows)); }
+  pjHydrate(); return out;
+};
+
+/* ---------- Detail rapor: profil + galeri ---------- */
+function pjCardHtml(p,can,personal){
+  const sid=dkEsc(p.studentId), pid=dkEsc(p.id), open='pjOpenProject(\''+sid+'\',\''+pid+'\','+(personal?1:0)+')';
+  return '<article class="pj-card"><button class="pj-card-media" onclick="'+open+'" aria-label="Lihat detail proyek">'+pjMediaHtml(p.foto,p.bidang)+
+      (p.unggulan?'<span class="pj-star">★ Unggulan</span>':'')+(personal?'<span class="pj-per">'+p.semester+' '+p.tahunAjaran+'</span>':'')+'</button>'+
+    '<div class="pj-card-body"><span class="pj-chip">'+(p.bidang||'-')+'</span><h4>'+p.judul+'</h4>'+
+      '<p class="pj-desc">'+(p.deskripsi||'<i>Belum ada deskripsi.</i>')+'</p>'+
+      '<div class="pj-card-meta"><div><span>Tanggal Selesai</span><b>'+(p.tanggalSelesai?fmtTglID(p.tanggalSelesai):'-')+'</b></div><div><span>Nilai</span><b class="pj-score">'+rpNum(p.nilai)+'</b></div><div><span>Status</span>'+pjStatusBadge(p.status)+'</div></div>'+
+      '<div class="pj-card-actions"><button class="pj-btn" onclick="'+open+'">'+pjIc('eye').replace('<svg','<svg width="15" height="15"')+'Lihat Detail</button>'+
+        (can?'<button class="pj-ibtn" title="Ubah proyek" onclick="pjOpenForm(\''+sid+'\',\''+pid+'\')">'+pjIc('edit')+'</button><button class="pj-ibtn del" title="Hapus proyek" onclick="pjDelete(\''+pid+'\')">'+pjIc('trash')+'</button>':'')+
+      '</div></div></article>';
+}
+function pjGalleryHtml(r,personal){
+  const list=personal?pjAllOf(r.studentId):pjPeriodOf(r.studentId), can=!personal&&pjCanWrite(), sid=dkEsc(r.studentId);
+  const sub=r.nama+' · '+(personal?'Semua periode':'Semester '+dkEsc(rpSel.sem)+' · TA '+dkEsc(rpSel.ta))+' · '+list.length+' proyek';
+  let body;
+  if(!list.length){
+    const why=pjLoadFailed?'Data proyek belum dapat dimuat dari server. Klik Muat Ulang, atau pastikan tabel <b>student_projects</b> sudah dibuat (supabase-proyek-siswa-setup.sql).'
+      :(can?'Klik <b>Tambah Proyek</b> untuk mengunggah hasil karya siswa ini.':'Hasil karya akan tampil di sini setelah diunggah oleh guru.');
+    body='<div class="pj-empty">'+pjIc('image')+'<b>Belum ada proyek yang ditampilkan</b><span>'+why+'</span></div>';
+  } else body='<div class="pj-grid">'+list.map(p=>pjCardHtml(p,can,personal)).join('')+'</div>';
+  return '<section class="panel pj-gallery" id="pjGallery"><div class="pj-gh"><div><h3>'+pjIc('image')+'Galeri Hasil Proyek</h3><p>'+sub+'</p></div>'+
+    (can?'<button class="btn-primary-sm" onclick="pjOpenForm(\''+sid+'\')">+ Tambah Proyek</button>':'')+'</div><div id="pjMsg"></div>'+body+'</section>';
+}
+const _rpDetail=rpDetailHtml;
+rpDetailHtml=function(r){
+  let html=_rpDetail.apply(this,arguments);
+  const avImg=pjAvatarImg(r.studentId), canPhoto=pjCanWrite();
+  html=html.replace(/<div class="rp-side-av">([^<]*)<\/div>/,(m,ini)=>'<div class="pj-av-wrap"><div class="rp-side-av'+(avImg?' pj-av-img':'')+'">'+ini+avImg+'</div>'+
+    (canPhoto?'<button class="pj-av-edit" title="Edit Foto Profil" aria-label="Edit Foto Profil" onclick="pjOpenPhotoForm(\''+dkEsc(r.studentId)+'\')">'+pjIc('edit')+'</button>':'')+'</div>');
+  const list=pjPeriodOf(r.studentId);
+  const ov='<div class="pj-overall"><div class="pj-ov-score"><span>Nilai Akademik Keseluruhan</span><b>'+rpNum(r.nilai)+'</b>'+pjDevBadge(r.nilai)+'</div>'+
+    '<div class="pj-ov-row"><span>Jumlah Proyek</span><b>'+list.length+'</b></div><div class="pj-ov-row"><span>Rata-rata Nilai Proyek</span><b>'+rpNum(pjAvg(list))+'</b></div>'+
+    '<button class="btn-outline-sm rp-wide" onclick="pjScrollGallery()">Lihat Galeri Proyek</button></div>';
+  html=html.replace('<div class="rp-meta">',ov+'<div class="rp-meta">');
+  return html;
+};
+/* Dokumen rapor (layar & cetak): tambah bagian "Hasil Karya / Proyek" sebelum tanda tangan. */
+const _rpDoc=rpDocHtml;
+rpDocHtml=function(r){
+  const html=_rpDoc.apply(this,arguments), list=pjPeriodOf(r.studentId);
+  const scr=!pjPrinting, can=scr&&pjCanWrite(), sid=dkEsc(r.studentId), sp='<svg width="14" height="14"';
+  const act=p=>scr?'<td class="rpd-act"><button title="Lihat proyek" aria-label="Lihat proyek" onclick="pjOpenProject(\''+sid+'\',\''+dkEsc(p.id)+'\')">'+pjIc('eye').replace('<svg',sp)+'</button>'+
+    (can?'<button title="Ubah proyek" aria-label="Ubah proyek" onclick="pjOpenForm(\''+sid+'\',\''+dkEsc(p.id)+'\')">'+pjIc('edit').replace('<svg',sp)+'</button>':'')+'</td>':'';
+  const rows=list.length?list.map((p,i)=>'<tr><td class="c">'+(i+1)+'</td><td>'+p.judul+'</td><td>'+(p.bidang||'-')+'</td><td class="c">'+(p.tanggalSelesai?fmtTglID(p.tanggalSelesai):'-')+'</td><td class="c">'+p.status+'</td><td class="c"><b>'+rpNum(p.nilai)+'</b></td>'+act(p)+'</tr>').join('')
+    :'<tr><td colspan="'+(scr?7:6)+'" class="c">Belum ada proyek yang ditampilkan pada periode ini.</td></tr>';
+  const head=scr?'<div class="rpd-hrow" id="pjGallery"><h4 class="rpd-h">E. Hasil Karya / Proyek</h4>'+(can?'<button class="btn-primary-sm" onclick="pjOpenForm(\''+sid+'\')">+ Tambah Proyek</button>':'')+'</div>'
+    :'<h4 class="rpd-h">E. Hasil Karya / Proyek</h4>';
+  const sec=head+'<table class="rpd-tbl"><thead><tr><th>No</th><th>Nama Proyek</th><th>Bidang / Mapel</th><th>Tanggal Selesai</th><th>Status</th><th>Nilai</th>'+(scr?'<th>Aksi</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table>';
+  return html.replace('<h4 class="rpd-h">E. Tanda Tangan</h4>',sec+'<h4 class="rpd-h">F. Tanda Tangan</h4>');
+};
+/* Saat mencetak, kolom Aksi & tombol tidak ikut. */
+let pjPrinting=false;
+const _rpPrintHtml=rpPrintHtml;
+rpPrintHtml=function(){ pjPrinting=true; try{ return _rpPrintHtml.apply(this,arguments); } finally{ pjPrinting=false; } };
+window.pjScrollGallery=function(){ const g=document.getElementById('pjGallery'); if(g) try{ g.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} };
+
+/* ---------- Detail proyek ---------- */
+function pjDetailHtml(r,p,personal){
+  const sid=dkEsc(p.studentId);
+  const sec=(ic,title,val,wide,cls)=>'<div class="pjd-sec'+(wide?' wide':'')+(cls?' '+cls:'')+'"><h4>'+pjIc(ic)+title+'</h4>'+(val?'<p>'+pjText(val)+'</p>':'<p class="mut">Belum diisi.</p>')+'</div>';
+  const tags=p.teknologi?akUnesc(p.teknologi).split(/[,;\n]/).map(x=>x.trim()).filter(Boolean):[];
+  const proc=p.fotoProses.length?'<div class="pjd-proc">'+p.fotoProses.map(f=>'<button onclick="pjLightbox(\''+dkEsc(f)+'\')" aria-label="Perbesar foto proses">'+pjMediaHtml(f,p.bidang)+'</button>').join('')+'</div>':'';
+  const procSec='<div class="pjd-sec wide"><h4>'+pjIc('doc')+'Dokumentasi Proses Pengerjaan</h4>'+(p.proses?'<p>'+pjText(p.proses)+'</p>':(proc?'':'<p class="mut">Belum ada dokumentasi proses.</p>'))+proc+'</div>';
+  const main=p.foto?'<button class="pjd-main" onclick="pjLightbox(\''+dkEsc(p.foto)+'\')" aria-label="Perbesar gambar proyek">'+pjMediaHtml(p.foto,p.bidang)+'</button><div class="pjd-hint">Klik gambar untuk memperbesar</div>'
+    :'<div class="pjd-main" style="cursor:default">'+pjMediaHtml('',p.bidang)+'</div>';
+  const can=!personal&&pjCanWrite();
+  return '<div class="panel"><button class="pjd-back" onclick="pjBackToGallery(\''+sid+'\','+(personal?1:0)+')">'+pjIc('back').replace('<svg','<svg width="16" height="16"')+'Kembali ke Galeri Proyek</button>'+
+    '<div class="pjd-grid"><div>'+main+'</div><aside class="pjd-info"><span class="pj-chip">'+(p.bidang||'-')+'</span><h2>'+p.judul+'</h2>'+
+      '<div class="pjd-who">'+r.nama+' · Kelas '+(r.kelas||'-')+'</div>'+
+      '<div class="pjd-score"><span>Nilai Proyek</span><b>'+rpNum(p.nilai)+'</b></div>'+
+      '<div class="pjd-rows"><div><span>Status</span>'+pjStatusBadge(p.status)+'</div><div><span>Tanggal Selesai</span><b>'+(p.tanggalSelesai?fmtTglID(p.tanggalSelesai):'-')+'</b></div>'+
+        '<div><span>Tanggal Pengumpulan</span><b>'+(p.tanggalKumpul?fmtTglID(p.tanggalKumpul):'-')+'</b></div><div><span>Pembimbing</span><b>'+(p.pembimbing||'-')+'</b></div>'+
+        '<div><span>Periode</span><b>'+p.semester+' '+p.tahunAjaran+'</b></div></div>'+
+      (can?'<div style="display:flex;gap:8px"><button class="btn-outline-sm" style="flex:1;justify-content:center" onclick="pjOpenForm(\''+sid+'\',\''+dkEsc(p.id)+'\')">Ubah Proyek</button></div>':'')+
+    '</aside></div>'+
+    '<div class="pjd-secs">'+sec('info','Deskripsi Proyek',p.deskripsi,true)+sec('target','Tujuan Pembuatan',p.tujuan)+
+      '<div class="pjd-sec"><h4>'+pjIc('tool')+'Teknologi / Alat yang Digunakan</h4>'+(tags.length?'<div class="pjd-tags">'+tags.map(t=>'<span>'+dkEsc(t)+'</span>').join('')+'</div>':'<p class="mut">Belum diisi.</p>')+'</div>'+
+      procSec+sec('note','Catatan Guru',p.catatan,true,'pjd-note')+'</div></div>';
+}
+window.pjOpenProject=function(sid,pid,personal){
+  const p=pjFind(pid);
+  if(!p||String(p.studentId)!==String(sid)){ showAcadToast('Proyek tidak ditemukan. Muat ulang halaman.'); return; }
+  if(personal){
+    const box=document.getElementById('pjPersonal'); if(!box) return;
+    const s=studentsData.find(x=>String(x.id)===String(sid))||{nama:'-',kelas:'-'};
+    box.innerHTML=pjDetailHtml({nama:s.nama,kelas:s.kelas},p,true);
+    try{ box.scrollIntoView({block:'start'}); }catch(e){} pjHydrate(); return;
+  }
+  const r=reportCardsData.find(x=>String(x.studentId)===String(sid)), root=document.getElementById('rpRoot');
+  if(!r||!root){ showAcadToast('Data siswa tidak ditemukan. Muat ulang halaman.'); return; }
+  rpView={mode:'project',id:r.studentId,pid:p.id};
+  root.innerHTML=pjDetailHtml(r,p,false);
+  try{ root.scrollIntoView({block:'start'}); }catch(e){} pjHydrate();
+};
+window.pjBackToGallery=function(sid,personal){
+  if(personal){ pjRenderPersonal(); setTimeout(pjScrollGallery,30); return; }
+  rpShowDetail(sid); setTimeout(pjScrollGallery,30);
+};
+const _rpShow=rpShowDetail;
+rpShowDetail=function(){ const out=_rpShow.apply(this,arguments); pjHydrate(); return out; };
+const _rpRefresh=rpRefresh;
+rpRefresh=function(){
+  if(rpView&&rpView.mode==='project'){
+    rpBuild();
+    const root=document.getElementById('rpRoot'); if(!root) return;
+    const r=reportCardsData.find(x=>String(x.studentId)===String(rpView.id)), p=pjFind(rpView.pid);
+    if(r&&p&&String(p.studentId)===String(r.studentId)&&acadFilterByScope([r],'kelas').length){ root.innerHTML=pjDetailHtml(r,p,false); pjHydrate(); return; }
+    rpView=r?{mode:'detail',id:r.studentId}:{mode:'list',id:null};
+  }
+  const out=_rpRefresh.apply(this,arguments); pjHydrate(); return out;
+};
+const _rpReload=rpReloadAll;
+rpReloadAll=async function(){ await Promise.all([_rpReload.apply(this,arguments),pjLoad()]); rpRefresh(); };
+
+/* ---------- Orang Tua / Siswa: galeri read-only ---------- */
+function pjRenderPersonal(){
+  const box=document.getElementById('pjPersonal'), s=studentsData[0]; if(!box||!s) return;
+  box.innerHTML=pjGalleryHtml({studentId:s.id,nama:s.nama},true); pjHydrate();
+}
+async function pjPersonalInit(){ await pjLoad(); pjRenderPersonal(); }
+if(typeof personalAcademicPageHtml==='function'){
+  const _pers=personalAcademicPageHtml;
+  personalAcademicPageHtml=function(pageKey){
+    const html=_pers.apply(this,arguments);
+    if(pageKey!=='rapor'||typeof akDbMode!=='function'||!akDbMode()||!studentsData[0]) return html;
+    setTimeout(pjPersonalInit,0);
+    return html+'<div id="pjPersonal"><section class="panel pj-gallery"><div class="pj-loading">Memuat hasil proyek...</div></section></div>';
+  };
+}
+
+/* ---------- Form tambah / ubah proyek (Drawer, pola sama dengan form lain) ---------- */
+function pjUuid(){
+  if(window.crypto&&crypto.randomUUID) return crypto.randomUUID();
+  const b=new Uint8Array(16); (window.crypto||{getRandomValues:a=>a.map(()=>Math.random()*256|0)}).getRandomValues(b);
+  b[6]=(b[6]&15)|64; b[8]=(b[8]&63)|128; const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+function pjDatalist(id,items){ return '<datalist id="'+id+'">'+[...new Set(items.map(x=>akUnesc(x)).filter(x=>x&&x!=='-'))].sort().map(x=>'<option value="'+dkEsc(x)+'">').join('')+'</datalist>'; }
+window.pjOpenForm=function(sid,pid){
+  if(!pjCanWrite()){ showAcadToast('Anda tidak memiliki izin untuk mengelola proyek siswa.'); return; }
+  if(!dkClient()){ showAcadToast('Mode demo: Supabase belum terhubung, proyek tidak dapat disimpan.'); return; }
+  const p=pid?pjFind(pid):null; if(pid&&!p){ showAcadToast('Proyek tidak ditemukan. Muat ulang halaman.'); return; }
+  const raw=p?(KSC.pj.raw[p.id]||{}):{};
+  const studs=acadFilterByScope(reportCardsData,'kelas');
+  const fixed=sid?studs.find(x=>String(x.studentId)===String(sid)):null;
+  if(sid&&!fixed){ showAcadToast('Siswa tidak berada dalam cakupan akun Anda.'); return; }
+  const v=k=>dkEsc(raw[k]==null?'':raw[k]);
+  const ta=p?akUnesc(p.tahunAjaran):rpSel.ta, sem=p?akUnesc(p.semester):rpSel.sem;
+  const tas=[...new Set([ta,rpSel.ta].concat(gradesData.map(g=>akUnesc(g.tahunAjaran))))].filter(Boolean).sort();
+  const mapels=gradesData.map(g=>g.mapel).concat((typeof schedulesData!=='undefined'?schedulesData:[]).map(s=>s.mapel),projectsData.map(x=>x.bidang));
+  const gurus=(typeof schedulesData!=='undefined'?schedulesData:[]).map(s=>s.guru).concat(projectsData.map(x=>x.pembimbing));
+  const studentField=fixed?dwRow('Siswa',fixed.nama+' · '+fixed.kelas)+'<input type="hidden" id="pjfStudent" value="'+dkEsc(fixed.studentId)+'">'
+    :'<div class="dw-field"><label>Siswa *</label><select id="pjfStudent"><option value="">Pilih siswa</option>'+studs.map(x=>'<option value="'+dkEsc(x.studentId)+'">'+x.nama+' — '+x.kelas+'</option>').join('')+'</select></div>';
+  const oldPhotos=p?[p.foto].concat(p.fotoProses).filter(Boolean):[];
+  const photosHtml=oldPhotos.length?'<div class="dw-field"><label>Foto tersimpan</label><div class="pjf-photos">'+oldPhotos.map((f,i)=>'<div class="pjf-photo">'+pjMediaHtml(f,p.bidang)+
+      '<label><input type="checkbox" class="pjfDel" value="'+dkEsc(f)+'"> Hapus'+(i===0&&f===p.foto?' (utama)':'')+'</label></div>').join('')+'</div></div>':'';
+  openAcadDrawer(p?'Ubah Proyek Siswa':'Tambah Proyek Siswa',AK_ERRBOX+studentField+
+    '<div class="dw-field"><label>Nama Proyek *</label><input type="text" id="pjfJudul" maxlength="150" value="'+v('judul')+'" placeholder="Contoh: Website Profil UMKM"></div>'+
+    '<div class="dw-field"><label>Mata Pelajaran / Bidang Keahlian *</label><input type="text" id="pjfBidang" maxlength="100" list="pjfBidangList" value="'+v('bidang')+'">'+pjDatalist('pjfBidangList',mapels)+'</div>'+
+    '<div class="dw-field-row"><div class="dw-field"><label>Tahun Ajaran *</label><select id="pjfTa">'+akOptHtml(tas,ta)+'</select></div><div class="dw-field"><label>Semester *</label><select id="pjfSem">'+akOptHtml(['Ganjil','Genap'],sem)+'</select></div></div>'+
+    '<div class="dw-field-row"><div class="dw-field"><label>Tanggal Selesai</label><input type="date" id="pjfSelesai" value="'+dkEsc(kscD(raw.tanggal_selesai))+'"></div><div class="dw-field"><label>Tanggal Pengumpulan</label><input type="date" id="pjfKumpul" value="'+dkEsc(kscD(raw.tanggal_kumpul))+'"></div></div>'+
+    '<div class="dw-field-row"><div class="dw-field"><label>Nilai Proyek (0–100)</label><input type="number" id="pjfNilai" min="0" max="100" step="0.5" value="'+v('nilai')+'"></div><div class="dw-field"><label>Status *</label><select id="pjfStatus">'+akOptHtml(PJ_STATUS,p?akUnesc(p.status):'Selesai')+'</select></div></div>'+
+    '<div class="dw-field"><label>Pembimbing</label><input type="text" id="pjfPembimbing" maxlength="100" list="pjfGuruList" value="'+v('pembimbing')+'">'+pjDatalist('pjfGuruList',gurus)+'</div>'+
+    '<div class="dw-field"><label>Deskripsi Singkat</label><textarea id="pjfDeskripsi" rows="3" maxlength="1000">'+v('deskripsi')+'</textarea></div>'+
+    '<div class="dw-field"><label>Tujuan Pembuatan</label><textarea id="pjfTujuan" rows="2" maxlength="1000">'+v('tujuan')+'</textarea></div>'+
+    '<div class="dw-field"><label>Teknologi / Alat (pisahkan dengan koma)</label><input type="text" id="pjfTeknologi" maxlength="300" value="'+v('teknologi')+'" placeholder="Contoh: HTML, CSS, Figma"></div>'+
+    '<div class="dw-field"><label>Dokumentasi Proses Pengerjaan</label><textarea id="pjfProses" rows="3" maxlength="2000">'+v('proses')+'</textarea></div>'+
+    '<div class="dw-field"><label>Catatan Guru</label><textarea id="pjfCatatan" rows="3" maxlength="1500">'+v('catatan_guru')+'</textarea></div>'+
+    photosHtml+
+    '<div class="dw-field"><label>'+(p&&p.foto?'Ganti Foto Utama':'Foto Utama Proyek')+' (JPG/PNG/WEBP)</label><input type="file" id="pjfFoto" accept="image/jpeg,image/png,image/webp"></div>'+
+    '<div class="dw-field"><label>Foto Proses Pengerjaan (maks '+PJ_MAX_PROSES+' foto)</label><input type="file" id="pjfFotoProses" accept="image/jpeg,image/png,image/webp" multiple></div>'+
+    '<p class="dw-hint">Foto dikompres otomatis (maks '+PJ_MAX_DIM+' px) dan disimpan privat; hanya pengguna yang berhak melihat siswa ini yang dapat membukanya.</p>'+
+    '<div class="dw-field"><label class="pjf-check"><input type="checkbox" id="pjfUnggulan"'+(raw.unggulan?' checked':'')+'> Tandai sebagai proyek unggulan (diprioritaskan di cuplikan kartu)</label></div>'+
+    '<div class="dw-formfoot">'+(p&&kscCan('pj','delete')?'<button class="btn-outline-sm" style="color:var(--danger);margin-right:auto" onclick="closeAcadDrawer();pjDelete(\''+dkEsc(p.id)+'\')">Hapus Proyek</button>':'')+
+      '<button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="pjfSubmit" onclick="pjSave('+(p?'\''+dkEsc(p.id)+'\'':'null')+')">Simpan</button></div>');
+  pjHydrate();
+};
+function pjLoadImage(file){
+  return new Promise((res,rej)=>{ const u=URL.createObjectURL(file), im=new Image(); im.onload=()=>{ URL.revokeObjectURL(u); res(im); }; im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('decode')); }; im.src=u; });
+}
+async function pjCompress(file,maxDim){
+  if(!/^image\/(jpeg|png|webp)$/i.test(file.type||'')) throw new Error('Format "'+file.name+'" tidak didukung. Gunakan JPG, PNG, atau WEBP.');
+  if(file.size>PJ_MAX_IN) throw new Error('Ukuran "'+file.name+'" terlalu besar (maks 15 MB sebelum kompres).');
+  let src;
+  try{ src=window.createImageBitmap?await createImageBitmap(file):await pjLoadImage(file); }
+  catch(e){ if(file.size<=PJ_MAX_OUT) return {blob:file,type:file.type}; throw new Error('Gambar "'+file.name+'" tidak dapat dibaca.'); }
+  const w=src.width, h=src.height, s=Math.min(1,(maxDim||PJ_MAX_DIM)/Math.max(w,h));
+  const cv=document.createElement('canvas'); cv.width=Math.max(1,Math.round(w*s)); cv.height=Math.max(1,Math.round(h*s));
+  const ctx=cv.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height); ctx.drawImage(src,0,0,cv.width,cv.height);
+  if(src.close) try{ src.close(); }catch(e){}
+  for(const q of [0.85,0.72,0.6]){
+    const b=await new Promise(r=>cv.toBlob(r,'image/jpeg',q));
+    if(b&&b.size<=PJ_MAX_OUT) return {blob:b,type:'image/jpeg'};
+  }
+  throw new Error('Gambar "'+file.name+'" masih lebih dari 5 MB setelah dikompres.');
+}
+window.pjSave=async function(pid){
+  const M=KSC.pj; if(M.submitting) return;
+  if(!pjCanWrite()){ akFormErr('akfError','Anda tidak memiliki izin untuk menyimpan.'); return; }
+  const sb=dkClient(); if(!sb){ akFormErr('akfError','Supabase belum terhubung.'); return; }
+  const g=id=>{ const e=document.getElementById(id); return e?String(e.value).trim():''; };
+  const editing=pid?pjFind(pid):null; if(pid&&!editing){ akFormErr('akfError','Proyek tidak ditemukan. Muat ulang halaman.'); return; }
+  const sid=g('pjfStudent'), r=reportCardsData.find(x=>String(x.studentId)===String(sid));
+  const judul=g('pjfJudul').replace(/\s+/g,' '), bidang=g('pjfBidang').replace(/\s+/g,' ');
+  const nilaiS=g('pjfNilai'), nilai=nilaiS===''?null:Number(nilaiS);
+  const tSel=g('pjfSelesai'), tKum=g('pjfKumpul');
+  if(!sid||!r) return akFormErr('akfError','Pilih siswa.');
+  if(editing&&String(editing.studentId)!==String(sid)) return akFormErr('akfError','Siswa pemilik proyek tidak dapat diganti.');
+  if(!judul) return akFormErr('akfError','Nama proyek wajib diisi.');
+  if(!bidang) return akFormErr('akfError','Mata pelajaran / bidang keahlian wajib diisi.');
+  if(nilai!=null&&!(isFinite(nilai)&&nilai>=0&&nilai<=100)) return akFormErr('akfError','Nilai proyek harus antara 0 sampai 100.');
+  if(tSel&&tKum&&tKum<tSel) return akFormErr('akfError','Tanggal pengumpulan tidak boleh sebelum tanggal selesai.');
+  const del=new Set([...document.querySelectorAll('.pjfDel:checked')].map(x=>x.value));
+  const mainFile=(document.getElementById('pjfFoto').files||[])[0]||null;
+  const procFiles=[...(document.getElementById('pjfFotoProses').files||[])];
+  const keptProc=editing?editing.fotoProses.filter(f=>!del.has(f)):[];
+  if(keptProc.length+procFiles.length>PJ_MAX_PROSES) return akFormErr('akfError','Foto proses maksimal '+PJ_MAX_PROSES+' (tersimpan '+keptProc.length+', dipilih '+procFiles.length+').');
+  const id=editing?editing.id:pjUuid();
+  akFormErr('akfError',''); M.submitting=true;
+  const btn=document.getElementById('pjfSubmit'); if(btn){ btn.disabled=true; btn.textContent='Memproses foto...'; }
+  const uploaded=[];
+  try{
+    const up=async(file,i)=>{ const c=await pjCompress(file); const path=sid+'/'+id+'/'+Date.now()+'-'+i+(c.type==='image/jpeg'?'.jpg':'.'+(c.type.split('/')[1]||'img'));
+      const res=await sb.storage.from(PJ_BUCKET).upload(path,c.blob,{upsert:false,contentType:c.type}); if(res.error) throw res.error; uploaded.push(path); return path; };
+    let foto=editing?editing.foto:''; if(foto&&del.has(foto)) foto='';
+    if(btn) btn.textContent='Mengunggah...';
+    if(mainFile) foto=await up(mainFile,0);
+    const newProc=[]; for(let i=0;i<procFiles.length;i++) newProc.push(await up(procFiles[i],i+1));
+    const fotoProses=keptProc.concat(newProc);
+    if(btn) btn.textContent='Menyimpan...';
+    const payload={student_id:r.studentId,class_id:r.classId,tahun_ajaran:g('pjfTa'),semester:g('pjfSem'),judul,bidang,
+      deskripsi:g('pjfDeskripsi')||null,tujuan:g('pjfTujuan')||null,teknologi:g('pjfTeknologi')||null,proses:g('pjfProses')||null,
+      catatan_guru:g('pjfCatatan')||null,pembimbing:g('pjfPembimbing')||null,tanggal_selesai:tSel||null,tanggal_kumpul:tKum||null,
+      nilai,status:g('pjfStatus'),unggulan:!!(document.getElementById('pjfUnggulan')||{}).checked,foto_utama:foto||null,foto_proses:fotoProses};
+    const res=editing?await sb.from(PJ_TABLE).update(payload).eq('id',id).select():await sb.from(PJ_TABLE).insert(Object.assign({id},payload)).select();
+    if(res.error) throw res.error;
+    if(!res.data||!res.data.length) throw {code:'42501',message:'Tidak ada baris yang berubah: diblokir RLS.'};
+    /* Berkas lama yang dihapus/diganti baru dibuang SETELAH data tersimpan. */
+    if(editing){ const now=new Set([foto].concat(fotoProses)); const gone=[editing.foto].concat(editing.fotoProses).filter(f=>f&&!now.has(f));
+      if(gone.length) try{ await sb.storage.from(PJ_BUCKET).remove(gone); }catch(x){ console.warn('[proyek-siswa] hapus berkas lama',x); } }
+    closeAcadDrawer(); showAcadToast(editing?'Proyek berhasil diperbarui.':'Proyek berhasil ditambahkan.');
+    await pjLoad();
+    if(rpView&&rpView.mode==='project'&&editing){ rpView={mode:'project',id:r.studentId,pid:id}; rpRefresh(); }
+    else if(rpView&&rpView.mode==='list'&&!document.getElementById('pjGallery')) rpRefresh();
+    else { rpShowDetail(r.studentId); setTimeout(pjScrollGallery,30); }
+  }catch(e){
+    console.error('pjSave',e);
+    if(uploaded.length) try{ await sb.storage.from(PJ_BUCKET).remove(uploaded); }catch(x){}
+    const raw=(e&&e.message)||String(e);
+    akFormErr('akfError','Gagal menyimpan: '+(/bucket not found/i.test(raw)?'bucket Storage "student-projects" belum ada. Jalankan supabase-proyek-siswa-setup.sql.'
+      :(e&&e.code)?kscErrMsg(e,'ubah',M.cfg):(/row-level security|not authorized|403|violates/i.test(raw)?'ditolak oleh kebijakan Storage (role tidak berhak atau siswa di luar cakupan akun). Detail: '+raw:raw)));
+  }finally{ M.submitting=false; const b=document.getElementById('pjfSubmit'); if(b){ b.disabled=false; b.textContent='Simpan'; } }
+};
+/* ---------- Edit Foto Profil (di bagian profil rapor) ---------- */
+window.pjOpenPhotoForm=function(sid){
+  if(!pjCanWrite()){ showAcadToast('Anda tidak memiliki izin untuk mengubah foto profil.'); return; }
+  if(!dkClient()){ showAcadToast('Mode demo: Supabase belum terhubung, foto tidak dapat disimpan.'); return; }
+  const r=reportCardsData.find(x=>String(x.studentId)===String(sid)); if(!r){ showAcadToast('Data siswa tidak ditemukan. Muat ulang halaman.'); return; }
+  const ini=dkEsc(ksInitials(akUnesc(r.nama))), has=!!pjPhotoPath(sid);
+  openAcadDrawer('Edit Foto Profil',AK_ERRBOX+dwRow('Siswa',r.nama+' · '+r.kelas)+
+    '<div class="pjf-avprev" id="pjfAvPrev">'+ini+pjAvatarImg(sid)+'</div>'+
+    '<div class="dw-field"><label>Pilih Foto (JPG/PNG/WEBP)</label><input type="file" id="pjfAvFile" accept="image/jpeg,image/png,image/webp" onchange="pjPreviewPhoto(this)"></div>'+
+    '<p class="dw-hint">Gunakan foto formal dengan wajah terlihat jelas. Foto dikompres otomatis dan disimpan privat.</p>'+
+    '<div class="dw-formfoot">'+(has?'<button class="btn-outline-sm" style="color:var(--danger);margin-right:auto" id="pjfAvDel" onclick="pjDeletePhoto(\''+dkEsc(sid)+'\')">Hapus Foto</button>':'')+
+    '<button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="pjfAvSubmit" onclick="pjSavePhoto(\''+dkEsc(sid)+'\')">Simpan Foto</button></div>');
+  pjHydrate();
+};
+window.pjPreviewPhoto=function(inp){
+  const f=inp.files&&inp.files[0], box=document.getElementById('pjfAvPrev'); if(!f||!box) return;
+  if(box.__u) URL.revokeObjectURL(box.__u); box.__u=URL.createObjectURL(f);
+  box.querySelectorAll('img').forEach(i=>i.remove()); const im=document.createElement('img'); im.alt=''; im.src=box.__u; box.appendChild(im);
+};
+async function pjAfterPhoto(sid){ await kscLoad('pf',{silent:true}); closeAcadDrawer(); rpRefresh(); }
+window.pjSavePhoto=async function(sid){
+  const M=KSC.pf; if(M.submitting) return;
+  const sb=dkClient(); if(!sb){ akFormErr('akfError','Supabase belum terhubung.'); return; }
+  const file=(document.getElementById('pjfAvFile').files||[])[0]; if(!file){ akFormErr('akfError','Pilih foto terlebih dahulu.'); return; }
+  const old=pjPhotoPath(sid); let path='';
+  akFormErr('akfError',''); M.submitting=true; const btn=document.getElementById('pjfAvSubmit'); if(btn){ btn.disabled=true; btn.textContent='Mengunggah...'; }
+  try{
+    const c=await pjCompress(file,600);
+    path=sid+'/profil/'+Date.now()+(c.type==='image/jpeg'?'.jpg':'.'+(c.type.split('/')[1]||'img'));
+    const up=await sb.storage.from(PJ_BUCKET).upload(path,c.blob,{upsert:false,contentType:c.type}); if(up.error) throw up.error;
+    const res=await sb.from('student_photos').upsert({student_id:sid,foto_path:path},{onConflict:'student_id'}).select();
+    if(res.error) throw res.error; if(!res.data||!res.data.length) throw {code:'42501',message:'Tidak ada baris yang berubah: diblokir RLS.'};
+    if(old&&old!==path) try{ await sb.storage.from(PJ_BUCKET).remove([old]); }catch(x){}
+    path=''; showAcadToast('Foto profil berhasil disimpan.'); await pjAfterPhoto(sid);
+  }catch(e){
+    console.error('pjSavePhoto',e);
+    if(path) try{ await sb.storage.from(PJ_BUCKET).remove([path]); }catch(x){}
+    const raw=(e&&e.message)||String(e);
+    akFormErr('akfError','Gagal menyimpan foto: '+(/bucket not found/i.test(raw)?'bucket Storage "student-projects" belum ada. Jalankan supabase-proyek-siswa-setup.sql.'
+      :(e&&e.code)?kscErrMsg(e,'ubah',M.cfg):raw));
+  }finally{ M.submitting=false; const b=document.getElementById('pjfAvSubmit'); if(b){ b.disabled=false; b.textContent='Simpan Foto'; } }
+};
+window.pjDeletePhoto=async function(sid){
+  const M=KSC.pf; if(M.submitting) return;
+  const sb=dkClient(), old=pjPhotoPath(sid); if(!sb||!old) return;
+  M.submitting=true; const btn=document.getElementById('pjfAvDel'); if(btn){ btn.disabled=true; btn.textContent='Menghapus...'; }
+  try{
+    const r=await sb.from('student_photos').delete().eq('student_id',sid).select();
+    if(r.error) throw r.error; if(!r.data||!r.data.length) throw {code:'42501',message:'Penghapusan diblokir RLS.'};
+    try{ await sb.storage.from(PJ_BUCKET).remove([old]); }catch(x){}
+    showAcadToast('Foto profil dihapus.'); await pjAfterPhoto(sid);
+  }catch(e){ console.error('pjDeletePhoto',e); akFormErr('akfError','Gagal menghapus foto: '+kscErrMsg(e,'hapus',M.cfg)); }
+  finally{ M.submitting=false; const b=document.getElementById('pjfAvDel'); if(b){ b.disabled=false; b.textContent='Hapus Foto'; } }
+};
+window.pjDelete=function(pid){
+  if(!kscCan('pj','delete')){ showAcadToast('Anda tidak memiliki izin untuk menghapus proyek.'); return; }
+  const p=pjFind(pid); if(!p) return;
+  openAcadConfirm('Hapus Proyek','Yakin ingin menghapus proyek "'+akUnesc(p.judul)+'"? Data dan seluruh fotonya akan dihapus permanen.',async ()=>{
+    const sb=dkClient(); if(!sb){ showAcadToast('Supabase belum terhubung.'); return; }
+    try{
+      const r=await sb.from(PJ_TABLE).delete().eq('id',p.id).select();
+      if(r.error) throw r.error; if(!r.data||!r.data.length) throw {code:'42501',message:'Penghapusan diblokir RLS.'};
+      const files=[p.foto].concat(p.fotoProses).filter(Boolean);
+      if(files.length) try{ await sb.storage.from(PJ_BUCKET).remove(files); }catch(x){ console.warn('[proyek-siswa] hapus berkas',x); }
+      showAcadToast('Proyek berhasil dihapus.'); await pjLoad();
+      if(rpView&&rpView.mode==='project') rpView={mode:'detail',id:p.studentId};
+      rpRefresh();
+    }catch(e){ console.error('pjDelete',e); showAcadToast('Gagal menghapus: '+kscErrMsg(e,'hapus',KSC.pj.cfg)); }
+  });
+};
+})();
+</script>
+
 </body>
 </html>
