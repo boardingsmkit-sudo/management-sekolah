@@ -3338,7 +3338,7 @@ async function initBoardingPresensiPage(){ bpRefresh(); await Promise.all([kscLo
    ======================================================================== */
 const BI_SHALAT=[['subuh','Subuh'],['dzuhur','Dzuhur'],['ashar','Ashar'],['maghrib','Maghrib'],['isya','Isya']];
 const BI_SHALAT_STATUS=['Tepat Waktu','Masbuk','Terlambat','Izin','Sakit','Alpa'];
-const BI_LAIN=[['tahajud','Tahajud','Hadir/Tidak Hadir/Izin/Sakit'],['witir','Witir','Hadir/Tidak Hadir/Izin/Sakit'],['dhuha','Dhuha','Hadir/Tidak Hadir/Izin/Sakit'],['rawatib','Rawatib','Jumlah (angka)'],['tilawah','Tilawah','Setor/Tidak Setor'],['dzikir','Dzikir','Hadir/Tidak Hadir'],['puasaSenKam','Puasa Senin/Kamis','Puasa/Tidak Puasa/Uzur']];
+const BI_LAIN=[['tahajud','Tahajud','Hadir/Tidak Hadir/Izin/Sakit'],['witir','Witir','Hadir/Tidak Hadir/Izin/Sakit'],['dhuha','Dhuha','Hadir/Tidak Hadir/Izin/Sakit'],['rawatib','Rawatib','Jumlah (angka)'],['tilawah','Dzikir Pagi','Hadir/Tidak Hadir/Terlambat'],['dzikir','Dzikir Sore','Hadir/Tidak Hadir/Terlambat'],['puasaSenKam','Puasa Senin/Kamis','Puasa/Tidak Puasa/Uzur']];
 const BI_COLS=BI_SHALAT.concat(BI_LAIN);
 const biDb=k=>k==='puasaSenKam'?'puasa_sen_kam':(k==='rawatib'?'rawatib_jumlah':k);
 /* Kolom bertipe JUMLAH (bukan status). Rawatib disimpan di worship_records.rawatib_jumlah (smallint, NULL = belum dicatat).
@@ -3391,7 +3391,7 @@ function biStatsArray(){
     {color:'teal',val:(rec?Math.round(tw/rec*100):0)+'%',label:'Shalat Tepat Waktu'},
     {color:'blue',val:rows.filter(w=>w.tahajud==='Hadir').length,label:'Tahajud'},
     {color:'purple',val:rows.filter(w=>w.dhuha==='Hadir').length,label:'Dhuha'},
-    {color:'green',val:rows.filter(w=>w.tilawah==='Setor').length,label:'Tilawah'}
+    {color:'green',val:rows.filter(w=>w.tilawah==='Hadir').length,label:'Dzikir Pagi'}
   ];
 }
 function biRefresh(){
@@ -3421,8 +3421,8 @@ function biOpenInput(tgl,tab){
   biInRender(); biInTab(biInTabCur);
 }
 function biInStudents(){ const as=document.getElementById('biInAsrama').value; return bdBoardingStudents().filter(s=>!as||s.asrama===as); }
-/* Ibadah Lainnya: Tilawah & Dzikir terisi otomatis (nilai baik) untuk santri yang belum punya catatan; Puasa Senin/Kamis hanya dinilai pada hari Senin & Kamis. */
-const BI_DEFAULT_LAIN={tilawah:'Setor',dzikir:'Hadir'};
+/* Ibadah Lainnya: Dzikir Pagi (kolom DB tilawah) & Dzikir Sore (kolom DB dzikir) terisi otomatis (nilai baik) untuk santri yang belum punya catatan; Puasa Senin/Kamis hanya dinilai pada hari Senin & Kamis. */
+const BI_DEFAULT_LAIN={tilawah:'Hadir',dzikir:'Hadir'};   /* tilawah = Dzikir Pagi, dzikir = Dzikir Sore */
 function biIsPuasaDay(tgl){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(tgl||''); if(!m) return true; const d=new Date(+m[1],+m[2]-1,+m[3]).getDay(); return d===1||d===4; }
 function biSelCell(c,s,e,group,puasaDay){
   const k=c[0], has=e&&e[k]&&e[k]!=='-';
