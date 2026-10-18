@@ -2463,13 +2463,23 @@ function kscFormError(text){
   el.textContent=text; el.style.display=text?'':'none';
   if(text){ const b=document.getElementById('acadDrawerBody'); if(b) b.scrollTop=0; }
 }
+/* Filter daftar siswa pada dropdown berdasarkan dropdown Kelas (<id>_kls). Dipakai form generik & Catat Pembayaran. */
+function kscFilterStudentClass(id){
+  const sel=document.getElementById(id), k=document.getElementById(id+'_kls'); if(!sel||!k) return;
+  if(!sel.__all) sel.__all=[...sel.options];
+  const cur=sel.value; sel.innerHTML='';
+  sel.__all.forEach(o=>{ if(!o.value||!k.value||o.dataset.kelas===k.value) sel.appendChild(o); });
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:'';
+}
 function kscFieldHtml(key,f,raw,prefill){
   const id='kscf_'+key+'_'+f.k;
   let cur=raw?(raw[f.k]!=null?raw[f.k]:''):((prefill&&prefill[f.k]!=null)?prefill[f.k]:(typeof f.def==='function'?f.def():(f.def!=null?f.def:'')));
   let input;
   if(f.type==='student'){
     const studs=f.boardingOnly?bdBoardingStudents():ksFilterStudents(studentsData);
-    input='<select id="'+id+'"'+(raw?' disabled':'')+'><option value="">— Pilih siswa —</option>'+studs.map(s=>'<option value="'+dkEsc(s.id)+'"'+(String(cur)===String(s.id)?' selected':'')+'>'+s.nama+(s.kelas&&s.kelas!=='-'?' — '+s.kelas:'')+'</option>').join('')+'</select>';
+    const kls=[...new Set(studs.map(s=>s.kelas))].filter(k=>k&&k!=='-').sort();   /* filter Kelas: hanya saat input baru */
+    const klsSel=(!raw&&kls.length)?'<select id="'+id+'_kls" onchange="kscFilterStudentClass(\''+id+'\')" style="margin-bottom:6px"><option value="">Semua Kelas</option>'+kls.map(k=>'<option>'+k+'</option>').join('')+'</select>':'';
+    input=klsSel+'<select id="'+id+'"'+(raw?' disabled':'')+'><option value="">— Pilih siswa —</option>'+studs.map(s=>'<option value="'+dkEsc(s.id)+'" data-kelas="'+(s.kelas||'')+'"'+(String(cur)===String(s.id)?' selected':'')+'>'+s.nama+(s.kelas&&s.kelas!=='-'?' — '+s.kelas:'')+'</option>').join('')+'</select>';
   }else if(f.type==='class'){
     const cl=(typeof akScopedClasses==='function')?akScopedClasses():classesData;
     input='<select id="'+id+'"><option value="">— Pilih kelas —</option>'+cl.map(c2=>'<option value="'+dkEsc(c2.id)+'"'+(String(cur)===String(c2.id)?' selected':'')+'>'+c2.nama+'</option>').join('')+'</select>';
@@ -3274,13 +3284,14 @@ function bpOpenInput(id){
   openAcadDrawer(rec?'Edit Presensi Kegiatan':'Input Presensi Kegiatan',AK_ERRBOX+`
     <div class="dw-field"><label>Kegiatan *</label><select id="bpInKegiatan" onchange="bpInRender()">${boardingActivitiesData.map(o=>`<option value="${dkEsc(o.id)}"${bdEq(o.id,kg)?' selected':''}>${o.nama}</option>`).join('')}</select></div>
     <div class="dw-field"><label>Tanggal *</label><input type="date" id="bpInTanggal" value="${dkEsc(tgl)}" onchange="bpInRender()"></div>
-    <div class="dw-field"><label>Asrama</label><select id="bpInAsrama" onchange="bpInRender()"><option value="">Semua Asrama</option>${bdUniq(list.map(s=>s.asrama)).map(a=>`<option>${a}</option>`).join('')}</select></div>
+    <div class="dw-field-row"><div class="dw-field"><label>Asrama</label><select id="bpInAsrama" onchange="bpInRender()"><option value="">Semua Asrama</option>${bdUniq(list.map(s=>s.asrama)).map(a=>`<option>${a}</option>`).join('')}</select></div>
+      <div class="dw-field"><label>Kelas</label><select id="bpInKelas" onchange="bpInRender()"><option value="">Semua Kelas</option>${bdUniq(list.map(s=>s.kelas)).map(k=>`<option>${k}</option>`).join('')}</select></div></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><b style="font-size:12px" id="bpInCount"></b><button class="btn-outline-sm" onclick="bpMarkAllHadir()">Hadir Semua</button></div>
     <div id="bpInList"></div>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="bpInSubmit" onclick="bpInSave()">Simpan Presensi</button></div>`);
   bpInRender();
 }
-function bpInStudents(){ const as=document.getElementById('bpInAsrama').value; return bdBoardingStudents().filter(s=>!as||s.asrama===as); }
+function bpInStudents(){ const as=document.getElementById('bpInAsrama').value, kl=(document.getElementById('bpInKelas')||{}).value||''; return bdBoardingStudents().filter(s=>(!as||s.asrama===as)&&(!kl||s.kelas===kl)); }
 function bpInRender(){
   const el=document.getElementById('bpInList'); if(!el) return;
   const kg=document.getElementById('bpInKegiatan').value, tgl=document.getElementById('bpInTanggal').value;
@@ -3413,14 +3424,15 @@ function biOpenInput(tgl,tab){
   biInTabCur=tab||'shalat';
   openAcadDrawer('Input Ibadah Harian',AK_ERRBOX+`
     <div class="dw-field"><label>Tanggal *</label><input type="date" id="biInTanggal" value="${dkEsc(tgl||ksToday())}" onchange="biInRender()"></div>
-    <div class="dw-field"><label>Asrama</label><select id="biInAsrama" onchange="biInRender()"><option value="">Semua Asrama</option>${bdUniq(list.map(s=>s.asrama)).map(a=>`<option>${a}</option>`).join('')}</select></div>
+    <div class="dw-field-row"><div class="dw-field"><label>Asrama</label><select id="biInAsrama" onchange="biInRender()"><option value="">Semua Asrama</option>${bdUniq(list.map(s=>s.asrama)).map(a=>`<option>${a}</option>`).join('')}</select></div>
+      <div class="dw-field"><label>Kelas</label><select id="biInKelas" onchange="biInRender()"><option value="">Semua Kelas</option>${bdUniq(list.map(s=>s.kelas)).map(k=>`<option>${k}</option>`).join('')}</select></div></div>
     <div class="dw-tabs" id="biInTabs" style="margin:0 0 10px"><button data-t="shalat" onclick="biInTab('shalat')">Shalat Berjamaah</button><button data-t="lain" onclick="biInTab('lain')">Ibadah Lainnya</button></div>
     <div style="margin:0 0 8px"><button class="btn-outline-sm" onclick="biInFillAll()">Isi semua kolom tab ini dengan status baik</button> <span class="dw-hint" style="font-size:10.5px;color:var(--sub)">Tepat Waktu / Hadir / Setor / Puasa. Kolom "-" = belum dicatat. <b>Rawatib</b> diisi angka jumlah pelaksanaan hari itu (kosong = belum dicatat, 0 = dicatat tidak melaksanakan).</span></div>
     <div id="biInList" style="overflow-x:auto"></div>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="biInSubmit" onclick="biInSave()">Simpan Ibadah</button></div>`);
   biInRender(); biInTab(biInTabCur);
 }
-function biInStudents(){ const as=document.getElementById('biInAsrama').value; return bdBoardingStudents().filter(s=>!as||s.asrama===as); }
+function biInStudents(){ const as=document.getElementById('biInAsrama').value, kl=(document.getElementById('biInKelas')||{}).value||''; return bdBoardingStudents().filter(s=>(!as||s.asrama===as)&&(!kl||s.kelas===kl)); }
 /* Ibadah Lainnya: Dzikir Pagi (kolom DB tilawah) & Dzikir Sore (kolom DB dzikir) terisi otomatis (nilai baik) untuk santri yang belum punya catatan; Puasa Senin/Kamis hanya dinilai pada hari Senin & Kamis. */
 const BI_DEFAULT_LAIN={tilawah:'Hadir',dzikir:'Hadir'};   /* tilawah = Dzikir Pagi, dzikir = Dzikir Sore */
 function biIsPuasaDay(tgl){ const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(tgl||''); if(!m) return true; const d=new Date(+m[1],+m[2]-1,+m[3]).getDay(); return d===1||d===4; }
@@ -3745,8 +3757,8 @@ function bkRefresh(){
   bkRenderPelanggaran();
 }
 /* -- Penilaian Kedisiplinan Harian -- */
-let bhFilter={tanggal:ksToday(),asrama:'',kamar:''};
-function bhRows(){ const base=bdBoardingStudents(); const f=bhFilter; return base.filter(s=>(!f.asrama||s.asrama===f.asrama)&&(!f.kamar||s.kamar===f.kamar)); }
+let bhFilter={tanggal:ksToday(),asrama:'',kamar:'',kelas:''};
+function bhRows(){ const base=bdBoardingStudents(); const f=bhFilter; return base.filter(s=>(!f.asrama||s.asrama===f.asrama)&&(!f.kamar||s.kamar===f.kamar)&&(!f.kelas||s.kelas===f.kelas)); }
 function bhRenderTable(){
   const el=document.getElementById('bhBody'); if(!el) return; const rows=bhRows(); const can=kscCan('bh','write');
   el.innerHTML=rows.length?`<table><tr><th>No</th><th>Santri</th><th>Kamar</th><th>Asrama</th><th>Attitude</th><th>Kerapian</th><th>Kebersihan</th><th>Nilai Harian</th><th>Aksi</th></tr>
@@ -3758,11 +3770,12 @@ function bhRenderTable(){
     <td>${(can||d)?`<button class="btn-outline-sm" onclick="bhOpenAssess('${dkEsc(s.id)}')">${can?(d?'Ubah':'Nilai'):'Lihat'}</button>`:''}</td></tr>`;}).join('')}
   </table>`:acadEmptyStateHtml('Tidak ada santri','Coba ubah filter asrama atau kamar.');
 }
-function bhOnFilterChange(){ bhFilter={tanggal:document.getElementById('bhTanggal').value||ksToday(),asrama:document.getElementById('bhAsrama').value,kamar:document.getElementById('bhKamar').value}; bhRenderTable(); }
+function bhOnFilterChange(){ bhFilter={tanggal:document.getElementById('bhTanggal').value||ksToday(),asrama:document.getElementById('bhAsrama').value,kamar:document.getElementById('bhKamar').value,kelas:(document.getElementById('bhKelas')||{}).value||''}; bhRenderTable(); }
 function bhRefresh(){
   const base=bdBoardingStudents();
   kscFillSelect('bhAsrama',bdUniq(base.map(s=>s.asrama)).map(a=>({value:a,label:a})));
   kscFillSelect('bhKamar',bdUniq(base.map(s=>s.kamar)).map(k=>({value:k,label:k})));
+  kscFillSelect('bhKelas',bdUniq(base.map(s=>s.kelas)).map(k=>({value:k,label:k})));
   bhRenderTable();
 }
 function bhOpenAssess(studentId){
@@ -3821,6 +3834,7 @@ function boardingDisiplinPageHtml(){
       <input type="date" id="bhTanggal" value="${ksToday()}" onchange="bhOnFilterChange()">
       <select id="bhAsrama" onchange="bhOnFilterChange()"><option value="">Semua Asrama</option></select>
       <select id="bhKamar" onchange="bhOnFilterChange()"><option value="">Semua Kamar</option></select>
+      <select id="bhKelas" onchange="bhOnFilterChange()"><option value="">Semua Kelas</option></select>
       <span class="ti-spacer"></span>
       <button class="btn-outline-sm" onclick="bhOpenWeights()">⚙️ Bobot Nilai</button>
       <button class="btn-outline-sm" onclick="bdReload(['bh'])">Muat Ulang</button>
@@ -4634,7 +4648,8 @@ function pbOpenAddForm(presetStudentId,presetInvoiceId){
   if(!kgCanManage()){ showAcadToast('Hanya Bendahara/Super Admin yang dapat mencatat pembayaran.'); return; }
   const studentOpts=studentsData.filter(s=>s.status==='Aktif');
   openAcadDrawer('Catat Pembayaran',AK_ERRBOX+`
-    <div class="dw-field"><label>Cari Siswa *</label><select id="pbfSiswa" onchange="pbOnSiswaChange()"><option value="">Pilih siswa...</option>${studentOpts.map(s=>`<option value="${dkEsc(s.id)}">${s.nama} — ${s.kelas}</option>`).join('')}</select></div>
+    <div class="dw-field"><label>Kelas</label><select id="pbfSiswa_kls" onchange="kscFilterStudentClass('pbfSiswa');pbOnSiswaChange()"><option value="">Semua Kelas</option>${bdUniq(studentOpts.map(s=>s.kelas)).map(k=>`<option>${k}</option>`).join('')}</select></div>
+    <div class="dw-field"><label>Cari Siswa *</label><select id="pbfSiswa" onchange="pbOnSiswaChange()"><option value="">Pilih siswa...</option>${studentOpts.map(s=>`<option value="${dkEsc(s.id)}" data-kelas="${s.kelas||''}">${s.nama} — ${s.kelas}</option>`).join('')}</select></div>
     <div class="dw-field"><label>Pilih Tagihan *</label><select id="pbfTagihan" onchange="pbOnTagihanChange()"><option value="">Pilih siswa terlebih dahulu</option></select></div>
     <div class="dw-field-row">
       <div class="dw-field"><label>Tanggal Pembayaran *</label><input type="date" id="pbfTanggal" value="${kgNowIso()}" max="${kgNowIso()}"></div>
@@ -9669,6 +9684,196 @@ window.pjDelete=function(pid){
       rpRefresh();
     }catch(e){ console.error('pjDelete',e); showAcadToast('Gagal menghapus: '+kscErrMsg(e,'hapus',KSC.pj.cfg)); }
   });
+};
+})();
+</script>
+
+<style id="rapor-boarding-css">
+/* ===== RAPOR: TAB AKADEMIK | BOARDING ===== */
+.rb-tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.rb-tabs .rb-tab{border:1px solid var(--line);background:var(--card);color:var(--sub);font-weight:700;font-size:13px;padding:8px 18px;border-radius:20px;cursor:pointer}
+.rb-tabs .rb-tab.active{background:var(--navy,#0B2540);border-color:var(--navy,#0B2540);color:#fff}
+.rb-tabs .rb-print{margin-left:auto}
+.rb-loading{padding:30px 10px;text-align:center;color:#555;font-size:12.5px}
+.rpd-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
+@media (max-width:760px){.rpd-sum{grid-template-columns:repeat(2,1fr)}}
+.rpd-sum div{border:1px solid #14407A;border-radius:8px;padding:8px;text-align:center}
+.rpd-sum span{display:block;font-size:10.5px;color:#444}.rpd-sum b{font-size:18px;color:#14407A}
+.rpd-sum div.tot{background:#14407A}.rpd-sum div.tot span,.rpd-sum div.tot b{color:#fff}
+.rpd-sign3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;margin-top:6px}
+.rpd-sign3 .rpd-line{margin-top:56px;font-weight:bold}
+</style>
+<script id="rapor-boarding">
+/* ========================================================================
+   RAPOR BOARDING — tab "Boarding" di detail Rapor Akademik
+   Isi (per Tahun Ajaran + Semester yang dipilih, akPeriodRange):
+     A. Identitas  B. Ibadah Harian (worship_records, bobot biWeights)
+     C. Kegiatan Asrama (boarding_attendance, bobot bpWeights)
+     D. Kedisiplinan: Penilaian Harian (daily_discipline, bkDailyWeights) + Pelanggaran (boarding_discipline)
+     E. Ringkasan Nilai Boarding  F. Tanda Tangan
+   Data diambil langsung dari Supabase per santri + rentang semester (tidak terbatas 120 hari seperti halaman Boarding).
+   Bila gagal / mode demo: memakai data yang sudah dimuat di aplikasi dan diberi keterangan.
+   Hanya membungkus fungsi rapor; tidak mengubah perhitungan Akademik.
+   ======================================================================== */
+(function(){
+if(typeof rpDetailHtml!=='function'||typeof KSC==='undefined'||!KSC.bi||!KSC.ba||!KSC.bh||!KSC.bk){ console.warn('[rapor-boarding] modul tidak ditemukan'); return; }
+let rbTab='akademik';
+const rbCache={};          /* key sid|ta|sem -> {t, data} */
+const rbBusy={};
+const RB_TTL=60*1000;
+function rbKey(sid){ return String(sid)+'|'+rpSel.ta+'|'+rpSel.sem; }
+function rbStudent(sid){ return studentsData.find(s=>String(s.id)===String(sid)); }
+function rbAvg(a){ return a.length?Math.round(a.reduce((x,y)=>x+y,0)/a.length):null; }
+function rbN(v){ return v==null?'-':v; }
+function rbPred(v){ if(v==null) return '-'; return v>=90?'Sangat Baik':v>=75?'Baik':'Perlu Pembinaan'; }
+
+async function rbFetch(table,sid,range,cfg){
+  const sb=dkClient(); let out=[],from=0;
+  for(let guard=0;guard<20;guard++){
+    const {data,error}=await sb.from(table).select('*').eq('student_id',sid).gte('tanggal',range[0]).lte('tanggal',range[1]).order('tanggal').range(from,from+999);
+    if(error) throw error; out=out.concat(data||[]);
+    if(!data||data.length<1000) break; from+=1000;
+  }
+  return out.map(r=>cfg.fromRow(r));
+}
+function rbLocal(arr,sid,range){ return arr.filter(x=>String(x.studentId)===String(sid)&&x.tanggal>=range[0]&&x.tanggal<=range[1]); }
+async function rbLoad(sid,force){
+  const key=rbKey(sid), c=rbCache[key];
+  if(!force&&c&&Date.now()-c.t<RB_TTL) return c.data;
+  if(rbBusy[key]) return rbBusy[key];
+  const range=akPeriodRange(rpSel.ta,rpSel.sem);
+  rbBusy[key]=(async()=>{
+    const data={range,ib:[],ba:[],bh:[],bk:[],local:false};
+    if(!range){ return data; }
+    if(dkClient()){
+      try{
+        if(!boardingActivitiesData.length) await kscLoad('bn',{silent:true});
+        const [ib,ba,bh,bk]=await Promise.all([rbFetch('worship_records',sid,range,KSC.bi.cfg),rbFetch('boarding_attendance',sid,range,KSC.ba.cfg),rbFetch('daily_discipline',sid,range,KSC.bh.cfg),rbFetch('boarding_discipline',sid,range,KSC.bk.cfg)]);
+        Object.assign(data,{ib,ba,bh,bk});
+      }catch(e){ console.warn('[rapor-boarding] gagal ambil dari server, pakai data lokal',e); data.local=true; }
+    } else data.local=true;
+    if(data.local) Object.assign(data,{ib:rbLocal(worshipRecordsData,sid,range),ba:rbLocal(boardingAttendanceData,sid,range),bh:rbLocal(dailyDisciplineData,sid,range),bk:rbLocal(disciplineBoardingData,sid,range)});
+    rbCache[key]={t:Date.now(),data}; return data;
+  })();
+  try{ return await rbBusy[key]; } finally{ delete rbBusy[key]; }
+}
+
+/* ---------- Perhitungan ---------- */
+function rbCompute(d){
+  const GOOD=['Tepat Waktu','Hadir','Setor','Puasa'];
+  const allIb=[];
+  const ibRows=BI_COLS.map(c=>{
+    const k=c[0];
+    if(biIsCount(k)){ const nums=d.ib.map(w=>w[k]).filter(v=>v!=='-'&&v!=null&&isFinite(v)); return {label:c[1],count:true,n:nums.length,total:nums.reduce((a,b)=>a+Number(b),0)}; }
+    const vals=d.ib.map(w=>akUnesc(w[k])).filter(v=>v&&v!=='-');
+    const sc=vals.map(v=>biWeights[v]??0); sc.forEach(x=>allIb.push(x));
+    return {label:c[1],n:vals.length,good:vals.filter(v=>GOOD.includes(v)).length,nilai:rbAvg(sc)};
+  });
+  const st=['Hadir','Terlambat','Izin','Sakit','Alpa'], byAct={}, allBa=[];
+  d.ba.forEach(a=>{ const s=akUnesc(a.status); const o=byAct[a.kegiatanId]||(byAct[a.kegiatanId]={id:a.kegiatanId,c:{},sc:[]}); o.c[s]=(o.c[s]||0)+1; const w=bpWeights[s]??0; o.sc.push(w); allBa.push(w); });
+  const baRows=Object.values(byAct).map(o=>({nama:activityName(o.id),c:o.c,total:o.sc.length,nilai:rbAvg(o.sc)})).sort((a,b)=>akUnesc(a.nama).localeCompare(akUnesc(b.nama)));
+  const bhDays=d.bh.filter(x=>bkDailyKeys().some(k=>x[k]));
+  const bh={n:bhDays.length,att:rbAvg(bhDays.filter(x=>x.attitude).map(x=>bkDailyWeights.attitude[x.attitude]??0)),
+    ker:rbAvg(bhDays.map(x=>bkGroupScore(x,['ranjang','loker','pakaian']))),bers:rbAvg(bhDays.map(x=>bkGroupScore(x,['piket','kamar','area']))),
+    tot:rbAvg(bhDays.map(x=>bkDailyScore(x)))};
+  const bk=d.bk.slice().sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  const nIb=rbAvg(allIb), nBa=rbAvg(allBa), nBh=bh.tot;
+  const parts=[nIb,nBa,nBh].filter(v=>v!=null);
+  return {st,ibRows,nIb,baRows,nBa,bh,nBh,bk,poin:bk.reduce((a,v)=>a+(Number(v.poin)||0),0),total:rbAvg(parts)};
+}
+
+/* ---------- Dokumen ---------- */
+function rbDocHtml(r,d){
+  const sc=rpSchool(), logo=rpLogoSrc(), ta=dkEsc(rpSel.ta), sem=dkEsc(rpSel.sem), s=rbStudent(r.studentId)||{};
+  const head=`<div class="rpd-head">${logo?`<img class="rpd-logo" src="${dkEsc(logo)}" alt="" onerror="this.style.display='none'">`:''}
+      <div class="rpd-school"><div class="rpd-name">${sc.name.toUpperCase()}</div>${sc.addr?`<div class="rpd-addr">${sc.addr}</div>`:''}${(sc.npsn||sc.phone)?`<div class="rpd-addr">${[sc.npsn&&'NPSN: '+sc.npsn,sc.phone&&'Telp: '+sc.phone].filter(Boolean).join(' &nbsp;|&nbsp; ')}</div>`:''}</div>
+      <div class="rpd-period">Tahun Ajaran ${ta}<br>Semester <b>${sem}</b></div></div>
+    <div class="rpd-title">RAPOR BOARDING SANTRI</div>
+    <h4 class="rpd-h">A. Identitas Santri</h4>
+    <table class="rpd-id"><tr><td>Nama</td><td>: ${r.nama}</td><td>Tahun Ajaran</td><td>: ${ta}</td></tr>
+      <tr><td>NIS</td><td>: ${r.nis||'-'}</td><td>Semester</td><td>: ${sem}</td></tr>
+      <tr><td>Kelas</td><td>: ${r.kelas}</td><td>Asrama</td><td>: ${s.asrama&&s.asrama!=='-'?s.asrama:'-'}</td></tr>
+      <tr><td>Kamar</td><td>: ${s.kamar&&s.kamar!=='-'?s.kamar:'-'}</td><td></td><td></td></tr></table>`;
+  if(!s.boarding) return head+'<p class="rpd-note rpd-warn">Siswa ini tidak terdaftar sebagai santri boarding, sehingga tidak memiliki penilaian ibadah, kegiatan asrama, dan kedisiplinan asrama.</p>';
+  if(!d) return head+'<div class="rb-loading">Memuat data boarding semester ini...</div>';
+  if(!d.range) return head+'<p class="rpd-note rpd-warn">Tahun ajaran/semester belum valid, data boarding tidak dapat dihitung.</p>';
+  const c=rbCompute(d), per=fmtTglID(d.range[0])+' s.d. '+fmtTglID(d.range[1]);
+  const ib=c.ibRows.map((x,i)=>x.count?`<tr><td class="c">${i+1}</td><td>${x.label}</td><td class="c">${x.n}</td><td class="c" colspan="2">Total ${x.total} kali</td></tr>`
+      :`<tr><td class="c">${i+1}</td><td>${x.label}</td><td class="c">${x.n}</td><td class="c">${x.n?x.good:'-'}</td><td class="c"><b>${rbN(x.nilai)}</b></td></tr>`).join('');
+  const ba=c.baRows.length?c.baRows.map((x,i)=>`<tr><td class="c">${i+1}</td><td>${x.nama}</td>${c.st.map(k=>`<td class="c">${x.c[k]||0}</td>`).join('')}<td class="c">${x.total}</td><td class="c"><b>${rbN(x.nilai)}</b></td></tr>`).join('')
+      :'<tr><td colspan="9" class="c">Belum ada presensi kegiatan asrama pada periode ini.</td></tr>';
+  const bk=c.bk.length?c.bk.map((v,i)=>`<tr><td class="c">${i+1}</td><td class="c">${fmtTglID(v.tanggal)}</td><td>${v.pelanggaran}</td><td>${v.kategori}</td><td class="c">${v.poin}</td><td class="c">${v.status}</td></tr>`).join('')
+      :'<tr><td colspan="6" class="c">Tidak ada catatan pelanggaran pada periode ini.</td></tr>';
+  return head+`
+    <h4 class="rpd-h">B. Ibadah Harian</h4>
+    <table class="rpd-tbl"><thead><tr><th>No</th><th>Ibadah</th><th>Hari Dicatat</th><th>Tepat Waktu / Hadir</th><th>Nilai</th></tr></thead><tbody>${ib}
+      <tr class="rpd-avg"><td colspan="4"><b>Nilai Ibadah</b></td><td class="c"><b>${rbN(c.nIb)}</b></td></tr></tbody></table>
+    <h4 class="rpd-h">C. Kehadiran Kegiatan Asrama</h4>
+    <table class="rpd-tbl"><thead><tr><th>No</th><th>Kegiatan</th><th>Hadir</th><th>Terlambat</th><th>Izin</th><th>Sakit</th><th>Alpa</th><th>Total</th><th>Nilai</th></tr></thead><tbody>${ba}
+      <tr class="rpd-avg"><td colspan="8"><b>Nilai Kegiatan Asrama</b></td><td class="c"><b>${rbN(c.nBa)}</b></td></tr></tbody></table>
+    <h4 class="rpd-h">D. Kedisiplinan</h4>
+    <table class="rpd-tbl"><thead><tr><th>Hari Dinilai</th><th>Attitude</th><th>Kerapian</th><th>Kebersihan</th><th>Nilai Kedisiplinan Harian</th></tr></thead>
+      <tbody><tr><td class="c">${c.bh.n}</td><td class="c">${rbN(c.bh.att)}</td><td class="c">${rbN(c.bh.ker)}</td><td class="c">${rbN(c.bh.bers)}</td><td class="c"><b>${rbN(c.bh.tot)}</b></td></tr></tbody></table>
+    <p class="rpd-note">Pelanggaran / Pembinaan (${c.bk.length} catatan, total ${c.poin} poin):</p>
+    <table class="rpd-tbl"><thead><tr><th>No</th><th>Tanggal</th><th>Pelanggaran</th><th>Kategori</th><th>Poin</th><th>Status</th></tr></thead><tbody>${bk}</tbody></table>
+    <h4 class="rpd-h">E. Ringkasan Nilai Boarding</h4>
+    <div class="rpd-sum"><div><span>Ibadah</span><b>${rbN(c.nIb)}</b></div><div><span>Kegiatan Asrama</span><b>${rbN(c.nBa)}</b></div><div><span>Kedisiplinan</span><b>${rbN(c.nBh)}</b></div>
+      <div class="tot"><span>Nilai Boarding</span><b>${rbN(c.total)}</b><span>${rbPred(c.total)}</span></div></div>
+    <p class="rpd-note">Periode ${per}. Nilai = rata-rata bobot status sesuai pengaturan Bobot Nilai di menu Boarding. Nilai Boarding = rata-rata komponen yang memiliki data. Predikat: ≥ 90 Sangat Baik, ≥ 75 Baik, di bawah 75 Perlu Pembinaan. Poin pelanggaran ditampilkan sebagai catatan dan tidak mengurangi nilai.${d.local?' <b>Catatan: data diambil dari data yang sudah dimuat aplikasi (maks. 120 hari terakhir), bukan langsung dari server.</b>':''}</p>
+    <h4 class="rpd-h">F. Tanda Tangan</h4>
+    <div class="rpd-sign3"><div><div>Musyrif / Pembina Asrama</div><div class="rpd-line">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div></div>
+      <div><div>Orang Tua / Wali</div><div class="rpd-line">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div></div>
+      <div><div>Kepala Sekolah</div><div class="rpd-line">${sc.principal?'( '+sc.principal+' )':'(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)'}</div></div></div>`;
+}
+function rbCached(sid){ const c=rbCache[rbKey(sid)]; return c?c.data:null; }
+function rbFillPaper(sid){
+  const el=document.getElementById('rbPaper'); const r=reportCardsData.find(x=>String(x.studentId)===String(sid)); if(!el||!r) return;
+  el.innerHTML=rbDocHtml(r,rbCached(sid));
+}
+async function rbEnsure(sid,force){
+  const s=rbStudent(sid); if(!s||!s.boarding) return;
+  const c=rbCache[rbKey(sid)];
+  if(!force&&c&&Date.now()-c.t<RB_TTL) return;
+  await rbLoad(sid,force);
+  if(rbTab==='boarding'&&rpView&&rpView.mode==='detail'&&String(rpView.id)===String(sid)) rbFillPaper(sid);
+}
+
+/* ---------- Tab di detail rapor ---------- */
+const _rbDetail=rpDetailHtml;
+rpDetailHtml=function(r){
+  const html=_rbDetail.apply(this,arguments), sid=dkEsc(r.studentId), bd=rbTab==='boarding';
+  const tabs=`<div class="rb-tabs"><button class="rb-tab${bd?'':' active'}" data-t="akademik" onclick="rbSetTab('akademik','${sid}')">Akademik</button><button class="rb-tab${bd?' active':''}" data-t="boarding" onclick="rbSetTab('boarding','${sid}')">Boarding</button>`+
+    `<button class="btn-outline-sm rb-print" id="rbPrintBtn" style="${bd?'':'display:none'}" onclick="rbPrint('${sid}')">Cetak Rapor Boarding</button></div>`;
+  const out=html.replace('<section class="panel rp-main"><div class="rp-paper">',
+    '<section class="panel rp-main">'+tabs+'<div class="rp-paper" id="rbPaper" style="'+(bd?'':'display:none')+'">'+rbDocHtml(r,rbCached(r.studentId))+'</div><div class="rp-paper" id="rpPaperAk" style="'+(bd?'display:none':'')+'">');
+  if(bd) setTimeout(()=>rbEnsure(r.studentId),0);
+  return out;
+};
+window.rbSetTab=function(t,sid){
+  rbTab=t==='boarding'?'boarding':'akademik';
+  document.querySelectorAll('.rb-tabs .rb-tab').forEach(b=>b.classList.toggle('active',b.dataset.t===rbTab));
+  const a=document.getElementById('rpPaperAk'), b=document.getElementById('rbPaper'), p=document.getElementById('rbPrintBtn');
+  if(a) a.style.display=rbTab==='boarding'?'none':''; if(b) b.style.display=rbTab==='boarding'?'':'none'; if(p) p.style.display=rbTab==='boarding'?'':'none';
+  if(rbTab==='boarding'){ rbFillPaper(sid); rbEnsure(sid); }
+};
+/* Tombol "Lihat Galeri Proyek" di profil -> bagian E ada di tab Akademik */
+if(typeof window.pjScrollGallery==='function'){ const _sg=window.pjScrollGallery; window.pjScrollGallery=function(){ if(rbTab==='boarding'&&rpView&&rpView.id!=null) rbSetTab('akademik',rpView.id); return _sg.apply(this,arguments); }; }
+/* Muat Ulang di halaman rapor ikut menyegarkan data boarding */
+const _rbReload=rpReloadAll;
+rpReloadAll=async function(){ Object.keys(rbCache).forEach(k=>delete rbCache[k]); await _rbReload.apply(this,arguments); if(rbTab==='boarding'&&rpView&&rpView.mode==='detail') rbEnsure(rpView.id,true); };
+
+/* ---------- Cetak ---------- */
+window.rbPrint=async function(sid){
+  const r=reportCardsData.find(x=>String(x.studentId)===String(sid)); if(!r){ showAcadToast('Data tidak ditemukan. Muat ulang halaman.'); return; }
+  let w=null; try{ w=window.open('','_blank'); }catch(e){ w=null; }
+  if(!w){ showAcadToast('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu klik Cetak lagi.'); return; }
+  const data=(rbStudent(sid)||{}).boarding?await rbLoad(sid):null;
+  const base=rpPrintHtml(r), i=base.indexOf('<body>');
+  const css='<style>.rpd-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}.rpd-sum div{border:1px solid #000;padding:6px;text-align:center}.rpd-sum span{display:block;font-size:9.5pt}.rpd-sum b{font-size:14pt}.rpd-sign3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;margin-top:6px;break-inside:avoid}.rpd-sign3 .rpd-line{margin-top:56px;font-weight:bold}</style>';
+  const doc=base.slice(0,i).replace('<title>Rapor ','<title>Rapor Boarding ').replace('</head>',css+'</head>')+'<body>'+rbDocHtml(r,data)+'<div class="rpd-foot">Dicetak dari sistem AIS pada '+fmtTglID(ksToday())+'</div></body></html>';
+  try{ w.document.open(); w.document.write(doc); w.document.close(); }catch(e){ try{ w.close(); }catch(_){} showAcadToast('Dokumen gagal dibuat, silakan coba lagi.'); return; }
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){ showAcadToast('Rapor terbuka di tab baru. Tekan Ctrl+P di tab tersebut.'); } },300);
+  showAcadToast('Rapor Boarding dibuka di tab baru. Pilih "Simpan sebagai PDF" bila ingin berkas PDF.');
 };
 })();
 </script>
