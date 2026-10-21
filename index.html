@@ -2095,25 +2095,25 @@ function rpPrintHtml(r){
     @page{size:A4 portrait;margin:14mm 14mm 16mm}
     *{box-sizing:border-box}
     html,body{margin:0;padding:0;background:#fff;color:#000}
-    body{font-family:"Times New Roman",Times,serif;font-size:11.5pt;line-height:1.35;padding:0}
-    .rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2.5px solid #000;padding-bottom:8px;margin-bottom:10px}
-    .rpd-logo{width:62px;height:62px;object-fit:contain;filter:grayscale(1)}
-    .rpd-school{flex:1}.rpd-name{font-size:15pt;font-weight:bold;letter-spacing:.3px}.rpd-addr{font-size:9.5pt}
+    body{font-family:"Helvetica Neue",Arial,sans-serif;font-size:10.5pt;line-height:1.35;padding:0;color:#16222f;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2.5px solid #0B2540;box-shadow:0 3px 0 -1px #C9A227;padding-bottom:8px;margin-bottom:12px}
+    .rpd-logo{width:62px;height:62px;object-fit:contain}
+    .rpd-school{flex:1}.rpd-name{font-size:14pt;font-weight:bold;letter-spacing:.3px;color:#0B2540}.rpd-addr{font-size:9pt;color:#5f6f80}
     .rpd-period{text-align:right;font-size:10pt;white-space:nowrap}
-    .rpd-title{text-align:center;font-size:13pt;font-weight:bold;letter-spacing:1px;margin:10px 0 8px;text-decoration:underline}
-    .rpd-h{font-size:11.5pt;margin:12px 0 5px;break-after:avoid}
+    .rpd-title{text-align:center;font-size:13pt;font-weight:bold;letter-spacing:1px;margin:10px 0 8px;color:#0B2540}
+    .rpd-h{font-size:11pt;font-weight:bold;color:#0B2540;margin:14px 0 5px;padding-left:7px;border-left:4px solid #0F8088;break-after:avoid}
     table{width:100%;border-collapse:collapse}
     .rpd-id td{padding:2px 4px;vertical-align:top;font-size:11pt}.rpd-id td:nth-child(1){width:16%}.rpd-id td:nth-child(2){width:36%}.rpd-id td:nth-child(3){width:16%}
-    .rpd-tbl th,.rpd-tbl td{border:1px solid #000;padding:4px 6px;font-size:10.5pt}
-    .rpd-tbl th{background:#e6e6e6;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-tbl th,.rpd-tbl td{border:1px solid #c9d6e2;padding:4px 6px;font-size:10pt}
+    .rpd-tbl th{background:#0B2540;border-color:#0B2540;color:#fff;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .rpd-tbl td.c{text-align:center}.rpd-tbl thead{display:table-header-group}
     tr{break-inside:avoid}
-    .rpd-avg td{background:#f0f0f0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .rpd-note{font-size:9.5pt;margin:5px 0}.rpd-warn{border:1px solid #000;padding:4px 6px;font-weight:bold}
+    .rpd-avg td{background:#e7f2f4;font-weight:bold;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-note{font-size:9.5pt;margin:5px 0}.rpd-warn{border:1px solid #C9A227;background:#fcf6e3;padding:4px 6px;font-weight:bold}
     .rpd-two{display:grid;grid-template-columns:1fr 1fr;gap:14px;break-inside:avoid}
     .rpd-pct{display:flex;justify-content:space-between;margin-top:6px;font-size:10.5pt}
-    .rpd-bar{height:9px;border:1px solid #000}.rpd-bar i{display:block;height:100%;background:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .rpd-box{border:1px solid #000;min-height:74px;padding:6px 8px;font-size:10.5pt;white-space:pre-wrap}
+    .rpd-bar{height:9px;border:1px solid #0B2540;border-radius:5px;overflow:hidden}.rpd-bar i{display:block;height:100%;background:#0F8088;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .rpd-box{border:1px solid #c9d6e2;border-left:3px solid #C9A227;min-height:74px;padding:6px 8px;font-size:10pt;white-space:pre-wrap}
     .rpd-muted{color:#444}
     .rpd-sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;text-align:center;margin-top:6px;break-inside:avoid;page-break-inside:avoid}
     .rpd-line{margin-top:62px;font-weight:bold}
@@ -8250,19 +8250,19 @@ window.dashReloadData=async function(force){
 .rp-meta div{display:flex;justify-content:space-between;gap:8px;text-align:right}.rp-meta span{color:var(--sub);text-align:left}
 .rp-wide{width:100%;margin-top:6px;justify-content:center}
 .rp-main{overflow-x:auto}
-.rp-paper{background:#fff;color:#111;border:1px solid var(--line);border-radius:10px;padding:22px 26px;min-width:560px;font-size:12.5px;line-height:1.4}
-.rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #14407A;padding-bottom:10px;margin-bottom:10px}
-.rpd-logo{width:56px;height:56px;object-fit:contain}.rpd-school{flex:1}.rpd-name{font-size:16px;font-weight:800;color:#14407A}.rpd-addr{font-size:11px;color:#444}
+.rp-paper{background:#fff;color:#16222f;border:1px solid var(--line);border-top:4px solid #0B2540;border-radius:10px;box-shadow:0 1px 0 #C9A227 inset;padding:22px 26px;min-width:560px;font-size:12.5px;line-height:1.4}
+.rpd-head{display:flex;align-items:center;gap:12px;border-bottom:2px solid #0B2540;box-shadow:0 3px 0 -1px #C9A227;padding-bottom:10px;margin-bottom:12px}
+.rpd-logo{width:56px;height:56px;object-fit:contain}.rpd-school{flex:1}.rpd-name{font-size:16px;font-weight:800;color:#0B2540}.rpd-addr{font-size:11px;color:#444}
 .rpd-period{text-align:right;font-size:11.5px;white-space:nowrap}
-.rpd-title{text-align:center;font-weight:800;letter-spacing:.5px;font-size:14px;margin:10px 0}
-.rpd-h{font-size:12.5px;font-weight:800;margin:14px 0 6px;color:#14407A}
-.rpd-id{width:100%;border-collapse:collapse;background:#F4F7FB;border-radius:8px}.rpd-id td{padding:3px 8px;font-size:12px}
-.rpd-tbl{width:100%;min-width:0;border-collapse:collapse}.rpd-tbl th,.rpd-tbl td{border:1px solid #cfd8e6;padding:6px 8px;font-size:12px}
-.rpd-tbl th{background:#EDF2FA;font-weight:700}.rpd-tbl td.c{text-align:center}.rpd-avg td{background:#EAF3FF}
+.rpd-title{text-align:center;font-weight:800;letter-spacing:.6px;font-size:14px;margin:10px 0;color:#0B2540}
+.rpd-h{font-size:12.5px;font-weight:800;margin:16px 0 6px;color:#0B2540;border-left:4px solid #0F8088;padding-left:8px}
+.rpd-id{width:100%;border-collapse:collapse;background:#F1F7F8;border-radius:8px}.rpd-id td{padding:3px 8px;font-size:12px}
+.rpd-tbl{width:100%;min-width:0;border-collapse:collapse}.rpd-tbl th,.rpd-tbl td{border:1px solid #d3dee8;padding:6px 8px;font-size:12px}
+.rpd-tbl th{background:#0B2540;border-color:#0B2540;color:#fff;font-weight:700}.rpd-tbl tbody tr:nth-child(even) td{background:#F6FAFB}.rpd-tbl td.c{text-align:center}.rpd-avg td{background:#E7F2F4!important;font-weight:700}
 .rpd-note{font-size:11px;color:#555;margin:6px 0}.rpd-warn{background:#FCF1DE;color:#7A5200;border-radius:8px;padding:6px 10px}
 .rpd-two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media (max-width:760px){.rpd-two{grid-template-columns:1fr}}
-.rpd-pct{display:flex;justify-content:space-between;margin-top:8px;font-size:12px}.rpd-bar{height:8px;border-radius:6px;background:#E3E9F2;overflow:hidden}.rpd-bar i{display:block;height:100%;background:#16A34A}
-.rpd-box{border:1px solid #cfd8e6;border-radius:8px;min-height:80px;padding:8px 10px;white-space:pre-wrap}.rpd-muted{color:#777}
+.rpd-pct{display:flex;justify-content:space-between;margin-top:8px;font-size:12px}.rpd-bar{height:8px;border-radius:6px;background:#E3E9F2;overflow:hidden}.rpd-bar i{display:block;height:100%;background:#0F8088}
+.rpd-box{border:1px solid #d3dee8;border-left:3px solid #C9A227;border-radius:8px;min-height:80px;padding:8px 10px;white-space:pre-wrap}.rpd-muted{color:#777}
 .rpd-sign{display:grid;grid-template-columns:1fr 1fr;gap:30px;text-align:center;margin-top:6px}.rpd-line{margin-top:58px;font-weight:700}
 </style>
 <style id="dashboard-main-css">
@@ -9697,9 +9697,9 @@ window.pjDelete=function(pid){
 .rb-loading{padding:30px 10px;text-align:center;color:#555;font-size:12.5px}
 .rpd-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}
 @media (max-width:760px){.rpd-sum{grid-template-columns:repeat(2,1fr)}}
-.rpd-sum div{border:1px solid #14407A;border-radius:8px;padding:8px;text-align:center}
-.rpd-sum span{display:block;font-size:10.5px;color:#444}.rpd-sum b{font-size:18px;color:#14407A}
-.rpd-sum div.tot{background:#14407A}.rpd-sum div.tot span,.rpd-sum div.tot b{color:#fff}
+.rpd-sum div{border:1px solid #cfdde6;border-top:3px solid #0F8088;border-radius:8px;padding:8px;text-align:center;background:#F6FAFB}
+.rpd-sum span{display:block;font-size:10.5px;color:#5f6f80}.rpd-sum b{font-size:18px;color:#0B2540}
+.rpd-sum div.tot{background:#0B2540;border-color:#0B2540;border-top-color:#C9A227;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rpd-sum div.tot span,.rpd-sum div.tot b{color:#fff}
 .rpd-sign3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;margin-top:6px}
 .rpd-sign3 .rpd-line{margin-top:56px;font-weight:bold}
 </style>
@@ -9869,13 +9869,1299 @@ window.rbPrint=async function(sid){
   if(!w){ showAcadToast('Pop-up diblokir browser. Izinkan pop-up untuk situs ini lalu klik Cetak lagi.'); return; }
   const data=(rbStudent(sid)||{}).boarding?await rbLoad(sid):null;
   const base=rpPrintHtml(r), i=base.indexOf('<body>');
-  const css='<style>.rpd-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}.rpd-sum div{border:1px solid #000;padding:6px;text-align:center}.rpd-sum span{display:block;font-size:9.5pt}.rpd-sum b{font-size:14pt}.rpd-sign3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;margin-top:6px;break-inside:avoid}.rpd-sign3 .rpd-line{margin-top:56px;font-weight:bold}</style>';
+  const css='<style>.rpd-sum{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 4px}.rpd-sum div{border:1px solid #c9d6e2;border-top:3px solid #0F8088;padding:6px;text-align:center;background:#f6fafb;-webkit-print-color-adjust:exact;print-color-adjust:exact}.rpd-sum span{display:block;font-size:9pt;color:#5f6f80}.rpd-sum b{font-size:14pt;color:#0B2540}.rpd-sum div.tot{background:#0B2540;border-color:#0B2540;border-top-color:#C9A227}.rpd-sum div.tot span,.rpd-sum div.tot b{color:#fff}.rpd-sign3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;text-align:center;margin-top:6px;break-inside:avoid}.rpd-sign3 .rpd-line{margin-top:56px;font-weight:bold}</style>';
   const doc=base.slice(0,i).replace('<title>Rapor ','<title>Rapor Boarding ').replace('</head>',css+'</head>')+'<body>'+rbDocHtml(r,data)+'<div class="rpd-foot">Dicetak dari sistem AIS pada '+fmtTglID(ksToday())+'</div></body></html>';
   try{ w.document.open(); w.document.write(doc); w.document.close(); }catch(e){ try{ w.close(); }catch(_){} showAcadToast('Dokumen gagal dibuat, silakan coba lagi.'); return; }
   setTimeout(()=>{ try{ w.focus(); w.print(); }catch(e){ showAcadToast('Rapor terbuka di tab baru. Tekan Ctrl+P di tab tersebut.'); } },300);
   showAcadToast('Rapor Boarding dibuka di tab baru. Pilih "Simpan sebagai PDF" bila ingin berkas PDF.');
 };
+/* dipakai bersama oleh modul Raport PDF (rumus sama, tidak diduplikasi) */
+window.rbComputeShared=rbCompute; window.rbPredShared=rbPred;
 })();
+</script>
+
+<style id="rapor-pdf-css">
+/* ===== RAPORT: Dashboard, Rapor Bulanan/Semester, Arsip (navy + putih AIS) ===== */
+.rpx-nav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;padding:5px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow-x:auto}
+.rpx-navb{border:0;background:transparent;color:var(--sub);font-weight:700;font-size:12.5px;padding:9px 15px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.rpx-navb:hover{background:#EEF3F8;color:var(--navy)}
+.rpx-navb.active{background:var(--navy);color:#fff}
+.rpx-note{margin:-6px 0 12px}
+.rpx-stats .stat-row,#rpxRoot>.stat-row{grid-template-columns:repeat(6,1fr)}
+@media (max-width:1100px){#rpxRoot>.stat-row{grid-template-columns:repeat(3,1fr)}}
+@media (max-width:600px){#rpxRoot>.stat-row{grid-template-columns:repeat(2,1fr)}}
+.rpx-banner{border-radius:10px;padding:11px 14px;font-size:12.5px;line-height:1.55;margin-bottom:12px;border:1px solid}
+.rpx-banner.warn{background:#FCF6E8;border-color:#F0DDB0;color:#7A560A}
+.rpx-banner.err{background:#FBE7E5;border-color:#F2C4BF;color:#A0302A}
+.rpx-banner code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;font-size:11.5px}
+.rpx-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.rpx-head h3{font-size:15px;color:var(--navy);margin:0;flex:1}
+.rpx-head-acts{display:flex;gap:8px;flex-wrap:wrap}
+.rpx-tools select,.rpx-tools input{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:12px;background:#fff;color:var(--ink)}
+.rpx-tools input[type=search]{min-width:200px;flex:1 1 200px}
+.rpx-loading{padding:26px 10px;text-align:center;color:var(--sub);font-size:12.5px}
+.rpx-tblwrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.rpx-tbl{width:100%;border-collapse:collapse;font-size:12px;min-width:860px}
+.rpx-tbl th{background:var(--navy);color:#fff;text-align:left;font-weight:700;padding:9px 10px;font-size:11.5px;white-space:nowrap}
+.rpx-tbl td{padding:8px 10px;border-top:1px solid var(--line);vertical-align:middle}
+.rpx-tbl tbody tr:nth-child(even) td{background:#F8FAFC}
+.rpx-tbl tbody tr:hover td{background:#EEF4FA}
+.rpx-sub{font-size:11px;color:var(--sub);font-weight:500}
+.rpx-muted{color:var(--sub);font-size:12px}
+.rpx-mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px}
+.rpx-acts-row{display:flex;gap:6px;flex-wrap:wrap}
+.rpx-chip{display:inline-block;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;margin:1px 3px 1px 0;white-space:nowrap;cursor:default}
+.rpx-chip.ok{background:#E4F5EE;color:#1C7B5D}.rpx-chip.kr{background:#FBE7E5;color:#B0352B}.rpx-chip.pw{background:#FCF1DE;color:#A5730C}.rpx-chip.wj{background:#E7F0F7;color:#1D6FA3}
+.badge.rpx-b-blue{background:#E2EDF8;color:#1D5F99}
+/* Editor */
+.rpx-ed{display:grid;grid-template-columns:minmax(320px,400px) 1fr;gap:14px;align-items:start}
+@media (max-width:1000px){.rpx-ed{grid-template-columns:1fr}}
+.rpx-side{max-height:calc(100vh - 120px);overflow-y:auto;position:sticky;top:10px}
+@media (max-width:1000px){.rpx-side{max-height:none;position:static}}
+.rpx-who{display:flex;flex-direction:column;gap:2px;margin:10px 0 8px}
+.rpx-who b{font-size:16px;color:var(--navy)}
+.rpx-who span{font-size:11.5px;color:var(--sub)}
+.rpx-stline{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+.rpx-acts{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0 4px;padding:10px;background:#F5F8FB;border:1px solid var(--line);border-radius:10px}
+.rpx-acts p{margin:0 0 4px;width:100%}
+.btn-primary-sm.rpx-pub{background:#1C7B5D}
+.btn-outline-sm.rpx-danger{color:#B0352B;border-color:#F2C4BF}
+.rpx-acts button:disabled,.rpx-head-acts button:disabled{opacity:.55;cursor:not-allowed}
+.rpx-sect{font-size:11.5px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 7px;padding-bottom:5px;border-bottom:2px solid var(--line)}
+.rpx-gap{font-size:11.8px;line-height:1.45;padding:7px 9px;border-radius:8px;margin-bottom:5px;border-left:3px solid}
+.rpx-gap b{font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin-right:4px}
+.rpx-gap.ok{background:#E4F5EE;border-color:#1C7B5D;color:#185F49}
+.rpx-gap.kr{background:#FBE7E5;border-color:#C0392B;color:#8E2A22}
+.rpx-gap.wj{background:#E7F0F7;border-color:#1D6FA3;color:#17527A}
+.rpx-gap.pw{background:#FCF1DE;border-color:#C9900F;color:#7A560A}
+.rpx-gap.in{background:#F1F4F7;border-color:#8FA3B5;color:#4A5E70}
+.rpx-fg{margin-bottom:6px}
+.rpx-fgt{font-size:11.5px;font-weight:700;color:var(--blue);margin:10px 0 4px}
+.rpx-field label{font-size:11.5px}
+.rpx-field textarea{width:100%;resize:vertical;font-family:inherit;font-size:12.5px;line-height:1.5}
+.rpx-field textarea:disabled{background:#F4F6F8;color:#3E5266}
+.rpx-req{color:#C0392B}
+.rpx-warnt{font-size:11px;color:#A5730C;margin-top:3px}
+.rpx-det{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#FBFCFD}
+.rpx-det summary{cursor:pointer;font-size:12px;font-weight:700;color:var(--navy)}
+.rpx-ref{border-top:1px solid var(--line);padding:8px 0}
+.rpx-ref-h{font-size:11px;color:var(--sub);font-weight:700;margin-bottom:3px}
+.rpx-ref-b{font-size:12px;line-height:1.5;margin-bottom:5px;white-space:pre-wrap}
+.rpx-hist{font-size:11.5px;border-top:1px solid var(--line);padding:6px 0;line-height:1.45}
+.rpx-hist span{float:right;color:var(--sub);font-size:10.5px}
+.rpx-hist div{color:var(--sub);clear:both}
+.rpx-prevwrap{padding:12px;min-width:0}
+.rpx-prevbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.rpx-prevbar b{color:var(--navy);font-size:13px}
+.rpx-prev{background:#E9EEF3;border-radius:10px;min-height:420px;display:flex;align-items:stretch;justify-content:center;overflow:hidden}
+.rpx-prev iframe{width:100%;height:calc(100vh - 170px);min-height:620px;border:0;background:#E9EEF3}
+.rpx-prev>.rpx-loading,.rpx-prev>.rpx-banner{align-self:center;margin:20px}
+.rpx-mobprev{align-self:center;text-align:center;padding:30px 16px;font-size:12.5px;color:var(--ink)}
+.rpx-mobprev a{display:inline-flex;margin:10px 0;text-decoration:none}
+</style>
+<script id="rapor-pdf">
+/* ========================================================================
+   RAPORT PDF — Rapor Bulanan & Semester (Akademik + Boarding) per santri
+   - Satu menu Raport (ak-rapor). Tab: Dashboard Raport | Rapor Bulanan | Rapor Semester | Arsip | Kartu Rapor Akademik (tampilan lama, tetap utuh).
+   - Data diambil langsung dari tabel yang sudah ada (attendance_kbm, grades, teacher_journals, violations, achievements, permits,
+     worship_records, boarding_attendance, daily_discipline, boarding_discipline, tahfidz_records, tahfidz_targets, musyrif_notes)
+     per santri + rentang periode. Tidak ada data contoh; data kosong ditandai, bukan dianggap nol.
+   - Rumus memakai aturan aplikasi yang sudah ada: Nilai Akhir = nlFinal (menu Nilai), kehadiran KBM = Hadir / seluruh catatan,
+     nilai boarding = rbCompute (Rapor Boarding), total hafalan = rumus btBuild (menu Tahfidz).
+   - Status & arsip disimpan di tabel report_documents (supabase-rapor-setup.sql). Saat terbit, seluruh isi rapor dibekukan sebagai
+     snapshot sehingga PDF terbitan tidak berubah walau data sumber berubah. Revisi = versi baru.
+   - PDF dibuat di browser dengan jsPDF + AutoTable (dimuat saat dibutuhkan) — teks asli (bukan gambar), ringan untuk WhatsApp.
+   ======================================================================== */
+(function(){
+'use strict';
+if(typeof rpBuild!=='function'||typeof KSC==='undefined'||typeof AKADEMIK_PAGES==='undefined'||!AKADEMIK_PAGES['ak-rapor']||typeof akPeriodRange!=='function'||typeof dbFetchAll!=='function'){
+  console.warn('[rapor-pdf] modul rapor tidak ditemukan, fitur Raport PDF dilewati'); return;
+}
+const U=akUnesc, E=dkEsc;
+const TBL='report_documents';
+const ROLE_EDIT=['Super Admin','Kepala Sekolah','Wali Kelas','Musyrif'];
+const ROLE_PUB=['Super Admin','Kepala Sekolah'];
+const STATUSES=['Belum Dibuat','Draft','Data Belum Lengkap','Menunggu Review','Diterbitkan','Diarsipkan'];
+const ST_CLS={'Belum Dibuat':'b-gray','Draft':'b-amber','Data Belum Lengkap':'b-red','Menunggu Review':'rpx-b-blue','Diterbitkan':'b-green','Diarsipkan':'b-gray'};
+const FIELDS=[
+  {k:'catatanWali',label:'Catatan Wali Kelas',grp:'ak',req:true},
+  {k:'evalAkademik',label:'Evaluasi Perkembangan Akademik',grp:'ak'},
+  {k:'rekomAkademik',label:'Rekomendasi Tindak Lanjut Akademik',grp:'ak'},
+  {k:'evalMusyrif',label:'Evaluasi Musyrif',grp:'bd',req:true},
+  {k:'rekomBoarding',label:'Rekomendasi Pembinaan Boarding',grp:'bd'},
+  {k:'ringkasan',label:'Ringkasan Perkembangan Santri',grp:'um',req:true},
+  {k:'kelebihan',label:'Kelebihan / Pencapaian',grp:'um'},
+  {k:'perbaikan',label:'Hal yang Perlu Ditingkatkan',grp:'um'},
+  {k:'rekomOrtu',label:'Rekomendasi untuk Santri dan Orang Tua',grp:'um'},
+  {k:'kerjasama',label:'Saran Kerja Sama Sekolah/Asrama dengan Orang Tua',grp:'um',only:'Semester'}
+];
+const GRP={ak:'Akademik — diisi Wali Kelas',bd:'Boarding — diisi Musyrif',um:'Kesimpulan & Rekomendasi'};
+/* Library PDF dimuat dari CDN hanya saat dibutuhkan (versi dipatok). Cadangan: jsDelivr. */
+const LIB={
+  jspdf:['https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js','https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js'],
+  at:['https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js','https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js'],
+  zip:['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js','https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js']
+};
+const canEdit=()=>ROLE_EDIT.includes(curRole);
+const canPub=()=>ROLE_PUB.includes(curRole);
+const me=()=>String((typeof ROLE_NAME!=='undefined'&&ROLE_NAME[curRole])||curRole);
+const live=()=>!!(dkClient()&&typeof stState!=='undefined'&&stState.fromDb);
+const toast=t=>showAcadToast(t);
+
+const P0=akDefaultPeriod();
+const RPX={tab:'dash',jenis:'Bulanan',ta:P0.ta,sem:P0.sem,bulan:'',kelas:'',q:'',status:'',bidang:'Gabungan',
+  docs:[],docsKey:'',tableOk:null,tableMsg:'',checks:{},ed:null,arsip:null,arsipF:{jenis:'',status:'',q:''},busy:'',settingsLoaded:false};
+
+/* ---------- Periode ---------- */
+function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function monthsOf(ta,sem){
+  const r=akPeriodRange(ta,sem); if(!r) return [];
+  const out=[]; let y=Number(r[0].slice(0,4)), mo=Number(r[0].slice(5,7)); const end=r[1].slice(0,7);
+  for(let g=0;g<12;g++){ const k=y+'-'+String(mo).padStart(2,'0'); out.push(k); if(k===end) break; mo++; if(mo>12){ mo=1; y++; } }
+  return out;
+}
+/* Bawaan: bulan lalu (laporan bulan yang sudah selesai) bila masih dalam semester terpilih. */
+function defMonth(ta,sem){
+  const ms=monthsOf(ta,sem); if(!ms.length) return '';
+  const d=new Date(), now=ym(d); d.setDate(1); d.setMonth(d.getMonth()-1); const prev=ym(d);
+  if(ms.includes(prev)) return prev; if(ms.includes(now)) return now;
+  return now<ms[0]?ms[0]:ms[ms.length-1];
+}
+function periodOf(jenis,ta,sem,bulan){
+  const r=akPeriodRange(ta,sem); if(!r) return null;
+  if(jenis==='Semester') return {jenis,ta,sem,bulan:'',range:r,label:'Semester '+sem+' '+ta,coverLine1:'SEMESTER '+String(sem).toUpperCase(),coverLine2:'Tahun Ajaran '+ta,
+    rangeLabel:fmtTglID(r[0])+' s.d. '+fmtTglID(r[1]),endLabel:fmtTglID(r[1]),fileTag:sem+'_'+String(ta).replace('/','-')};
+  if(!/^\d{4}-\d{2}$/.test(bulan||'')) return null;
+  const y=Number(bulan.slice(0,4)), mo=Number(bulan.slice(5,7)), last=new Date(y,mo,0).getDate(), a=bulan+'-01', b=bulan+'-'+String(last).padStart(2,'0');
+  const nm=BULAN_ID[mo-1]+' '+y;
+  return {jenis,ta,sem,bulan,range:[a,b],label:nm,coverLine1:nm.toUpperCase(),coverLine2:'Tahun Ajaran '+ta+' \u00B7 Semester '+sem,
+    rangeLabel:fmtTglID(a)+' s.d. '+fmtTglID(b),endLabel:fmtTglID(b),fileTag:BULAN_ID[mo-1]+'_'+y};
+}
+function curPeriod(){ if(RPX.jenis==='Bulanan'&&!monthsOf(RPX.ta,RPX.sem).includes(RPX.bulan)) RPX.bulan=defMonth(RPX.ta,RPX.sem); return periodOf(RPX.jenis,RPX.ta,RPX.sem,RPX.bulan); }
+const pkey=P=>P?[P.jenis,P.ta,P.sem,P.bulan||''].join('|'):'';
+function camel(n){
+  let t=U(n); try{ t=t.normalize('NFKD').replace(/[\u0300-\u036f]/g,''); }catch(e){}
+  return t.replace(/[^A-Za-z0-9 ]+/g,' ').trim().split(/\s+/).filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join('')||'Santri';
+}
+function fileNameOf(P,nama,o){ o=o||{}; return 'Rapor_'+P.jenis+'_'+camel(nama)+'_'+P.fileTag+(o.versi>1?'_v'+o.versi:'')+(o.draft?'_DRAF':'')+'.pdf'; }
+function tglS(d){ if(!d) return '-'; const x=new Date(String(d).slice(0,10)+'T00:00:00'); if(isNaN(x)) return '-'; return x.getDate()+' '+BULAN_ID[x.getMonth()].slice(0,3)+' '+x.getFullYear(); }
+function tglJam(iso){ if(!iso) return '-'; const x=new Date(iso); if(isNaN(x)) return '-'; return x.getDate()+' '+BULAN_ID[x.getMonth()].slice(0,3)+' '+x.getFullYear()+' '+String(x.getHours()).padStart(2,'0')+':'+String(x.getMinutes()).padStart(2,'0'); }
+function docNoOf(d,P){ return 'RPT/'+(P.jenis==='Bulanan'?'BLN/'+P.bulan:'SMT/'+String(P.ta).replace('/','-')+'-'+P.sem.slice(0,3).toUpperCase())+'/'+String(d.id||'').replace(/-/g,'').slice(0,8).toUpperCase(); }
+function docPeriod(d){ return periodOf(d.jenis,d.tahun_ajaran,d.semester,d.bulan||''); }
+function errMsg(e){
+  const c=(e&&e.code)||'', m=(e&&e.message)||String(e||'Error tidak diketahui');
+  if(c==='42P01'||c==='PGRST205'||/does not exist|Could not find the table/i.test(m)) return 'tabel belum ada di database';
+  if(c==='42501'||/row-level security|permission denied/i.test(m)) return 'akses ditolak oleh kebijakan RLS';
+  if(c==='42703'||c==='PGRST204'||/column .* does not exist/i.test(m)) return 'kolom tidak ditemukan ('+m+')';
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'tidak dapat terhubung ke server';
+  return m;
+}
+const tblMissing=e=>{ const c=(e&&e.code)||'', m=(e&&e.message)||''; return c==='42P01'||c==='PGRST205'||/does not exist|Could not find the table/i.test(m); };
+
+/* ---------- Santri dalam cakupan akses ---------- */
+function scopeStudents(){
+  return acadFilterByScope(studentsData.filter(s=>s.classId!=null&&s.status==='Aktif'),'kelas').slice()
+    .sort((a,b)=>U(a.kelas).localeCompare(U(b.kelas))||U(a.nama).localeCompare(U(b.nama)));
+}
+function filteredStudents(){
+  const q=(RPX.q||'').trim().toLowerCase();
+  return scopeStudents().filter(s=>(!RPX.kelas||s.kelas===RPX.kelas)&&(!q||U(s.nama).toLowerCase().includes(q)||String(s.nis).toLowerCase().includes(q)))
+    .filter(s=>!RPX.status||statusOf(s.id)===RPX.status);
+}
+
+/* ---------- Pengambilan data (langsung ke Supabase, per periode) ---------- */
+async function byCol(table,col,vals,mod,cfg){
+  const sb=dkClient(); if(!sb) throw {message:'Supabase belum terhubung.'};
+  const out=[], CH=80;
+  for(let i=0;i<vals.length;i+=CH){
+    const part=vals.slice(i,i+CH);
+    for(let from=0;from<200000;from+=1000){
+      let q=sb.from(table).select('*').in(col,part); if(mod) q=mod(q);
+      const {data,error}=await q.order('id',{ascending:true}).range(from,from+999);
+      if(error) throw error;
+      (data||[]).forEach(r=>out.push(cfg?cfg.fromRow(r):r));
+      if(!data||data.length<1000) break;
+    }
+  }
+  return out;
+}
+async function fetchDataset(studs,P,opt){
+  opt=opt||{};
+  const D={err:{},demo:!live(),at:new Date().toISOString()};
+  const ids=studs.map(s=>s.id), bIds=studs.filter(s=>s.boarding).map(s=>s.id);
+  const cls=[...new Set(studs.map(s=>s.classId).filter(v=>v!=null))];
+  const a=P.range[0], b=P.range[1];
+  if(D.demo){
+    const inS=x=>ids.some(i=>String(i)===String(x.studentId)), inR=x=>x.tanggal>=a&&x.tanggal<=b;
+    Object.assign(D,{pk:attendanceRecordsData.filter(x=>inS(x)&&inR(x)),nl:gradesData.filter(g=>cls.some(c=>String(c)===String(g.classId))&&g.tahunAjaran===E(P.ta)&&g.semester===P.sem),
+      pl:violationsData.filter(x=>inS(x)&&inR(x)),pr:achievementsData.filter(x=>inS(x)&&inR(x)),pz:permitsData.filter(x=>inS(x)&&x.mulai<=b&&x.sampai>=a),
+      jg:teacherJournalsData.filter(x=>cls.some(c=>String(c)===String(x.classId))&&inR(x)),bi:worshipRecordsData.filter(x=>inS(x)&&inR(x)),
+      ba:boardingAttendanceData.filter(x=>inS(x)&&inR(x)),bh:dailyDisciplineData.filter(x=>inS(x)&&inR(x)),bk:disciplineBoardingData.filter(x=>inS(x)&&inR(x)),
+      bt:tahfidzLogData.filter(x=>inS(x)&&x.tanggal<=b),btg:tahfidzTargetsData.filter(inS),bc:musyrifNotesData.filter(x=>inS(x)&&inR(x))});
+    return D;
+  }
+  const job=async(k,fn)=>{ try{ D[k]=await fn(); }catch(e){ console.warn('[rapor-pdf] '+k,e); D[k]=[]; D.err[k]=errMsg(e); } };
+  const rng=q=>q.gte('tanggal',a).lte('tanggal',b);
+  const jobs=[
+    job('pk',()=>byCol('attendance_kbm','student_id',ids,rng,KSC.pk.cfg)),
+    job('nl',()=>cls.length?byCol('grades','class_id',cls,q=>q.eq('tahun_ajaran',P.ta).eq('semester',P.sem),KSC.nl.cfg):[]),
+    job('pl',()=>byCol('violations','student_id',ids,rng,KSC.pl.cfg)),
+    job('pr',()=>byCol('achievements','student_id',ids,rng,KSC.pr.cfg))
+  ];
+  if(P.jenis==='Bulanan') jobs.push(job('jg',()=>cls.length?byCol('teacher_journals','class_id',cls,rng,KSC.jg.cfg):[]));
+  if(bIds.length){
+    jobs.push(job('pz',()=>byCol('permits','student_id',bIds,q=>q.lte('mulai',b).gte('sampai',a),KSC.pz.cfg)),
+      job('bi',()=>byCol('worship_records','student_id',bIds,rng,KSC.bi.cfg)),
+      job('ba',()=>byCol('boarding_attendance','student_id',bIds,rng,KSC.ba.cfg)),
+      job('bh',()=>byCol('daily_discipline','student_id',bIds,rng,KSC.bh.cfg)),
+      job('bk',()=>byCol('boarding_discipline','student_id',bIds,rng,KSC.bk.cfg)),
+      job('bt',()=>byCol('tahfidz_records','student_id',bIds,q=>q.lte('tanggal',b),KSC.bt.cfg)),
+      job('btg',()=>byCol('tahfidz_targets','student_id',bIds,null,KSC.btg.cfg)));
+    if(opt.notes) jobs.push(job('bc',()=>byCol('musyrif_notes','student_id',bIds,rng,KSC.bc.cfg)));
+  }
+  jobs.push((async()=>{
+    try{ if(!RPX.settingsLoaded&&typeof bdLoadSettings==='function'){ await bdLoadSettings(); RPX.settingsLoaded=true; } }catch(e){ console.warn('[rapor-pdf] bobot nilai',e); }
+    try{ if(KSC.bn&&!boardingActivitiesData.length) await kscLoad('bn',{silent:true}); }catch(e){}
+  })());
+  await Promise.all(jobs);
+  return D;
+}
+
+/* ---------- Model rapor (data jadi + daftar kelengkapan) ---------- */
+function kktpVal(){ const k=Number((schoolSettingsData&&schoolSettingsData.kktp)||(typeof academicSettingsData!=='undefined'&&academicSettingsData&&academicSettingsData.kktp)||75); return isFinite(k)&&k>0?k:75; }
+/* Sama dengan status perkembangan di Rapor Akademik (galeri proyek): >= 90 Sangat Baik, >= KKTP Baik, di bawahnya Perlu Pendampingan. */
+function capaian(v){ if(v==null) return '-'; const k=kktpVal(); return v>=90?'Sangat Baik':v>=k?'Baik':'Perlu Pendampingan'; }
+function predBoarding(v){ if(typeof window.rbPredShared==='function') return window.rbPredShared(v); if(v==null) return '-'; return v>=90?'Sangat Baik':v>=75?'Baik':'Perlu Pembinaan'; }
+function emptyEv(){ const o={}; FIELDS.forEach(f=>o[f.k]=''); return o; }
+function clean(v){ const t=U(v==null?'':v).trim(); return (t&&t!=='-')?t:''; }
+
+function buildModel(s,P,D,ev,meta){
+  meta=meta||{}; ev=Object.assign(emptyEv(),ev||{});
+  const sid=String(s.id), mine=arr=>(arr||[]).filter(x=>String(x.studentId)===sid);
+  const a=P.range[0], b=P.range[1], today=ksToday();
+  const cl=classesData.find(c=>String(c.id)===String(s.classId));
+  const wali=cl&&cl.wali?clean(cl.wali):'';
+  const sc=rpSchool(), ss=schoolSettingsData||{}, dflt=(typeof RP_SCHOOL_DEFAULTS!=='undefined')?RP_SCHOOL_DEFAULTS:{};
+  const kab=clean(ss.kabupaten), tempat=(kab&&kab!==dflt.kabupaten)?kab:'';
+  const gaps=[]; const G=(lvl,bid,text)=>gaps.push({lvl,bid,text});
+  const fail=(k,label)=>{ if(D.err[k]){ G('kritis',k==='pk'||k==='nl'||k==='pl'||k==='jg'||k==='pr'?'ak':'bd',label+' gagal dimuat: '+D.err[k]); return true; } return false; };
+  if(D.demo) G('kritis','um','Mode demo / data lokal: aplikasi belum terhubung ke database produksi. Rapor tidak boleh diterbitkan.');
+
+  /* Akademik */
+  const att={hadir:0,sakit:0,izin:0,alpa:0,total:0,pct:null};
+  mine(D.pk).forEach(x=>{ const st=U(x.status); att.total++; if(st==='Hadir') att.hadir++; else if(st==='Sakit') att.sakit++; else if(st==='Izin') att.izin++; else if(st==='Alpa') att.alpa++; });
+  att.pct=att.total?Math.round(att.hadir/att.total*100):null;
+  const gr=mine(D.nl).slice().sort((x,y)=>U(x.mapel).localeCompare(U(y.mapel)));
+  const scored=gr.filter(g=>g.nilaiAkhir!=null);
+  const avg=scored.length?Math.round(scored.reduce((t,g)=>t+g.nilaiAkhir,0)/scored.length*10)/10:null;
+  const partial=gr.filter(g=>NL_COMPS.some(k=>g[k]==null));
+  const have=new Set(gr.map(g=>g.mapel));
+  const missing=[...new Set((D.nl||[]).filter(g=>String(g.classId)===String(s.classId)).map(g=>g.mapel))].filter(mp=>!have.has(mp)).sort();
+  const jm={};
+  (D.jg||[]).filter(j=>String(j.classId)===String(s.classId)).sort((x,y)=>String(y.tanggal).localeCompare(String(x.tanggal))).forEach(j=>{
+    const k=U(j.mapel)||'-'; const o=jm[k]||(jm[k]={mapel:k,n:0,materi:[]}); o.n++; const mt=clean(j.materi); if(mt&&!o.materi.includes(mt)&&o.materi.length<4) o.materi.push(mt); });
+  const ak={att,attErr:D.err.pk||'',gradeErr:D.err.nl||'',jurnalErr:D.err.jg||'',pelErr:D.err.pl||'',kktp:kktpVal(),avg,avgCapaian:capaian(avg),partialN:partial.length,
+    grades:gr.map(g=>({mapel:U(g.mapel),tugas:g.tugas,ulangan:g.ulangan,pts:g.pts,pas:g.pas,project:g.project,akhir:g.nilaiAkhir,partial:NL_COMPS.some(k=>g[k]==null),capaian:capaian(g.nilaiAkhir)})),
+    jurnal:Object.values(jm).sort((x,y)=>x.mapel.localeCompare(y.mapel)).map(o=>({mapel:o.mapel,n:o.n,materi:o.materi.join('; ')+(o.n>o.materi.length?' ...':'')})),
+    pel:mine(D.pl).slice().sort((x,y)=>String(x.tanggal).localeCompare(String(y.tanggal))).map(v=>({tanggal:tglS(v.tanggal),pelanggaran:U(v.pelanggaran),tingkat:U(v.tingkat),poin:v.poin,status:U(v.status)}))};
+  if(!fail('pk','Presensi KBM')&&!att.total) G('peringatan','ak','Belum ada catatan presensi KBM pada periode ini.');
+  if(!fail('nl','Nilai')){
+    if(P.jenis==='Semester'){
+      if(!gr.length) G('kritis','ak','Belum ada nilai mata pelajaran pada semester ini.');
+      if(partial.length) G('peringatan','ak','Komponen nilai belum lengkap: '+partial.map(g=>U(g.mapel)+' ('+NL_COMPS.filter(k=>g[k]==null).map(k=>NL_LABEL[k]).join(', ')+')').join('; ')+'.');
+      if(missing.length) G('peringatan','ak','Belum ada nilai untuk mapel yang sudah dinilai di kelas: '+missing.map(U).join(', ')+'.');
+    } else if(!gr.length) G('info','ak','Belum ada nilai semester berjalan; bagian nilai tampil sebagai "belum ada nilai".');
+  }
+  fail('pl','Pelanggaran sekolah'); fail('pr','Prestasi');
+  if(P.jenis==='Bulanan') fail('jg','Jurnal guru');
+  if(!wali) G('peringatan','ak','Wali kelas belum diatur di Data Kelas, nama tanda tangan wali kelas akan kosong.');
+
+  /* Boarding */
+  const bd={boarding:!!s.boarding,err:{},keg:{st:[],rows:[],nilai:null},ib:{days:0,rows:[],nilai:null},tf:{hasData:false,riwayat:[]},dis:{n:0},pel:[],poin:0,izin:[],total:null,predikat:'-'};
+  if(s.boarding){
+    ['ba','bi','bt','bh','bk','pz'].forEach(k=>{ if(D.err[k]) bd.err[k]=D.err[k]; if(k==='bt'&&D.err.btg) bd.err.bt=D.err.btg; });
+    fail('ba','Presensi kegiatan asrama'); fail('bi',"Mutaba'ah ibadah"); fail('bt','Setoran tahfidz'); fail('btg','Target tahfidz'); fail('bh','Penilaian harian'); fail('bk','Pelanggaran asrama'); fail('pz','Perizinan');
+    const roleHint=curRole==='Wali Kelas'?' (bila seharusnya ada, pastikan akun ini berhak membaca data asrama)':'';
+    if(typeof window.rbComputeShared!=='function'){ G('kritis','bd','Modul perhitungan Rapor Boarding tidak ditemukan.'); }
+    else {
+      const ib=mine(D.bi), ba=mine(D.ba), bh=mine(D.bh), bk=mine(D.bk);
+      const c=window.rbComputeShared({ib,ba,bh,bk});
+      bd.keg={st:c.st,rows:c.baRows.map(x=>({nama:U(x.nama),c:x.c,total:x.total,nilai:x.nilai})),nilai:c.nBa};
+      bd.ib={days:ib.length,rows:c.ibRows.map(x=>x.count?{label:x.label,count:true,n:x.n,total:x.total}:{label:x.label,n:x.n,good:x.good,nilai:x.nilai}),nilai:c.nIb};
+      bd.dis={n:c.bh.n,att:c.bh.att,ker:c.bh.ker,bers:c.bh.bers,tot:c.bh.tot};
+      bd.pel=c.bk.map(v=>({tanggal:tglS(v.tanggal),pelanggaran:U(v.pelanggaran),kategori:U(v.kategori),poin:v.poin,status:U(v.status)}));
+      bd.poin=c.poin; bd.total=c.total; bd.predikat=predBoarding(c.total);
+      if(!D.err.bi&&!ib.length) G('peringatan','bd',"Belum ada catatan mutaba'ah ibadah pada periode ini"+roleHint+'.');
+      if(!D.err.ba&&!ba.length) G('peringatan','bd','Belum ada presensi kegiatan asrama pada periode ini'+roleHint+'.');
+      if(!D.err.bh&&!c.bh.n) G('peringatan','bd','Belum ada penilaian harian (attitude, kerapian, kebersihan) pada periode ini.');
+    }
+    const logs=mine(D.bt).slice().sort((x,y)=>String(x.tanggal).localeCompare(String(y.tanggal)));
+    const tg=mine(D.btg)[0];
+    const setAll=logs.filter(l=>U(l.jenis)==='Setoran').reduce((t,l)=>t+l.halaman,0);
+    const inP=logs.filter(l=>l.tanggal>=a&&l.tanggal<=b), sP=inP.filter(l=>U(l.jenis)==='Setoran'), mP=inP.filter(l=>U(l.jenis)==='Murojaah');
+    const awal=tg?tg.awal:0, juz=Math.round((awal+setAll/20)*10)/10, target=tg&&tg.target?tg.target:null;
+    const lastSet=logs.slice().reverse().find(l=>U(l.jenis)==='Setoran');
+    const rw=P.jenis==='Bulanan'?inP.slice(-12):[];
+    bd.tf={hasData:!!(tg||logs.length),target,awal,juz,progress:target?Math.min(100,Math.round(juz/target*100)):null,
+      setoranP:Math.round(sP.reduce((t,l)=>t+l.halaman,0)*10)/10,nSetoran:sP.length,murojaahP:Math.round(mP.reduce((t,l)=>t+l.halaman,0)*10)/10,nMurojaah:mP.length,
+      lastSurat:lastSet?U(lastSet.surat):'',riwayat:rw.map(r=>({tanggal:tglS(r.tanggal),jenis:U(r.jenis),juz:r.juz,surat:U(r.surat),halaman:r.halaman,nilai:clean(r.nilai)||'-',pembimbing:clean(r.pembimbing)||'-'})),
+      riwayatMore:inP.length>rw.length&&rw.length>0,riwayatTotal:inP.length};
+    if(!D.err.btg&&!tg) G('peringatan','bd','Target tahfidz santri belum diatur di menu Tahfidz.');
+    if(!D.err.bt&&!sP.length) G('info','bd','Tidak ada setoran tahfidz pada periode ini.');
+    const iz={};
+    mine(D.pz).filter(p=>U(p.status)!=='Ditolak').forEach(p=>{
+      const j=U(p.jenis)||'Lainnya', s0=p.mulai>a?p.mulai:a, s1=p.sampai<b?p.sampai:b;
+      const days=(s0&&s1&&s1>=s0)?Math.round((new Date(s1+'T00:00:00')-new Date(s0+'T00:00:00'))/864e5)+1:0;
+      const o=iz[j]||(iz[j]={jenis:j,n:0,hari:0}); o.n++; o.hari+=days; });
+    bd.izin=Object.values(iz).sort((x,y)=>x.jenis.localeCompare(y.jenis));
+    if(!clean(s.musyrif)) G('peringatan','bd','Nama musyrif santri belum diisi di Database Siswa, nama tanda tangan musyrif akan kosong.');
+  }
+
+  /* Evaluasi wajib */
+  FIELDS.forEach(f=>{ if(!f.req) return; if(f.grp==='bd'&&!s.boarding) return; if(!String(ev[f.k]||'').trim()) G('wajib',f.grp==='bd'?'bd':(f.grp==='ak'?'ak':'um'),f.label+' belum diisi.'); });
+  if(b>today) G('info','um','Periode belum berakhir ('+fmtTglID(b)+'); data masih dapat bertambah.');
+
+  const prestasi=mine(D.pr).slice().sort((x,y)=>String(x.tanggal).localeCompare(String(y.tanggal))).map(p=>({tanggal:tglS(p.tanggal),nama:U(p.nama),kategori:U(p.kategori),tingkat:U(p.tingkat),peringkat:U(p.peringkat)}));
+  const ortu=[clean(s.ayah),clean(s.ibu)].filter(Boolean).join(' / ');
+  const jkL=s.jk==='L'?'Laki-laki':s.jk==='P'?'Perempuan':'-';
+  const cols=[{role:'Orang Tua / Wali Santri',name:''}];
+  if(s.boarding) cols.push({role:'Musyrif',name:clean(s.musyrif)});
+  cols.push({role:'Wali Kelas',name:wali});
+  const pubDate=meta.tglTerbit||today;
+  const school={name:U(sc.name),addr:U(sc.addr),contact:[sc.npsn&&'NPSN: '+U(sc.npsn),sc.phone&&'Telp: '+U(sc.phone)].filter(Boolean).join('  |  ')};
+  const title='Rapor '+P.jenis+' Akademik & Boarding';
+  return {v:1,title,coverTitle:'RAPOR '+P.jenis.toUpperCase(),fileTitle:title+' - '+U(s.nama)+' - '+P.label,draft:!!meta.draft,
+    school,period:{jenis:P.jenis,ta:P.ta,sem:P.sem,bulan:P.bulan,label:P.label,coverLine1:P.coverLine1,coverLine2:P.coverLine2,rangeLabel:P.rangeLabel,endLabel:P.endLabel},
+    s:{id:s.id,nama:U(s.nama),nis:clean(s.nis),nisn:clean(s.nisn),kelas:U(s.kelas),jurusan:clean(s.jurusan),jk:jkL,wali,musyrif:clean(s.musyrif),asrama:clean(s.asrama),kamar:clean(s.kamar),ortu,boarding:!!s.boarding},
+    ak,bd,ks:{prestasi},ev,
+    sign:{tanggal:fmtTglID(pubDate),tempat,cols,kepsek:{name:clean(sc.principal)}},
+    footerLeft:meta.draft?('DRAF - dibuat '+fmtTglID(today)+' dari sistem AIS, belum diterbitkan'):('Diterbitkan '+fmtTglID(pubDate)+'  |  Versi '+(meta.versi||1)+'  |  No. '+(meta.docNo||'-')),
+    gaps,dataAt:D.at};
+}
+
+/*@@RENDER_START*/
+/* ---------- RENDERER PDF (murni: hanya butuh jsPDF + AutoTable + model) ----------
+   Model = objek data rapor yang sudah jadi (lihat rpxBuildModel). Renderer tidak membaca state aplikasi,
+   sehingga PDF dari snapshot terbitan selalu sama walau data sumber berubah. */
+const RPXR=(function(){
+/* Palet visual: navy + teal + putih + aksen emas (BLUE dipertahankan sebagai nama variabel, kini bernuansa teal). */
+const NAVY=[11,37,64], BLUE=[15,128,136], GOLD=[196,154,46], LIGHT=[231,242,244], LINE=[203,216,225], INK=[22,34,48], SUB=[95,111,128], ZEBRA=[246,250,251], WARN=[165,115,12];
+const PW=210, PH=297, ML=16, MR=16, MT=31, MB=20, CW=PW-ML-MR;
+const CP1252='\u20AC\u201A\u0192\u201E\u2026\u2020\u2021\u02C6\u2030\u0160\u2039\u0152\u017D\u2018\u2019\u201C\u201D\u2022\u2013\u2014\u02DC\u2122\u0161\u203A\u0153\u017E\u0178';
+/* Font standar PDF hanya mendukung huruf Latin (WinAnsi). Karakter lain diganti agar tidak muncul sebagai simbol rusak. */
+function tx(v){
+  let s=String(v==null?'':v);
+  s=s.replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'").replace(/&amp;/g,'&');
+  s=s.replace(/\u2265/g,'>=').replace(/\u2264/g,'<=').replace(/[\u00A0\u2007\u202F]/g,' ').replace(/\r\n?/g,'\n').replace(/\t/g,'  ').replace(/[\u2192]/g,'->');
+  let out='';
+  for(const ch of s){
+    const c=ch.codePointAt(0);
+    if(c===10||(c>=32&&c<127)||(c>=160&&c<=255)||CP1252.indexOf(ch)>=0){ out+=ch; continue; }
+    let n=''; try{ n=ch.normalize('NFKD').replace(/[\u0300-\u036f]/g,''); }catch(e){}
+    out+=(n&&[...n].every(x=>x.codePointAt(0)<256))?n:'?';
+  }
+  return out;
+}
+const num=v=>(v==null||v==='')?'-':String(v).replace('.',',');
+const pct=v=>v==null?'-':v+'%';
+
+function render(J,m,a){
+  a=a||{};
+  const doc=new J({unit:'mm',format:'a4',orientation:'portrait',compress:true});
+  doc.setProperties({title:tx(m.fileTitle||m.title),subject:tx(m.title+' - '+m.period.label),author:tx(m.school.name),creator:'AIS - Al-Hidayah Integrated System'});
+  let y=MT, secNo=0;
+  const F=(style,size,color)=>{ doc.setFont('helvetica',style||'normal'); doc.setFontSize(size||9); doc.setTextColor.apply(doc,color||INK); };
+  const newPage=()=>{ doc.addPage(); y=MT; };
+  const ensure=h=>{ if(y+h>PH-MB) newPage(); };
+  const room=()=>PH-MB-y;
+  const margin={top:MT,bottom:MB,left:ML,right:MR};
+  const cell=c=>(c&&typeof c==='object')?Object.assign({},c,{content:tx(c.content)}):tx(c);
+
+  function table(head,body,o){
+    o=o||{}; ensure(o.minRoom||20);
+    doc.autoTable({startY:y,head:head?[head.map(cell)]:undefined,body:body.map(r=>r.map(cell)),theme:'grid',margin,
+      styles:{font:'helvetica',fontSize:o.fs||8.6,cellPadding:{top:1.7,bottom:1.7,left:2,right:2},lineColor:LINE,lineWidth:0.15,textColor:INK,valign:'middle',overflow:'linebreak'},
+      headStyles:{fillColor:NAVY,textColor:255,fontStyle:'bold',halign:'center',fontSize:o.hfs||8.2,lineColor:NAVY},
+      alternateRowStyles:{fillColor:ZEBRA},columnStyles:o.cols||{},showHead:'everyPage',rowPageBreak:'avoid',
+      didParseCell:o.parse});
+    y=doc.lastAutoTable.finalY+(o.after==null?5:o.after);
+  }
+  function box(label,text,o){
+    o=o||{}; const t=String(text==null?'':text).trim();
+    if(!t&&!o.always) return;
+    ensure(24);
+    doc.autoTable({startY:y,head:[[tx(label)]],body:[[t?tx(t):tx(o.empty||'(belum diisi)')]],theme:'grid',margin,
+      styles:{font:'helvetica',fontSize:9,cellPadding:{top:2.4,bottom:2.8,left:3,right:3},lineColor:LINE,lineWidth:0.15,textColor:t?INK:SUB,overflow:'linebreak',fontStyle:t?'normal':'italic'},
+      headStyles:{fillColor:LIGHT,textColor:NAVY,fontStyle:'bold',fontSize:8.6,halign:'left',lineColor:BLUE,lineWidth:0.2},showHead:'everyPage',rowPageBreak:'auto'});
+    y=doc.lastAutoTable.finalY+4;
+  }
+  function note(t,o){
+    o=o||{}; F(o.style||'italic',o.size||7.9,o.color||SUB);
+    doc.splitTextToSize(tx(t),CW).forEach(l=>{ ensure(4); doc.text(l,ML,y+3); y+=3.6; });
+    y+=(o.after==null?2.2:o.after);
+  }
+  function empty(t){
+    ensure(9); doc.setFillColor(248,250,252); doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2);
+    doc.rect(ML,y,CW,7.4,'FD'); F('italic',8.4,SUB); doc.text(tx(t),ML+3,y+4.9); y+=11;
+  }
+  function part(no,title){
+    ensure(42); doc.setFillColor.apply(doc,NAVY); doc.roundedRect(ML,y,CW,9.6,1.6,1.6,'F');
+    doc.setFillColor.apply(doc,GOLD); doc.rect(ML,y+1.6,1.6,6.4,'F');
+    doc.setFillColor.apply(doc,BLUE); doc.rect(ML+CW*0.62,y+9.6,CW*0.38,0.9,'F'); doc.setFillColor.apply(doc,GOLD); doc.rect(ML,y+9.6,CW*0.62,0.9,'F');
+    F('bold',10.5,[255,255,255]); doc.text(tx('BAGIAN '+no+'   '+title),ML+5.5,y+6.4); y+=15.5; secNo=0;
+  }
+  function sec(title){
+    ensure(30); const code=String.fromCharCode(65+secNo++);
+    doc.setFillColor.apply(doc,BLUE); doc.roundedRect(ML,y,1.6,5.8,0.8,0.8,'F'); doc.setFillColor.apply(doc,GOLD); doc.rect(ML,y+3.6,1.6,2.2,'F');
+    F('bold',10,NAVY); const t=tx(code+'. '+title); doc.text(t,ML+4,y+4.4);
+    const w=doc.getTextWidth(t); doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2); doc.line(ML+4+w+3,y+3,PW-MR,y+3);
+    y+=9;
+  }
+  function kv(pairs){
+    const rows=[]; for(let i=0;i<pairs.length;i+=2){ const p=pairs[i], q=pairs[i+1]||['','']; rows.push([p[0],':',p[1]||'-',q[0],q[0]?':':'',q[0]?(q[1]||'-'):'']); }
+    ensure(8+rows.length*5);
+    doc.autoTable({startY:y,body:rows.map(r=>r.map(tx)),theme:'plain',margin,
+      styles:{font:'helvetica',fontSize:8.8,cellPadding:{top:1,bottom:1,left:1.2,right:1.2},textColor:INK,overflow:'linebreak'},
+      columnStyles:{0:{cellWidth:27,textColor:SUB},1:{cellWidth:3},2:{cellWidth:59,fontStyle:'bold'},3:{cellWidth:27,textColor:SUB},4:{cellWidth:3},5:{cellWidth:'auto',fontStyle:'bold'}}});
+    y=doc.lastAutoTable.finalY+4;
+  }
+
+  /* ---------- Sampul ---------- */
+  function cover(){
+    /* pita navy atas & bawah dengan aksen emas/teal */
+    doc.setFillColor.apply(doc,NAVY); doc.rect(0,0,PW,9,'F'); doc.rect(0,PH-9,PW,9,'F');
+    doc.setFillColor.apply(doc,GOLD); doc.rect(0,9,PW,0.9,'F'); doc.rect(0,PH-9.9,PW,0.9,'F');
+    doc.setFillColor.apply(doc,BLUE); doc.rect(PW*0.62,0,PW*0.38,9,'F');
+    doc.setDrawColor.apply(doc,NAVY); doc.setLineWidth(0.7); doc.rect(10,15,190,267);
+    doc.setDrawColor.apply(doc,GOLD); doc.setLineWidth(0.25); doc.rect(12.2,17.2,185.6,262.6);
+    doc.setFillColor.apply(doc,GOLD); [[10,15],[200,15],[10,282],[200,282]].forEach(p=>doc.rect(p[0]-1.2,p[1]-1.2,2.4,2.4,'F'));
+    let cy=27;
+    if(a.logoWide){ const w=a.logoWideRatio>0.8?44:70, h=w*(a.logoWideRatio||0.478); try{ doc.addImage(a.logoWide,'PNG',(PW-w)/2,cy,w,h); cy+=h+9; }catch(e){ cy+=10; } } else cy+=12;
+    F('bold',15,NAVY); doc.text(tx(m.school.name.toUpperCase()),PW/2,cy,{align:'center'}); cy+=5.8;
+    if(!/boarding/i.test(m.school.name)){ F('bold',9.5,BLUE); doc.text('BOARDING SCHOOL',PW/2,cy,{align:'center'}); cy+=5; }
+    if(m.school.addr){ F('normal',8.2,SUB); doc.splitTextToSize(tx(m.school.addr),150).forEach(l=>{ doc.text(l,PW/2,cy,{align:'center'}); cy+=3.8; }); }
+    if(m.school.contact){ F('normal',8.2,SUB); doc.text(tx(m.school.contact),PW/2,cy,{align:'center'}); cy+=3.8; }
+    cy+=4; doc.setDrawColor.apply(doc,NAVY); doc.setLineWidth(0.8); doc.line(PW/2-25,cy,PW/2+25,cy); doc.setDrawColor.apply(doc,GOLD); doc.setLineWidth(0.4); doc.line(PW/2-15,cy+1.6,PW/2+15,cy+1.6);
+    cy+=17; F('bold',23,NAVY); doc.text(tx(m.coverTitle),PW/2,cy,{align:'center'});
+    cy+=8; F('bold',12.5,BLUE); doc.text('AKADEMIK & BOARDING',PW/2,cy,{align:'center'});
+    cy+=7; doc.setFillColor.apply(doc,LIGHT); doc.setDrawColor.apply(doc,GOLD); doc.setLineWidth(0.5); doc.roundedRect(PW/2-62,cy,124,17,4,4,'FD');
+    F('bold',12,NAVY); doc.text(tx(m.period.coverLine1),PW/2,cy+7,{align:'center'});
+    F('normal',8.8,SUB); doc.text(tx(m.period.coverLine2),PW/2,cy+12.6,{align:'center'});
+    cy+=26;
+    if(a.photo){ const w=30,h=40; doc.setDrawColor.apply(doc,GOLD); doc.setLineWidth(0.6); doc.rect((PW-w)/2-0.8,cy-0.8,w+1.6,h+1.6);
+      try{ doc.addImage(a.photo,'JPEG',(PW-w)/2,cy,w,h); }catch(e){} cy+=h+8; }
+    const s=m.s, rows=[['Nama Santri',s.nama],['NIS / NISN',[s.nis||'-',s.nisn||'-'].join(' / ')],['Kelas',s.kelas+(s.jurusan?' - '+s.jurusan:'')]];
+    if(s.boarding) rows.push(['Asrama / Kamar',[s.asrama||'-',s.kamar||'-'].join(' / ')]);
+    rows.push(['Orang Tua / Wali',s.ortu||'-']);
+    F('bold',10,INK); const lines=rows.map(r=>doc.splitTextToSize(tx(r[1]),88));
+    const bh=lines.reduce((t,l)=>t+Math.max(1,l.length)*5+2.2,0)+8;
+    const bx=PW/2-70; doc.setFillColor(251,252,254); doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.3); doc.roundedRect(bx,cy,140,bh,2.5,2.5,'FD');
+    doc.setFillColor.apply(doc,BLUE); doc.rect(bx,cy+3,1.3,bh-6,'F'); doc.setFillColor.apply(doc,GOLD); doc.rect(bx,cy+3,1.3,(bh-6)*0.3,'F');
+    let ry=cy+6.6;
+    rows.forEach((r,i)=>{ F('normal',8.8,SUB); doc.text(tx(r[0]),bx+7,ry); doc.text(':',bx+44,ry); F('bold',10,INK); lines[i].forEach((l,j)=>doc.text(l,bx+47,ry+j*5)); ry+=Math.max(1,lines[i].length)*5+2.2; });
+    F('italic',7.6,SUB);
+    doc.text('Dokumen ini bersifat rahasia dan ditujukan kepada orang tua/wali santri yang bersangkutan.',PW/2,276,{align:'center'});
+  }
+
+  /* ---------- Bagian I: Akademik ---------- */
+  function akademik(){
+    const s=m.s, ak=m.ak;
+    newPage(); part('I','LAPORAN AKADEMIK');
+    sec('Identitas Santri');
+    kv([['Nama',s.nama],['Tahun Ajaran',m.period.ta],['NIS',s.nis],['Semester',m.period.sem],['NISN',s.nisn],['Periode',m.period.label],['Kelas',s.kelas],['Wali Kelas',s.wali],['Jurusan',s.jurusan],['Jenis Kelamin',s.jk]]);
+    sec('Kehadiran Pembelajaran (KBM)');
+    if(ak.attErr) empty('Data presensi KBM gagal dimuat: '+ak.attErr);
+    else if(!ak.att.total) empty('Belum ada catatan presensi KBM pada periode ini.');
+    else { const t=ak.att;
+      table(['Hadir','Sakit','Izin','Alpa','Total Pertemuan','Persentase Kehadiran'],[[t.hadir,t.sakit,t.izin,t.alpa,t.total,{content:pct(t.pct),styles:{fontStyle:'bold'}}]],{cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'}},after:1.5});
+      note('Persentase = jumlah Hadir dibagi seluruh catatan presensi KBM (per pertemuan) pada '+m.period.rangeLabel+'.'); }
+    sec(m.period.jenis==='Semester'?'Nilai Mata Pelajaran':'Nilai Semester Berjalan (Sementara)');
+    if(ak.gradeErr) empty('Data nilai gagal dimuat: '+ak.gradeErr);
+    else if(!ak.grades.length) empty(m.period.jenis==='Semester'?'Belum ada nilai pada semester ini.':'Belum ada nilai yang diinput untuk semester berjalan.');
+    else {
+      const body=ak.grades.map((g,i)=>[i+1,g.mapel,num(g.tugas),num(g.ulangan),num(g.pts),num(g.pas),num(g.project),{content:num(g.akhir)+(g.partial?'*':''),styles:{fontStyle:'bold'}},g.capaian||'-']);
+      body.push([{content:'Rata-rata Nilai Akhir',colSpan:7,styles:{fontStyle:'bold',halign:'right',fillColor:LIGHT}},{content:num(ak.avg),styles:{fontStyle:'bold',halign:'center',fillColor:LIGHT}},{content:ak.avgCapaian||'-',styles:{fillColor:LIGHT,fontStyle:'bold'}}]);
+      table(['No','Mata Pelajaran','Tugas','Ulangan','PTS','PAS','Project','Nilai Akhir','Capaian'],body,{fs:8.3,cols:{0:{halign:'center',cellWidth:8},1:{cellWidth:44},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'},6:{halign:'center'},7:{halign:'center',cellWidth:17},8:{cellWidth:26}},after:1.5});
+      const notes=[];
+      if(m.period.jenis!=='Semester') notes.push('Nilai bersifat sementara: diambil dari menu Nilai untuk semester berjalan per tanggal dokumen dibuat dan dapat berubah sampai rapor semester.');
+      notes.push('Nilai Akhir = rata-rata komponen yang sudah diinput (sesuai menu Nilai). Capaian: >= 90 Sangat Baik, >= KKTP ('+ak.kktp+') Baik, di bawah KKTP Perlu Pendampingan.');
+      if(ak.partialN) notes.push('* Sebagian komponen nilai mapel ini belum diinput (ditandai "-").');
+      note(notes.join(' '));
+    }
+    if(m.period.jenis!=='Semester'){
+      sec('Aktivitas Pembelajaran Kelas');
+      if(ak.jurnalErr) empty('Jurnal guru gagal dimuat: '+ak.jurnalErr);
+      else if(!ak.jurnal.length) empty('Belum ada jurnal pembelajaran kelas pada bulan ini.');
+      else { table(['Mata Pelajaran','Pertemuan','Materi yang Dipelajari'],ak.jurnal.map(j=>[j.mapel,{content:j.n,styles:{halign:'center'}},j.materi]),{fs:8.3,cols:{0:{cellWidth:44},1:{cellWidth:20}},after:1.5});
+        note('Diambil dari Jurnal Guru untuk kelas '+s.kelas+' (aktivitas kelas, bukan penilaian individu).'); }
+    }
+    sec('Kedisiplinan Sekolah');
+    if(ak.pelErr) empty('Data pelanggaran sekolah gagal dimuat: '+ak.pelErr);
+    else if(!ak.pel.length) empty('Tidak ada catatan pelanggaran sekolah pada periode ini.');
+    else table(['Tanggal','Pelanggaran','Tingkat','Poin','Status'],ak.pel.map(v=>[v.tanggal,v.pelanggaran,v.tingkat,{content:v.poin,styles:{halign:'center'}},v.status]),{fs:8.3,cols:{0:{cellWidth:28},2:{cellWidth:20},3:{cellWidth:13},4:{cellWidth:38}}});
+    sec('Catatan & Evaluasi Wali Kelas');
+    box('Catatan Wali Kelas',m.ev.catatanWali,{always:true});
+    box('Evaluasi Perkembangan Akademik',m.ev.evalAkademik);
+    box('Rekomendasi Tindak Lanjut Akademik',m.ev.rekomAkademik);
+  }
+
+  /* ---------- Bagian II: Boarding ---------- */
+  function boarding(){
+    const bd=m.bd;
+    newPage(); part('II','LAPORAN BOARDING');
+    if(!bd.boarding){ empty('Santri ini tidak terdaftar sebagai santri boarding, sehingga tidak memiliki laporan asrama.'); return; }
+    kv([['Asrama',m.s.asrama],['Musyrif',m.s.musyrif],['Kamar',m.s.kamar],['Periode',m.period.rangeLabel]]);
+    sec('Kehadiran Kegiatan Asrama');
+    if(bd.err.ba) empty('Presensi kegiatan asrama gagal dimuat: '+bd.err.ba);
+    else if(!bd.keg.rows.length) empty('Belum ada presensi kegiatan asrama pada periode ini.');
+    else { const st=bd.keg.st;
+      const body=bd.keg.rows.map((x,i)=>[i+1,x.nama].concat(st.map(k=>x.c[k]||0)).concat([x.total,{content:num(x.nilai),styles:{fontStyle:'bold'}}]));
+      body.push([{content:'Nilai Kegiatan Asrama',colSpan:st.length+3,styles:{fontStyle:'bold',halign:'right',fillColor:LIGHT}},{content:num(bd.keg.nilai),styles:{fontStyle:'bold',halign:'center',fillColor:LIGHT}}]);
+      const cols={0:{halign:'center',cellWidth:8},1:{cellWidth:46}}; for(let i=2;i<st.length+4;i++) cols[i]={halign:'center'};
+      table(['No','Kegiatan'].concat(st).concat(['Total','Nilai']),body,{fs:8.3,cols}); }
+    sec("Mutaba'ah Ibadah");
+    if(bd.err.bi) empty("Data mutaba'ah ibadah gagal dimuat: "+bd.err.bi);
+    else if(!bd.ib.days) empty("Belum ada catatan mutaba'ah ibadah pada periode ini.");
+    else {
+      const body=bd.ib.rows.map((x,i)=>x.count?[i+1,x.label,x.n,{content:'Total '+x.total+' rakaat/kali',colSpan:2,styles:{halign:'center'}}]:[i+1,x.label,x.n,x.n?x.good:'-',{content:num(x.nilai),styles:{fontStyle:'bold'}}]);
+      body.push([{content:'Nilai Ibadah',colSpan:4,styles:{fontStyle:'bold',halign:'right',fillColor:LIGHT}},{content:num(bd.ib.nilai),styles:{fontStyle:'bold',halign:'center',fillColor:LIGHT}}]);
+      table(['No','Ibadah','Hari Dicatat','Tepat Waktu / Hadir','Nilai'],body,{fs:8.3,cols:{0:{halign:'center',cellWidth:8},2:{halign:'center',cellWidth:24},3:{halign:'center',cellWidth:34},4:{halign:'center',cellWidth:20}},after:1.5});
+      note('Dicatat '+bd.ib.days+' hari. Nilai = rata-rata bobot status sesuai pengaturan Bobot Nilai di menu Ibadah Harian.'); }
+    sec('Perkembangan Tahfidz');
+    const tf=bd.tf;
+    if(bd.err.bt) empty('Data tahfidz gagal dimuat: '+bd.err.bt);
+    else if(!tf.hasData) empty('Belum ada target maupun setoran tahfidz yang tercatat.');
+    else {
+      table(['Target Hafalan','Hafalan Awal','Total Hafalan','Progres Target','Setoran Periode Ini','Murojaah Periode Ini','Surat Terakhir'],
+        [[tf.target==null?'Belum diatur':num(tf.target)+' juz',num(tf.awal)+' juz',{content:num(tf.juz)+' juz',styles:{fontStyle:'bold'}},tf.progress==null?'-':tf.progress+'%',num(tf.setoranP)+' hlm ('+tf.nSetoran+'x)',num(tf.murojaahP)+' hlm ('+tf.nMurojaah+'x)',tf.lastSurat||'-']],
+        {fs:8.2,hfs:7.6,cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'},5:{halign:'center'},6:{halign:'center'}},after:1.5});
+      note('Total hafalan = hafalan awal + seluruh setoran s.d. '+m.period.endLabel+' (20 halaman = 1 juz), sesuai perhitungan menu Tahfidz.');
+      if(tf.riwayat.length){ y+=1; table(['Tanggal','Jenis','Juz','Surat','Halaman','Nilai','Pembimbing'],tf.riwayat.map(r=>[r.tanggal,r.jenis,{content:r.juz,styles:{halign:'center'}},r.surat,{content:num(r.halaman),styles:{halign:'center'}},r.nilai,r.pembimbing]),{fs:8,cols:{0:{cellWidth:26},2:{cellWidth:11},4:{cellWidth:17}},after:1.5});
+        if(tf.riwayatMore) note('Menampilkan '+tf.riwayat.length+' catatan terakhir dari '+tf.riwayatTotal+' catatan pada periode ini.'); }
+    }
+    sec('Kedisiplinan, Kebersihan & Kerapian');
+    if(bd.err.bh) empty('Penilaian harian gagal dimuat: '+bd.err.bh);
+    else if(!bd.dis.n) empty('Belum ada penilaian harian (attitude, kerapian, kebersihan) pada periode ini.');
+    else { table(['Hari Dinilai','Attitude / Adab','Kerapian','Kebersihan','Nilai Kedisiplinan Harian'],[[bd.dis.n,num(bd.dis.att),num(bd.dis.ker),num(bd.dis.bers),{content:num(bd.dis.tot),styles:{fontStyle:'bold'}}]],{cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'}},after:1.5});
+      note('Kerapian = ranjang, loker, pakaian. Kebersihan = piket, kamar, area. Bobot sesuai pengaturan menu Kedisiplinan.'); }
+    if(bd.err.bk) empty('Data pelanggaran asrama gagal dimuat: '+bd.err.bk);
+    else if(!bd.pel.length) empty('Tidak ada catatan pelanggaran asrama pada periode ini.');
+    else { F('bold',8.8,NAVY); ensure(20); doc.text(tx('Pelanggaran & Pembinaan Asrama ('+bd.pel.length+' catatan, total '+bd.poin+' poin)'),ML,y+3); y+=5;
+      table(['Tanggal','Pelanggaran','Kategori','Poin','Status'],bd.pel.map(v=>[v.tanggal,v.pelanggaran,v.kategori,{content:v.poin,styles:{halign:'center'}},v.status]),{fs:8.2,cols:{0:{cellWidth:27},2:{cellWidth:32},3:{cellWidth:12},4:{cellWidth:36}}}); }
+    sec('Perizinan');
+    if(bd.err.pz) empty('Data perizinan gagal dimuat: '+bd.err.pz);
+    else if(!bd.izin.length) empty('Tidak ada perizinan pada periode ini.');
+    else { table(['Jenis Izin','Jumlah','Total Hari (dalam periode)'],bd.izin.map(z=>[z.jenis,{content:z.n,styles:{halign:'center'}},{content:z.hari,styles:{halign:'center'}}]),{cols:{1:{cellWidth:28},2:{cellWidth:48}},after:1.5});
+      note('Hanya ringkasan jumlah; alasan izin tidak ditampilkan. Izin berstatus Ditolak tidak dihitung.'); }
+    sec('Ringkasan Nilai Boarding');
+    if(bd.total==null) empty('Belum ada komponen nilai boarding (ibadah, kegiatan, kedisiplinan) pada periode ini.');
+    else { table(['Ibadah','Kegiatan Asrama','Kedisiplinan Harian','Nilai Boarding','Predikat'],[[num(bd.ib.nilai),num(bd.keg.nilai),num(bd.dis.tot),{content:num(bd.total),styles:{fontStyle:'bold'}},{content:bd.predikat||'-',styles:{fontStyle:'bold'}}]],
+      {cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'}},after:1.5});
+    note('Nilai Boarding = rata-rata komponen yang memiliki data. Predikat: >= 90 Sangat Baik, >= 75 Baik, di bawah 75 Perlu Pembinaan. Poin pelanggaran tidak mengurangi nilai (sesuai aturan Rapor Boarding di aplikasi).'); }
+    sec('Evaluasi Musyrif');
+    box('Evaluasi Musyrif',m.ev.evalMusyrif,{always:true});
+    box('Rekomendasi Pembinaan Boarding',m.ev.rekomBoarding);
+  }
+
+  /* ---------- Bagian III: Kesimpulan & Pengesahan ---------- */
+  function kesimpulan(){
+    if(room()<150) newPage(); else y+=3;
+    part('III','KESIMPULAN & PENGESAHAN');
+    sec('Evaluasi Akhir');
+    box(m.period.jenis==='Semester'?'Ringkasan Perkembangan Santri Selama Semester':'Ringkasan Perkembangan Santri',m.ev.ringkasan,{always:true});
+    box('Kelebihan / Pencapaian',m.ev.kelebihan);
+    if(m.ks.prestasi.length){ ensure(24); F('bold',8.8,NAVY); doc.text('Prestasi pada periode ini',ML,y+3); y+=5;
+      table(['Tanggal','Prestasi','Kategori','Tingkat','Peringkat'],m.ks.prestasi.map(p=>[p.tanggal,p.nama,p.kategori,p.tingkat,p.peringkat]),{fs:8.2,cols:{0:{cellWidth:27}}}); }
+    box('Hal yang Perlu Ditingkatkan',m.ev.perbaikan);
+    box('Rekomendasi untuk Santri dan Orang Tua',m.ev.rekomOrtu);
+    if(m.period.jenis==='Semester') box('Saran Kerja Sama Sekolah/Asrama dengan Orang Tua',m.ev.kerjasama);
+    ensure((m.sign.kepsek?92:52)+12); sec('Pengesahan');
+    sign();
+  }
+  function sign(){
+    const g=m.sign; ensure(g.kepsek?92:52);
+    F('normal',9,INK); doc.text(tx((g.tempat?g.tempat+', ':'')+g.tanggal),PW-MR,y+3,{align:'right'}); y+=10;
+    const cols=g.cols, w=CW/cols.length;
+    const blank='(.......................................)';
+    cols.forEach((c,i)=>{ const cx=ML+w*i+w/2;
+      F('normal',9,INK); doc.text(tx(c.role),cx,y,{align:'center'});
+      F('bold',9,INK); const nm=tx(c.name||blank); doc.text(nm,cx,y+25,{align:'center'});
+      if(c.name){ const tw=doc.getTextWidth(nm); doc.setDrawColor.apply(doc,INK); doc.setLineWidth(0.25); doc.line(cx-tw/2,y+26.2,cx+tw/2,y+26.2); } });
+    y+=34;
+    if(g.kepsek){ const cx=PW/2; F('normal',9,INK); doc.text('Mengetahui,',cx,y,{align:'center'}); doc.text('Kepala Sekolah',cx,y+4.6,{align:'center'});
+      F('bold',9,INK); const nm=tx(g.kepsek.name||blank); doc.text(nm,cx,y+29,{align:'center'});
+      if(g.kepsek.name){ const tw=doc.getTextWidth(nm); doc.setDrawColor.apply(doc,INK); doc.setLineWidth(0.25); doc.line(cx-tw/2,y+30.2,cx+tw/2,y+30.2); }
+      y+=36; }
+  }
+
+  /* ---------- Header, footer, watermark ---------- */
+  function decorate(){
+    const n=doc.getNumberOfPages();
+    for(let i=1;i<=n;i++){
+      doc.setPage(i);
+      if(i>1){
+        if(a.logoMark){ const h=12, w=h/(a.logoMarkRatio||1.42); try{ doc.addImage(a.logoMark,'PNG',ML,8.5,w,h); }catch(e){} }
+        const lx=ML+(a.logoMark?12/(a.logoMarkRatio||1.42)+3.5:0);
+        F('bold',9.6,NAVY); doc.text(tx(m.school.name.toUpperCase()),lx,13.2);
+        F('normal',7.8,SUB); doc.text(tx(m.title+'  |  '+m.period.label),lx,17.6);
+        F('bold',8.6,INK); doc.text(tx(m.s.nama),PW-MR,13.2,{align:'right'});
+        F('normal',7.8,SUB); doc.text(tx('NIS '+(m.s.nis||'-')+'  |  Kelas '+m.s.kelas),PW-MR,17.6,{align:'right'});
+        doc.setFillColor.apply(doc,NAVY); doc.rect(0,0,PW,3.2,'F'); doc.setFillColor.apply(doc,BLUE); doc.rect(PW*0.7,0,PW*0.3,3.2,'F'); doc.setFillColor.apply(doc,GOLD); doc.rect(0,3.2,PW,0.5,'F');
+        doc.setDrawColor.apply(doc,NAVY); doc.setLineWidth(0.6); doc.line(ML,22.6,PW-MR,22.6);
+        doc.setDrawColor.apply(doc,GOLD); doc.setLineWidth(0.3); doc.line(ML,23.6,PW-MR,23.6);
+        doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2); doc.line(ML,PH-13.5,PW-MR,PH-13.5);
+        F('normal',7.2,SUB); doc.text(tx(m.footerLeft),ML,PH-9.2);
+        F('bold',7.6,[255,255,255]); const pg=tx('Halaman '+i+' dari '+n), pw2=doc.getTextWidth(pg)+7;
+        doc.setFillColor.apply(doc,NAVY); doc.roundedRect(PW-MR-pw2,PH-12.2,pw2,5.6,2.8,2.8,'F');
+        doc.text(pg,PW-MR-pw2/2,PH-8.4,{align:'center'});
+        doc.setFillColor.apply(doc,GOLD); doc.rect(0,PH-1.6,PW,0.5,'F'); doc.setFillColor.apply(doc,NAVY); doc.rect(0,PH-1.1,PW,1.1,'F');
+      }
+      if(m.draft){
+        try{ doc.setGState(new doc.GState({opacity:0.09})); }catch(e){}
+        F('bold',74,[160,24,24]); const t='DRAF', ang=33*Math.PI/180, w=doc.getTextWidth(t);
+        doc.text(t,PW/2-Math.cos(ang)*w/2,PH/2+Math.sin(ang)*w/2,{angle:33});
+        F('bold',15,[160,24,24]); const t2='BELUM DITERBITKAN - TIDAK UNTUK DIBAGIKAN', w2=doc.getTextWidth(t2);
+        doc.text(t2,PW/2-Math.cos(ang)*w2/2+9,PH/2+Math.sin(ang)*w2/2+17,{angle:33});
+        try{ doc.setGState(new doc.GState({opacity:1})); }catch(e){}
+      }
+    }
+  }
+
+  cover(); akademik(); boarding(); kesimpulan(); decorate();
+  return doc;
+}
+return {render,tx};
+})();
+/*@@RENDER_END*/
+
+
+/* ---------- Library PDF & aset ---------- */
+const libBusy={};
+function loadScript(urls,check){
+  if(check()) return Promise.resolve();
+  const key=urls[0]; if(libBusy[key]) return libBusy[key];
+  libBusy[key]=new Promise((res,rej)=>{
+    let i=0;
+    const next=()=>{ if(i>=urls.length){ delete libBusy[key]; return rej(new Error('Library PDF gagal dimuat. Periksa koneksi internet lalu coba lagi.')); }
+      const s=document.createElement('script'); s.src=urls[i++]; s.async=true;
+      s.onload=()=>{ if(check()) res(); else { s.remove(); next(); } };
+      s.onerror=()=>{ s.remove(); next(); };
+      document.head.appendChild(s); };
+    next();
+  });
+  return libBusy[key];
+}
+async function ensureLib(){
+  await loadScript(LIB.jspdf,()=>!!(window.jspdf&&window.jspdf.jsPDF));
+  const J=window.jspdf.jsPDF;
+  await loadScript(LIB.at,()=>{ if(!J.API.autoTable&&typeof window.applyPlugin==='function'){ try{ window.applyPlugin(J); }catch(e){} } return !!J.API.autoTable; });
+  return J;
+}
+async function ensureZip(){ await loadScript(LIB.zip,()=>typeof window.JSZip==='function'); return window.JSZip; }
+function imgData(src,o){
+  o=o||{};
+  return new Promise(res=>{
+    if(!src) return res(null);
+    const im=new Image(); if(!/^data:/i.test(src)) im.crossOrigin='anonymous';
+    const to=setTimeout(()=>res(null),10000);
+    im.onload=()=>{ clearTimeout(to);
+      try{
+        const sw=im.naturalWidth, sh=im.naturalHeight; if(!sw||!sh) return res(null);
+        let sx=0,sy=0,cw=sw,ch=sh;
+        if(o.cropLeft){ cw=Math.round(sw*o.cropLeft); }
+        if(o.cover){ const r=o.cover; if(cw/ch>r){ const w=ch*r; sx=(cw-w)/2; cw=w; } else { const h=cw/r; sy=(ch-h)/2; ch=h; } }
+        const sc=Math.min(1,(o.maxW||800)/cw), c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(cw*sc)); c.height=Math.max(1,Math.round(ch*sc));
+        const x=c.getContext('2d'); if(o.jpeg){ x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); }
+        x.drawImage(im,sx,sy,cw,ch,0,0,c.width,c.height);
+        res({data:c.toDataURL(o.jpeg?'image/jpeg':'image/png',0.85),ratio:c.height/c.width});
+      }catch(e){ res(null); } };
+    im.onerror=()=>{ clearTimeout(to); res(null); };
+    im.src=src;
+  });
+}
+/* Logo resmi: logo di Pengaturan Sekolah (bila diisi), selain itu logo AIS yang sudah tertanam di aplikasi (halaman login). */
+const ASSET={};
+async function assets(){
+  if(ASSET.ready) return ASSET;
+  let custom=null; try{ const lu=rpLogoSrc(); if(lu) custom=await imgData(lu,{maxW:720}); }catch(e){}
+  const el=document.querySelector('img.logo')||document.querySelector('img.wc-logo');
+  const src=el&&el.getAttribute('src');
+  const wide=custom||await imgData(src,{maxW:720});
+  const mark=custom||(el&&el.classList.contains('logo')?await imgData(src,{maxW:260,cropLeft:0.345}):wide);
+  if(wide){ ASSET.logoWide=wide.data; ASSET.logoWideRatio=wide.ratio; }
+  if(mark){ ASSET.logoMark=mark.data; ASSET.logoMarkRatio=mark.ratio; }
+  ASSET.ready=true; return ASSET;
+}
+/* Foto santri: foto profil yang sudah diunggah (student_photos, bucket privat) atau kolom foto_url di tabel students. */
+async function photoOf(sid){
+  try{
+    if(KSC.pf&&!KSC.pf.cfg.arr.length&&dkClient()) await kscLoad('pf',{silent:true});
+    let url='';
+    const f=KSC.pf?KSC.pf.cfg.arr.find(x=>String(x.studentId)===String(sid)):null;
+    if(f&&f.path&&dkClient()){ const r=await dkClient().storage.from('student-projects').createSignedUrl(f.path,300); if(!r.error&&r.data) url=r.data.signedUrl||r.data.signedURL||''; }
+    if(!url&&typeof stState!=='undefined'&&stState.raw&&stState.raw[sid]){ const raw=stState.raw[sid], v=String(raw.foto_url||raw.photo_url||raw.foto||'').trim(); if(/^(https?:\/\/|data:image\/)/i.test(v)&&!/[\s<>"']/.test(v)) url=v; }
+    if(!url) return '';
+    const r=await imgData(url,{maxW:300,cover:0.75,jpeg:true}); return r?r.data:'';
+  }catch(e){ console.warn('[rapor-pdf] foto',e); return ''; }
+}
+function saveBlob(blob,name){
+  const u=URL.createObjectURL(blob), a=document.createElement('a');
+  a.href=u; a.download=name; a.rel='noopener'; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u),60000);
+}
+
+/* ---------- Tabel report_documents ---------- */
+const DOC_COLS='id,student_id,class_id,jenis,tahun_ajaran,semester,bulan,periode_mulai,periode_selesai,status,versi,catatan,file_name,dibuat_oleh,diajukan_oleh,diajukan_at,diterbitkan_oleh,diterbitkan_at,riwayat,created_at,updated_at';
+async function loadDocs(P,force){
+  const k=pkey(P); if(!force&&RPX.docsKey===k&&RPX.tableOk) return;
+  RPX.docsKey=k; RPX.docs=[];
+  if(!live()){ RPX.tableOk=false; RPX.tableMsg='demo'; return; }
+  try{
+    RPX.docs=await dbFetchAll(TBL,DOC_COLS,'versi',q=>q.eq('jenis',P.jenis).eq('tahun_ajaran',P.ta).eq('semester',P.sem).eq('bulan',P.bulan||''));
+    RPX.tableOk=true; RPX.tableMsg='';
+  }catch(e){ console.warn('[rapor-pdf] report_documents',e); RPX.tableOk=false; RPX.tableMsg=tblMissing(e)?'missing':errMsg(e); RPX.docsKey=''; }
+}
+function docOf(sid){ let best=null; RPX.docs.forEach(d=>{ if(String(d.student_id)===String(sid)&&(!best||d.versi>best.versi)) best=d; }); return best; }
+function pubOf(sid){ let best=null; RPX.docs.forEach(d=>{ if(String(d.student_id)===String(sid)&&d.status==='Diterbitkan'&&(!best||d.versi>best.versi)) best=d; }); return best; }
+function statusOf(sid){ const d=docOf(sid); return d?d.status:'Belum Dibuat'; }
+function putDoc(d){ const i=RPX.docs.findIndex(x=>x.id===d.id); if(i>=0) RPX.docs[i]=d; else RPX.docs.push(d); if(RPX.arsip){ const j=RPX.arsip.findIndex(x=>x.id===d.id); if(j>=0) RPX.arsip[j]=d; } }
+function hist(d,aksi,ket){ const h=Array.isArray(d&&d.riwayat)?d.riwayat.slice():[]; h.push({t:new Date().toISOString(),aksi,oleh:me(),role:curRole,ket:ket||''}); return h; }
+async function docInsert(p){
+  const {data,error}=await dkClient().from(TBL).insert(p).select(DOC_COLS);
+  if(error) throw error; if(!data||!data.length) throw {code:'42501',message:'Tidak ada baris tersimpan: diblokir RLS.'}; return data[0];
+}
+async function docUpdate(d,patch){
+  const {data,error}=await dkClient().from(TBL).update(patch).eq('id',d.id).eq('updated_at',d.updated_at).select(DOC_COLS);
+  if(error) throw error;
+  if(!data||!data.length) throw {code:'CONFLICT',message:'Dokumen sudah diubah oleh pengguna lain atau akses ditolak. Klik Muat Ulang lalu coba lagi.'};
+  return data[0];
+}
+async function getSnapshot(id){
+  const {data,error}=await dkClient().from(TBL).select('id,snapshot,file_name').eq('id',id).maybeSingle();
+  if(error) throw error; if(!data||!data.snapshot||!data.snapshot.model) throw {message:'Snapshot rapor tidak ditemukan.'}; return data;
+}
+function tableReady(){
+  if(RPX.tableOk) return true;
+  toast(RPX.tableMsg==='demo'?'Mode demo: rapor tidak dapat disimpan atau diterbitkan.':RPX.tableMsg==='missing'?'Tabel report_documents belum dibuat. Jalankan supabase-rapor-setup.sql di Supabase.':'Tabel rapor belum dapat diakses: '+RPX.tableMsg);
+  return false;
+}
+
+/* ---------- Render PDF ---------- */
+async function pdfFromModel(m,photo){
+  const J=await ensureLib(), a=await assets();
+  return RPXR.render(J,m,Object.assign({},a,{photo:photo||''}));
+}
+async function pdfFromDoc(d){
+  const snap=await getSnapshot(d.id);
+  const doc=await pdfFromModel(snap.snapshot.model,snap.snapshot.photo);
+  return {doc,name:snap.file_name||d.file_name||'Rapor.pdf'};
+}
+
+
+/* ---------- UI: navigasi ---------- */
+const TABS=[['dash','Dashboard Raport'],['bulanan','Rapor Bulanan'],['semester','Rapor Semester'],['arsip','Arsip'],['kartu','Kartu Rapor Akademik']];
+function navHtml(){
+  const tabs=canEdit()?TABS:TABS.filter(t=>t[0]==='kartu');
+  return `<div class="rpx-nav" id="rpxNav">${tabs.map(t=>`<button class="rpx-navb${RPX.tab===t[0]?' active':''}" data-t="${t[0]}" onclick="rpxTab('${t[0]}')">${t[1]}</button>`).join('')}</div>`+
+    (canEdit()?'':'<p class="desc rpx-note">Pembuatan Rapor Bulanan &amp; Semester hanya untuk Wali Kelas, Musyrif, Kepala Sekolah, dan Super Admin. Anda tetap dapat melihat Kartu Rapor Akademik sesuai akses.</p>');
+}
+function root(){ return document.getElementById('rpxRoot'); }
+function showRoots(){
+  const k=RPX.tab==='kartu', a=root(), b=document.getElementById('rpRoot');
+  if(a) a.style.display=k?'none':''; if(b) b.style.display=k?'':'none';
+  document.querySelectorAll('#rpxNav .rpx-navb').forEach(x=>x.classList.toggle('active',x.dataset.t===RPX.tab));
+}
+window.rpxTab=function(t){
+  if(RPX.ed&&RPX.ed.dirty&&!confirm('Perubahan catatan belum disimpan. Tinggalkan halaman ini?')) return;
+  RPX.tab=t; RPX.ed=null;
+  if(t==='bulanan') RPX.jenis='Bulanan'; else if(t==='semester') RPX.jenis='Semester';
+  showRoots(); if(t!=='kartu') render();
+};
+function bannerHtml(){
+  if(RPX.tableOk) return '';
+  if(RPX.tableMsg==='demo') return '<div class="rpx-banner warn"><b>Mode demo.</b> Aplikasi belum terhubung ke database produksi. Pratinjau tetap dapat dibuat (bertanda DRAF), tetapi rapor tidak dapat disimpan atau diterbitkan.</div>';
+  if(RPX.tableMsg==='missing') return '<div class="rpx-banner warn"><b>Tabel <code>report_documents</code> belum ada.</b> Jalankan <code>supabase-rapor-setup.sql</code> di SQL Editor Supabase agar status, persetujuan, snapshot, dan arsip rapor dapat disimpan. Sementara itu pratinjau dan unduhan PDF berstatus <b>DRAF</b> tetap bisa digunakan.</div>';
+  if(RPX.tableMsg) return '<div class="rpx-banner err">Tabel rapor belum dapat diakses: '+E(RPX.tableMsg)+'</div>';
+  return '';
+}
+function opt(v,l,sel){ return `<option value="${E(v)}"${String(v)===String(sel)?' selected':''}>${l==null?E(v):l}</option>`; }
+function taList(){
+  const y=Number(String(P0.ta).slice(0,4)), set=new Set([RPX.ta]);
+  for(let i=-2;i<=1;i++) set.add((y+i)+'/'+(y+i+1));
+  gradesData.forEach(g=>{ const t=U(g.tahunAjaran); if(/^\d{4}\/\d{4}$/.test(t)) set.add(t); });
+  return [...set].sort().reverse();
+}
+function filtersHtml(mode){
+  const ks=[...new Set(scopeStudents().map(s=>s.kelas))].sort((a,b)=>U(a).localeCompare(U(b)));
+  const showJenis=mode==='dash', bul=RPX.jenis==='Bulanan';
+  return `<div class="acad-toolrow rpx-tools">
+    ${showJenis?`<select id="rpxJenis" onchange="rpxOnFilter()" title="Jenis laporan">${opt('Bulanan','Rapor Bulanan',RPX.jenis)}${opt('Semester','Rapor Semester',RPX.jenis)}</select>`:''}
+    <select id="rpxTA" onchange="rpxOnFilter()" title="Tahun ajaran">${taList().map(t=>opt(t,'TA '+E(t),RPX.ta)).join('')}</select>
+    <select id="rpxSem" onchange="rpxOnFilter()" title="Semester">${opt('Ganjil','Semester Ganjil',RPX.sem)}${opt('Genap','Semester Genap',RPX.sem)}</select>
+    ${bul?`<select id="rpxBulan" onchange="rpxOnFilter()" title="Bulan">${monthsOf(RPX.ta,RPX.sem).map(m=>opt(m,BULAN_ID[Number(m.slice(5,7))-1]+' '+m.slice(0,4),RPX.bulan)).join('')}</select>`:''}
+    ${mode==='dash'?`<select id="rpxBidang" onchange="rpxOnFilter()" title="Bidang kelengkapan">${['Gabungan','Akademik','Boarding'].map(b=>opt(b,'Bidang: '+b,RPX.bidang)).join('')}</select>`:''}
+    <select id="rpxKelas" onchange="rpxOnFilter()" title="Kelas"><option value="">Semua Kelas</option>${ks.map(k=>`<option value="${k}"${k===RPX.kelas?' selected':''}>${k}</option>`).join('')}</select>
+    <select id="rpxStatus" onchange="rpxOnFilter()" title="Status"><option value="">Semua Status</option>${STATUSES.map(s=>opt(s,s,RPX.status)).join('')}</select>
+    <input type="search" id="rpxQ" placeholder="Cari nama santri atau NIS..." value="${E(RPX.q)}" oninput="rpxOnFilter(true)" autocomplete="off">
+    <span class="ti-spacer"></span>
+    <button class="btn-outline-sm" onclick="rpxReload()">Muat Ulang</button>
+  </div>`;
+}
+window.rpxOnFilter=function(typing){
+  const v=id=>{ const e=document.getElementById(id); return e?e.value:null; };
+  const before=pkey(curPeriod());
+  if(v('rpxJenis')!=null) RPX.jenis=v('rpxJenis');
+  if(v('rpxTA')!=null) RPX.ta=v('rpxTA'); if(v('rpxSem')!=null) RPX.sem=v('rpxSem');
+  if(v('rpxBulan')!=null) RPX.bulan=v('rpxBulan');
+  if(v('rpxBidang')!=null) RPX.bidang=v('rpxBidang');
+  RPX.kelas=v('rpxKelas')||''; RPX.status=v('rpxStatus')||''; RPX.q=v('rpxQ')||'';
+  const P=curPeriod();
+  if(pkey(P)!==before){ render(); return; }
+  if(typing){ clearTimeout(RPX._qt); RPX._qt=setTimeout(()=>{ const b=document.getElementById('rpxListBody'); if(b) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); },200); return; }
+  render();
+};
+window.rpxReload=async function(){
+  RPX.docsKey=''; RPX.checks={}; Object.keys(ASSET).forEach(k=>delete ASSET[k]);
+  try{ if(typeof stReload==='function') await stReload({silent:true}); }catch(e){}
+  if(RPX.ed){ const sid=RPX.ed.s.id; RPX.ed=null; await loadDocs(curPeriod(),true); return openEditor(sid); }
+  render();
+};
+
+/* ---------- Daftar santri + status ---------- */
+function gapsFor(sid){ return RPX.checks[pkey(curPeriod())+'|'+sid]; }
+function gapChips(gs,bidang){
+  if(!gs) return '<span class="rpx-muted">Belum diperiksa</span>';
+  const f=gs.filter(g=>bidang==='Akademik'?(g.bid==='ak'||g.bid==='um'):bidang==='Boarding'?(g.bid==='bd'||g.bid==='um'):true);
+  const n=l=>f.filter(g=>g.lvl===l).length, kr=n('kritis'), pw=n('peringatan'), wj=n('wajib');
+  if(!kr&&!pw&&!wj) return '<span class="rpx-chip ok">Lengkap</span>';
+  return (kr?`<span class="rpx-chip kr" title="${E(f.filter(g=>g.lvl==='kritis').map(g=>g.text).join('\n'))}">${kr} kritis</span>`:'')+
+    (pw?`<span class="rpx-chip pw" title="${E(f.filter(g=>g.lvl==='peringatan').map(g=>g.text).join('\n'))}">${pw} peringatan</span>`:'')+
+    (wj?`<span class="rpx-chip wj" title="${E(f.filter(g=>g.lvl==='wajib').map(g=>g.text).join('\n'))}">${wj} evaluasi kosong</span>`:'');
+}
+function badge(st){ return `<span class="badge ${ST_CLS[st]||'b-gray'}">${E(st)}</span>`; }
+function listBodyHtml(mode){
+  const rows=filteredStudents();
+  if(!scopeStudents().length) return acadEmptyStateHtml('Belum ada santri','Belum ada siswa aktif yang memiliki kelas dalam akses Anda.');
+  if(!rows.length) return acadEmptyStateHtml('Tidak ada santri yang cocok','Ubah filter kelas, status, atau pencarian.');
+  return `<div class="rpx-tblwrap"><table class="rpx-tbl"><thead><tr><th>No</th><th>Santri</th><th>Kelas</th><th>Boarding</th><th>Status</th><th>Versi</th><th>Kelengkapan Data</th><th>Diperbarui</th><th>Aksi</th></tr></thead><tbody>
+    ${rows.map((s,i)=>{ const d=docOf(s.id), p=pubOf(s.id), sid=E(s.id);
+      const extra=(p&&d&&p.id!==d.id)?`<div class="rpx-sub">v${p.versi} terbit</div>`:'';
+      return `<tr><td>${i+1}</td><td><b>${s.nama}</b><div class="rpx-sub">NIS ${s.nis||'-'}</div></td><td>${s.kelas}</td><td>${s.boarding?'Ya':'Tidak'}</td>
+        <td>${badge(d?d.status:'Belum Dibuat')}${extra}</td><td>${d?'v'+d.versi:'-'}</td><td>${gapChips(gapsFor(s.id),mode==='dash'?RPX.bidang:'Gabungan')}</td>
+        <td>${d?tglJam(d.updated_at):'-'}</td>
+        <td><div class="rpx-acts-row"><button class="btn-primary-sm" onclick="rpxOpen('${sid}')">${d?'Buka':'Buat'}</button>${p?`<button class="btn-outline-sm" onclick="rpxDlDoc('${E(p.id)}')" title="Unduh PDF terbit">PDF</button>`:''}</div></td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+function statsHtml(){
+  const ss=scopeStudents(), c={}; STATUSES.forEach(s=>c[s]=0); ss.forEach(s=>c[statusOf(s.id)]++);
+  return acadStatRowHtml([
+    {color:'blue',val:ss.length,label:'Total Santri'},{color:'purple',val:c['Belum Dibuat'],label:'Belum Dibuat'},
+    {color:'orange',val:c['Draft']+c['Data Belum Lengkap'],label:'Draft / Data Belum Lengkap'},{color:'indigo',val:c['Menunggu Review'],label:'Menunggu Review'},
+    {color:'green',val:c['Diterbitkan'],label:'Diterbitkan'},{color:'teal',val:c['Diarsipkan'],label:'Diarsipkan'}]);
+}
+async function renderList(mode){
+  const r=root(); if(!r) return;
+  const P=curPeriod();
+  const title=mode==='dash'?'Dashboard Raport':(RPX.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester');
+  if(!P){ r.innerHTML=bannerHtml()+`<div class="panel">${filtersHtml(mode)}<p class="desc">Tahun ajaran / semester tidak valid.</p></div>`; return; }
+  r.innerHTML=bannerHtml()+`<div class="panel rpx-panel">${filtersHtml(mode)}<div class="rpx-loading">Memuat status rapor ${E(P.label)}...</div></div>`;
+  await loadDocs(P);
+  if(root()!==r||RPX.ed||RPX.tab==='arsip'||RPX.tab==='kartu') return;
+  const desc=mode==='dash'
+    ?`Ringkasan pembuatan <b>${E(RPX.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester')} ${E(P.label)}</b>. Setiap santri mendapat <b>satu PDF</b> berisi laporan Akademik dan Boarding. Halaman ini hanya untuk pengelola, tidak ikut ke PDF.`
+    :`Periode <b>${E(P.label)}</b> (${E(P.rangeLabel)}). Klik <b>Buat/Buka</b> untuk mengisi evaluasi, memeriksa kelengkapan, pratinjau A4, dan menerbitkan PDF.`;
+  r.innerHTML=bannerHtml()+`${mode==='dash'?statsHtml():''}<div class="panel rpx-panel">
+    <div class="rpx-head"><h3>${title}</h3><div class="rpx-head-acts">
+      <button class="btn-outline-sm" id="rpxChkBtn" onclick="rpxCheck()" title="Ambil data semua santri pada filter ini dan periksa kelengkapannya">Periksa Kelengkapan</button>
+      ${mode==='work'?`<button class="btn-outline-sm" id="rpxZipBtn" onclick="rpxZip()" title="Unduh semua rapor berstatus Diterbitkan pada filter ini dalam satu berkas ZIP">Unduh Massal (ZIP)</button>`:''}
+    </div></div>
+    ${filtersHtml(mode)}<p class="desc">${desc}</p><div id="rpxListBody">${listBodyHtml(mode)}</div></div>`;
+}
+
+/* ---------- Periksa kelengkapan massal ---------- */
+window.rpxCheck=async function(){
+  if(RPX.busy) return; const P=curPeriod(); if(!P) return;
+  const studs=filteredStudents(); if(!studs.length){ toast('Tidak ada santri pada filter ini.'); return; }
+  if(studs.length>400){ toast('Terlalu banyak santri ('+studs.length+'). Pilih kelas terlebih dahulu.'); return; }
+  RPX.busy='check'; const btn=document.getElementById('rpxChkBtn');
+  try{
+    for(let i=0;i<studs.length;i+=40){
+      if(btn){ btn.disabled=true; btn.textContent='Memeriksa '+Math.min(i+40,studs.length)+'/'+studs.length+'...'; }
+      const part=studs.slice(i,i+40), D=await fetchDataset(part,P);
+      part.forEach(s=>{ const d=docOf(s.id); RPX.checks[pkey(P)+'|'+s.id]=buildModel(s,P,D,d&&d.catatan).gaps; });
+    }
+    toast('Pemeriksaan kelengkapan selesai untuk '+studs.length+' santri.');
+  }catch(e){ console.error('[rapor-pdf] cek',e); toast('Pemeriksaan gagal: '+errMsg(e)); }
+  finally{ RPX.busy=''; const b=document.getElementById('rpxListBody'); if(b) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); if(btn){ btn.disabled=false; btn.textContent='Periksa Kelengkapan'; } }
+};
+
+/* ---------- Unduh massal (hanya rapor Diterbitkan, dari snapshot) ---------- */
+window.rpxZip=async function(){
+  if(RPX.busy) return; const P=curPeriod(); if(!P) return;
+  if(!tableReady()) return;
+  const pubs=filteredStudents().map(s=>pubOf(s.id)).filter(Boolean);
+  if(!pubs.length){ toast('Belum ada rapor berstatus Diterbitkan pada filter ini.'); return; }
+  RPX.busy='zip'; const btn=document.getElementById('rpxZipBtn');
+  try{
+    const [J,Z]=await Promise.all([ensureLib(),ensureZip()]); const a=await assets(); const zip=new Z(), used={};
+    for(let i=0;i<pubs.length;i+=10){
+      const ids=pubs.slice(i,i+10).map(d=>d.id);
+      if(btn){ btn.disabled=true; btn.textContent='Menyiapkan '+Math.min(i+10,pubs.length)+'/'+pubs.length+'...'; }
+      const {data,error}=await dkClient().from(TBL).select('id,snapshot,file_name').in('id',ids); if(error) throw error;
+      (data||[]).forEach(r=>{ if(!r.snapshot||!r.snapshot.model) return;
+        const doc=RPXR.render(J,r.snapshot.model,Object.assign({},a,{photo:r.snapshot.photo||''}));
+        let n=r.file_name||('Rapor_'+r.id+'.pdf'); if(used[n]) n=n.replace(/\.pdf$/i,'_'+String(r.id).slice(0,6)+'.pdf'); used[n]=1;
+        zip.file(n,doc.output('arraybuffer')); });
+    }
+    const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+    saveBlob(blob,'Rapor_'+P.jenis+'_'+(RPX.kelas?camel(RPX.kelas):'SemuaKelas')+'_'+P.fileTag+'.zip');
+    toast(pubs.length+' rapor diunduh dalam satu berkas ZIP.');
+  }catch(e){ console.error('[rapor-pdf] zip',e); toast('Unduh massal gagal: '+errMsg(e)); }
+  finally{ RPX.busy=''; if(btn){ btn.disabled=false; btn.textContent='Unduh Massal (ZIP)'; } }
+};
+window.rpxDlDoc=async function(id){
+  const d=RPX.docs.find(x=>String(x.id)===String(id))||(RPX.arsip||[]).find(x=>String(x.id)===String(id)); if(!d) return;
+  try{ toast('Menyiapkan PDF...'); const r=await pdfFromDoc(d); r.doc.save(r.name); }
+  catch(e){ console.error('[rapor-pdf] unduh',e); toast('PDF gagal dibuat: '+errMsg(e)); }
+};
+
+/* ---------- Editor per santri ---------- */
+window.rpxOpen=function(sid){
+  if(RPX.tab==='dash'){ RPX.tab=RPX.jenis==='Bulanan'?'bulanan':'semester'; showRoots(); }
+  openEditor(sid);
+};
+async function openEditor(sid){
+  const s=studentsData.find(x=>String(x.id)===String(sid)); if(!s){ toast('Santri tidak ditemukan. Klik Muat Ulang.'); return; }
+  if(!scopeStudents().some(x=>String(x.id)===String(sid))){ toast('Santri ini di luar akses Anda.'); return; }
+  const P=curPeriod(); if(!P) return;
+  RPX.ed={s,P,loading:true,dirty:false}; render();
+  try{
+    const [D]=await Promise.all([fetchDataset([s],P,{notes:true}),loadDocs(P)]);
+    const ed=RPX.ed; if(!ed||ed.s!==s) return;
+    ed.D=D; ed.doc=docOf(s.id); ed.pub=pubOf(s.id);
+    ed.ev=Object.assign(emptyEv(),(ed.doc&&ed.doc.catatan)||{});
+    ed.prefill='';
+    if(!ed.doc&&P.jenis==='Semester'){
+      const rec=rpRecords.find(r=>String(r.studentId)===String(s.id)&&U(r.tahunAjaran)===P.ta&&r.semester===P.sem);
+      const cw=rec&&rec.raw?String(rec.raw.catatan_wali||'').trim():'';
+      if(cw){ ed.ev.catatanWali=cw; ed.prefill='Catatan Wali Kelas diambil dari Rapor Akademik semester ini. Periksa sebelum disimpan.'; }
+    }
+    ed.loading=false; render();
+  }catch(e){ console.error('[rapor-pdf] buka',e); if(RPX.ed){ RPX.ed.loading=false; RPX.ed.err=errMsg(e); render(); } }
+}
+window.rpxBack=function(){
+  if(RPX.ed&&RPX.ed.dirty&&!confirm('Perubahan catatan belum disimpan. Kembali ke daftar?')) return;
+  RPX.ed=null; render();
+};
+const isFinal=d=>!!d&&(d.status==='Diterbitkan'||d.status==='Diarsipkan');
+function locked(ed){ if(!canEdit()) return true; const d=ed.doc; if(!d) return false; if(isFinal(d)) return true; if(d.status==='Menunggu Review'&&!canPub()) return true; return false; }
+function collectEv(){
+  const ed=RPX.ed; if(!ed||!ed.ev) return;
+  FIELDS.forEach(f=>{ const el=document.getElementById('rpxf_'+f.k); if(el&&!el.disabled) ed.ev[f.k]=el.value.trim(); });
+}
+function gapsHtml(gs){
+  if(!gs.length) return '<div class="rpx-gap ok">Data dan evaluasi lengkap.</div>';
+  const L={kritis:['kr','Kritis'],wajib:['wj','Wajib diisi'],peringatan:['pw','Peringatan'],info:['in','Info']};
+  return ['kritis','wajib','peringatan','info'].map(l=>gs.filter(g=>g.lvl===l).map(g=>`<div class="rpx-gap ${L[l][0]}"><b>${L[l][1]}</b> ${E(g.text)}</div>`).join('')).join('');
+}
+function refreshGaps(){
+  const ed=RPX.ed, el=document.getElementById('rpxGaps'); if(!ed||!ed.D||!el) return;
+  if(isFinal(ed.doc)){ el.innerHTML='<div class="rpx-gap ok">Rapor sudah diterbitkan; isi dokumen dibekukan (snapshot).</div>'; return; }
+  collectEv(); el.innerHTML=gapsHtml(buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}).gaps);
+}
+const NONLATIN=/[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u20AC\u2122\s]/;
+window.rpxDirty=function(el){
+  const ed=RPX.ed; if(!ed) return; ed.dirty=true;
+  const w=document.getElementById(el.id+'_w'); if(w) w.style.display=NONLATIN.test(el.value)?'':'none';
+  clearTimeout(RPX._gt); RPX._gt=setTimeout(refreshGaps,350);
+};
+function fieldsHtml(ed,lock){
+  const s=ed.s, groups={};
+  FIELDS.filter(f=>!f.only||f.only===ed.P.jenis).filter(f=>f.grp!=='bd'||s.boarding).forEach(f=>(groups[f.grp]=groups[f.grp]||[]).push(f));
+  return Object.keys(groups).map(g=>`<div class="rpx-fg"><div class="rpx-fgt">${GRP[g]}</div>${groups[g].map(f=>`
+    <div class="dw-field rpx-field"><label for="rpxf_${f.k}">${f.label}${f.req?' <span class="rpx-req">*</span>':''}</label>
+      <textarea id="rpxf_${f.k}" rows="${f.req?4:3}" maxlength="1500" oninput="rpxDirty(this)" ${lock?'disabled':''}>${E(ed.ev[f.k]||'')}</textarea>
+      <div class="rpx-warnt" id="rpxf_${f.k}_w" style="display:${NONLATIN.test(ed.ev[f.k]||'')?'':'none'}">Huruf non-Latin (mis. Arab) belum didukung font PDF dan akan tampil sebagai "?". Gunakan transliterasi Latin.</div></div>`).join('')}</div>`).join('');
+}
+function notesRefHtml(ed,lock){
+  if(!ed.s.boarding) return '';
+  const ns=(ed.D.bc||[]).filter(n=>String(n.studentId)===String(ed.s.id)).sort((a,b)=>String(b.tanggal).localeCompare(String(a.tanggal)));
+  const body=ed.D.err.bc?`<p class="rpx-muted">Catatan musyrif gagal dimuat: ${E(ed.D.err.bc)}</p>`:!ns.length?'<p class="rpx-muted">Tidak ada catatan musyrif pada periode ini.</p>':
+    ns.map(n=>`<div class="rpx-ref"><div class="rpx-ref-h">${tglS(n.tanggal)} · ${n.kategori} · ${n.musyrif}</div><div class="rpx-ref-b">${n.catatan}</div>${n.followUp&&n.followUp!=='-'?`<div class="rpx-ref-b"><i>Tindak lanjut:</i> ${n.followUp}</div>`:''}
+      ${lock?'':`<button class="btn-outline-sm" onclick="rpxCopyNote('${E(n.id)}')">Salin ke Evaluasi Musyrif</button>`}</div>`).join('');
+  return `<details class="rpx-det"><summary>Referensi: Catatan Musyrif periode ini (${ns.length}) — tidak dicetak</summary>${body}</details>`;
+}
+window.rpxCopyNote=function(id){
+  const ed=RPX.ed; if(!ed) return; const n=(ed.D.bc||[]).find(x=>String(x.id)===String(id)); const el=document.getElementById('rpxf_evalMusyrif'); if(!n||!el) return;
+  el.value=(el.value?el.value.trim()+'\n':'')+U(n.catatan); rpxDirty(el); el.focus(); toast('Catatan disalin. Sunting seperlunya sebelum disimpan.');
+};
+function histHtml(d){
+  const h=(d&&Array.isArray(d.riwayat))?d.riwayat.slice().reverse():[];
+  if(!h.length) return '';
+  return `<details class="rpx-det"><summary>Riwayat dokumen (${h.length})</summary>${h.map(x=>`<div class="rpx-hist"><b>${E(x.aksi)}</b> · ${E(x.oleh||'-')} (${E(x.role||'-')})<span>${tglJam(x.t)}</span>${x.ket?`<div>${E(x.ket)}</div>`:''}</div>`).join('')}</details>`;
+}
+function actionsHtml(ed){
+  const d=ed.doc, st=d?d.status:'Belum Dibuat', ok=RPX.tableOk, dis=ok?'':' disabled title="Tabel rapor belum tersedia"';
+  const b=[];
+  if(!d||st==='Draft'||st==='Data Belum Lengkap'){
+    if(canEdit()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Draf</button>`,`<button class="btn-primary-sm" onclick="rpxSubmit()"${dis}>Ajukan Review</button>`);
+    if(canPub()) b.push(`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
+    b.push(`<button class="btn-outline-sm" onclick="rpxDownload()">Unduh PDF Draf</button>`);
+  } else if(st==='Menunggu Review'){
+    if(canPub()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Perubahan</button>`,`<button class="btn-outline-sm" onclick="rpxReturn()"${dis}>Kembalikan ke Draf</button>`,`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
+    else b.push('<p class="rpx-muted">Menunggu review Kepala Sekolah / Super Admin. Catatan dikunci selama review.</p>');
+    b.push(`<button class="btn-outline-sm" onclick="rpxDownload()">Unduh PDF Draf</button>`);
+  } else {
+    b.push(`<button class="btn-primary-sm" onclick="rpxDownload()">Unduh PDF</button>`);
+    if(navigator.canShare&&typeof File==='function') b.push(`<button class="btn-outline-sm" onclick="rpxShare()">Bagikan (WhatsApp, dll.)</button>`);
+    if(canEdit()&&ed.doc.id===(docOf(ed.s.id)||{}).id) b.push(`<button class="btn-outline-sm" onclick="rpxRevise()"${dis}>Buat Revisi</button>`);
+    if(canPub()&&st==='Diterbitkan') b.push(`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive()"${dis}>Arsipkan</button>`);
+  }
+  if(ed.pub&&d&&ed.pub.id!==d.id) b.push(`<button class="btn-outline-sm" onclick="rpxDlDoc('${E(ed.pub.id)}')">Unduh versi ${ed.pub.versi} (terbit)</button>`);
+  return b.join('');
+}
+function editorHtml(){
+  const ed=RPX.ed, s=ed.s, P=ed.P;
+  if(ed.loading) return bannerHtml()+`<div class="panel"><button class="rp-back" onclick="rpxBack()">&larr; Kembali ke Daftar</button><div class="rpx-loading">Mengambil data ${s.nama} untuk ${E(P.label)} dari semua modul...</div></div>`;
+  if(ed.err) return bannerHtml()+`<div class="panel"><button class="rp-back" onclick="rpxBack()">&larr; Kembali ke Daftar</button><div class="rpx-banner err">Gagal memuat data: ${E(ed.err)}</div></div>`;
+  const d=ed.doc, lock=locked(ed), st=d?d.status:'Belum Dibuat';
+  return bannerHtml()+`<div class="rpx-ed">
+    <aside class="panel rpx-side">
+      <button class="rp-back" onclick="rpxBack()">&larr; Kembali ke Daftar</button>
+      <div class="rpx-who"><b>${s.nama}</b><span>NIS ${s.nis||'-'} · Kelas ${s.kelas}${s.boarding?' · Boarding':''}</span><span>${E(P.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester')} · ${E(P.label)}</span></div>
+      <div class="rpx-stline">${badge(st)}${d?` <span class="rpx-sub">Versi ${d.versi}${isFinal(d)?' · No. '+E(docNoOf(d,P)):''}</span>`:''}</div>
+      ${d&&d.diterbitkan_at?`<div class="rpx-sub">Diterbitkan ${tglJam(d.diterbitkan_at)} oleh ${E(d.diterbitkan_oleh||'-')}</div>`:''}
+      ${d&&d.status==='Menunggu Review'&&d.diajukan_at?`<div class="rpx-sub">Diajukan ${tglJam(d.diajukan_at)} oleh ${E(d.diajukan_oleh||'-')}</div>`:''}
+      <div class="rpx-acts">${actionsHtml(ed)}</div>
+      <div class="rpx-sect">Kelengkapan Data</div><div id="rpxGaps"></div>
+      <div class="rpx-sect">Evaluasi &amp; Catatan ${lock?'<span class="rpx-sub">(terkunci)</span>':''}</div>
+      ${ed.prefill?`<div class="rpx-gap in">${E(ed.prefill)}</div>`:''}
+      ${fieldsHtml(ed,lock)}
+      ${notesRefHtml(ed,lock)}
+      ${histHtml(d)}
+    </aside>
+    <section class="panel rpx-prevwrap">
+      <div class="rpx-prevbar"><b>Pratinjau A4</b><span class="rpx-sub">${isFinal(d)?'Dokumen terbit (snapshot)':'Draf: diperbarui dari data terbaru + catatan di formulir'}</span><span class="ti-spacer"></span>
+        ${isFinal(d)?'':'<button class="btn-outline-sm" onclick="rpxPreview()">Perbarui Pratinjau</button>'}</div>
+      <div id="rpxPrev" class="rpx-prev"><div class="rpx-loading">Menyiapkan pratinjau...</div></div>
+    </section></div>`;
+}
+function setPreview(blob,name){
+  const el=document.getElementById('rpxPrev'); if(!el) return;
+  if(RPX._url) try{ URL.revokeObjectURL(RPX._url); }catch(e){}
+  const u=URL.createObjectURL(blob); RPX._url=u;
+  const mobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||navigator.pdfViewerEnabled===false;
+  el.innerHTML=mobile
+    ?`<div class="rpx-mobprev"><p>Pratinjau PDF tidak dapat ditampilkan langsung di perangkat ini.</p><a class="btn-primary-sm" href="${u}" target="_blank" rel="noopener">Buka Pratinjau PDF</a><p class="rpx-sub">${E(name)}</p></div>`
+    :`<iframe title="Pratinjau rapor" src="${u}#toolbar=1&navpanes=0&view=FitH"></iframe>`;
+}
+window.rpxPreview=async function preview(){
+  const ed=RPX.ed; if(!ed||!ed.D) return;
+  const el=document.getElementById('rpxPrev'); if(el) el.innerHTML='<div class="rpx-loading">Menyusun PDF...</div>';
+  refreshGaps();
+  try{
+    let doc, name;
+    if(isFinal(ed.doc)){ const r=await pdfFromDoc(ed.doc); doc=r.doc; name=r.name; }
+    else {
+      collectEv();
+      if(ed.photo===undefined) ed.photo=await photoOf(ed.s.id);
+      doc=await pdfFromModel(buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}),ed.photo); name=fileNameOf(ed.P,ed.s.nama,{draft:true});
+    }
+    if(RPX.ed!==ed) return;
+    setPreview(doc.output('blob'),name);
+  }catch(e){ console.error('[rapor-pdf] pratinjau',e); const x=document.getElementById('rpxPrev'); if(x) x.innerHTML=`<div class="rpx-banner err">Pratinjau gagal: ${E(errMsg(e))}</div>`; }
+};
+const preview=window.rpxPreview;
+window.rpxDownload=async function(){
+  const ed=RPX.ed; if(!ed) return;
+  try{
+    toast('Menyiapkan PDF...');
+    if(isFinal(ed.doc)){ const r=await pdfFromDoc(ed.doc); r.doc.save(r.name); return; }
+    collectEv(); if(ed.photo===undefined) ed.photo=await photoOf(ed.s.id);
+    const doc=await pdfFromModel(buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}),ed.photo);
+    doc.save(fileNameOf(ed.P,ed.s.nama,{draft:true}));
+    toast('PDF DRAF diunduh. Draf bertanda "DRAF" dan tidak untuk dikirim ke orang tua.');
+  }catch(e){ console.error('[rapor-pdf] unduh',e); toast('PDF gagal dibuat: '+errMsg(e)); }
+};
+window.rpxShare=async function(){
+  const ed=RPX.ed; if(!ed||!isFinal(ed.doc)) return;
+  try{
+    const r=await pdfFromDoc(ed.doc), file=new File([r.doc.output('blob')],r.name,{type:'application/pdf'});
+    if(!navigator.canShare({files:[file]})){ toast('Perangkat ini tidak mendukung berbagi berkas. Gunakan Unduh PDF.'); return; }
+    await navigator.share({files:[file],title:r.name.replace(/\.pdf$/i,'').replace(/_/g,' ')});
+  }catch(e){ if(e&&e.name==='AbortError') return; console.error('[rapor-pdf] share',e); toast('Berbagi gagal: '+errMsg(e)); }
+};
+
+/* ---------- Aksi status ---------- */
+async function persist(status,extra,aksi,ket){
+  const ed=RPX.ed; collectEv();
+  if(ed.doc){
+    const patch=Object.assign({catatan:ed.ev,status},extra||{});
+    if(aksi) patch.riwayat=hist(ed.doc,aksi,ket);
+    ed.doc=await docUpdate(ed.doc,patch);
+  } else {
+    ed.doc=await docInsert(Object.assign({student_id:ed.s.id,class_id:ed.s.classId,jenis:ed.P.jenis,tahun_ajaran:ed.P.ta,semester:ed.P.sem,bulan:ed.P.bulan||'',
+      periode_mulai:ed.P.range[0],periode_selesai:ed.P.range[1],status,versi:1,catatan:ed.ev,dibuat_oleh:me(),riwayat:aksi?hist({riwayat:hist(null,'Dibuat')},aksi,ket):hist(null,'Dibuat')},extra||{}));
+  }
+  putDoc(ed.doc); ed.dirty=false;
+}
+function draftStatus(ed){ return buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}).gaps.some(g=>g.lvl==='kritis')?'Data Belum Lengkap':'Draft'; }
+async function run(label,fn){
+  if(RPX.busy) return; RPX.busy=label;
+  document.querySelectorAll('.rpx-acts button').forEach(b=>b.disabled=true);
+  try{ await fn(); }
+  catch(e){ console.error('[rapor-pdf] '+label,e); toast(label+' gagal: '+errMsg(e)); }
+  finally{ RPX.busy=''; if(RPX.ed&&root()){ const sc=document.querySelector('.rpx-side'); const top=sc?sc.scrollTop:0; render(); const sc2=document.querySelector('.rpx-side'); if(sc2) sc2.scrollTop=top; } }
+}
+window.rpxSave=function(){
+  if(!tableReady()) return;
+  run('Simpan',async()=>{ const ed=RPX.ed; collectEv();
+    const st=(ed.doc&&ed.doc.status==='Menunggu Review')?'Menunggu Review':draftStatus(ed);
+    const fresh=!ed.doc; await persist(st,null,fresh?null:(ed.doc.status!==st?'Status: '+st:null));
+    toast(st==='Data Belum Lengkap'?'Draf tersimpan dengan status "Data Belum Lengkap" (ada data kritis yang kurang).':'Draf rapor tersimpan.'); });
+};
+window.rpxSubmit=function(){
+  if(!tableReady()) return; const ed=RPX.ed; collectEv();
+  const g=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}).gaps, block=g.filter(x=>x.lvl==='kritis'||x.lvl==='wajib'), warn=g.filter(x=>x.lvl==='peringatan');
+  if(block.length){ refreshGaps(); toast('Belum bisa diajukan: '+block[0].text+(block.length>1?' (+'+(block.length-1)+' lainnya, lihat Kelengkapan Data)':'')); return; }
+  const go=()=>run('Ajukan review',async()=>{ await persist('Menunggu Review',{diajukan_oleh:me(),diajukan_at:new Date().toISOString()},'Diajukan untuk review'); toast('Rapor diajukan untuk review Kepala Sekolah.'); });
+  if(warn.length) openAcadConfirm('Ajukan dengan catatan?','Masih ada '+warn.length+' peringatan data:\n- '+warn.map(x=>x.text).join('\n- ')+'\n\nTetap ajukan untuk review?',go,'Tetap Ajukan');
+  else go();
+};
+window.rpxReturn=function(){
+  if(!tableReady()||!canPub()) return;
+  openAcadDrawer('Kembalikan ke Draf',AK_ERRBOX+`<p class="desc">Rapor akan dikembalikan ke penyusun untuk diperbaiki.</p>
+    <div class="dw-field"><label>Alasan / catatan perbaikan *</label><textarea id="rpxRetNote" rows="4" maxlength="500"></textarea></div>
+    <div class="dw-formfoot"><button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" onclick="rpxReturnGo()">Kembalikan</button></div>`);
+};
+window.rpxReturnGo=function(){
+  const t=(document.getElementById('rpxRetNote')||{}).value||''; if(!t.trim()){ akFormErr('akfError','Alasan wajib diisi.'); return; }
+  closeAcadDrawer();
+  run('Kembalikan',async()=>{ await persist('Draft',null,'Dikembalikan ke draf',t.trim()); toast('Rapor dikembalikan ke draf.'); });
+};
+window.rpxPublish=function(){
+  if(!tableReady()||!canPub()) return;
+  const ed=RPX.ed; collectEv();
+  run('Terbitkan',async()=>{
+    const fresh=await fetchDataset([ed.s],ed.P,{notes:true}); ed.D=fresh;
+    const g=buildModel(ed.s,ed.P,fresh,ed.ev,{draft:true}).gaps, block=g.filter(x=>x.lvl==='kritis'||x.lvl==='wajib'), warn=g.filter(x=>x.lvl==='peringatan');
+    if(block.length){ toast('Belum bisa diterbitkan: '+block[0].text+(block.length>1?' (+'+(block.length-1)+' lainnya)':'')); return; }
+    const doIt=()=>run('Terbitkan',async()=>{
+      if(!ed.doc) await persist(draftStatus(ed),null,null);
+      const d=ed.doc, today=ksToday(), docNo=docNoOf(d,ed.P);
+      const m=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:false,versi:d.versi,docNo,tglTerbit:today});
+      const photo=await photoOf(ed.s.id); ed.photo=photo;
+      await ensureLib();
+      const fn=fileNameOf(ed.P,ed.s.nama,{versi:d.versi});
+      await persist('Diterbitkan',{snapshot:{v:1,model:m,photo,frozenAt:new Date().toISOString()},file_name:fn,diterbitkan_oleh:me(),diterbitkan_at:new Date().toISOString()},'Diterbitkan',warn.length?warn.length+' peringatan data disetujui saat terbit':'');
+      const older=RPX.docs.filter(x=>String(x.student_id)===String(ed.s.id)&&x.id!==ed.doc.id&&x.status==='Diterbitkan');
+      for(const o of older){ try{ putDoc(await docUpdate(o,{status:'Diarsipkan',riwayat:hist(o,'Diarsipkan otomatis','Digantikan versi '+ed.doc.versi)})); }catch(e){ console.warn('[rapor-pdf] arsip versi lama',e); } }
+      ed.pub=ed.doc; toast('Rapor diterbitkan. Klik "Unduh PDF" atau "Bagikan" untuk mengirim ke orang tua.');
+    });
+    if(warn.length){ RPX.busy=''; openAcadConfirm('Terbitkan dengan peringatan?','Data berikut belum lengkap:\n- '+warn.map(x=>x.text).join('\n- ')+'\n\nSetelah terbit, isi rapor dibekukan. Tetap terbitkan?',doIt,'Terbitkan'); return; }
+    RPX.busy=''; await doIt();
+  });
+};
+window.rpxRevise=function(){
+  if(!tableReady()) return; const ed=RPX.ed; if(!ed||!isFinal(ed.doc)) return;
+  openAcadConfirm('Buat Revisi','Versi baru (v'+(ed.doc.versi+1)+') akan dibuat sebagai draf dengan catatan dari versi '+ed.doc.versi+'. Versi '+ed.doc.versi+' tetap tersimpan dan tetap berlaku sampai versi baru diterbitkan.',()=>run('Buat revisi',async()=>{
+    const base=ed.doc;
+    const nd=await docInsert({student_id:ed.s.id,class_id:ed.s.classId,jenis:ed.P.jenis,tahun_ajaran:ed.P.ta,semester:ed.P.sem,bulan:ed.P.bulan||'',periode_mulai:ed.P.range[0],periode_selesai:ed.P.range[1],
+      status:'Draft',versi:base.versi+1,catatan:Object.assign(emptyEv(),base.catatan||{}),dibuat_oleh:me(),riwayat:hist(null,'Revisi dibuat','Dari versi '+base.versi)});
+    putDoc(nd); ed.doc=nd; ed.ev=Object.assign(emptyEv(),nd.catatan||{}); ed.D=await fetchDataset([ed.s],ed.P,{notes:true});
+    toast('Draf revisi v'+nd.versi+' dibuat.');
+  }),'Buat Revisi');
+};
+window.rpxArchive=function(id){
+  if(!tableReady()||!canPub()) return;
+  const d=id?(RPX.arsip||RPX.docs).find(x=>String(x.id)===String(id)):(RPX.ed&&RPX.ed.doc); if(!d||d.status!=='Diterbitkan') return;
+  openAcadConfirm('Arsipkan Rapor','Rapor ini akan berstatus Diarsipkan (tidak lagi dianggap rapor aktif). Berkas tetap dapat diunduh dari menu Arsip.',async()=>{
+    try{ const nd=await docUpdate(d,{status:'Diarsipkan',riwayat:hist(d,'Diarsipkan')}); putDoc(nd); if(RPX.ed&&RPX.ed.doc&&RPX.ed.doc.id===nd.id){ RPX.ed.doc=nd; RPX.ed.pub=pubOf(RPX.ed.s.id); } toast('Rapor diarsipkan.'); render(); }
+    catch(e){ toast('Gagal mengarsipkan: '+errMsg(e)); }
+  },'Arsipkan');
+};
+
+/* ---------- Arsip ---------- */
+async function renderArsip(){
+  const r=root(); if(!r) return; const f=RPX.arsipF;
+  const head=`<div class="acad-toolrow rpx-tools">
+    <select id="rpxAJenis" onchange="rpxArsipFilter()"><option value="">Semua Jenis</option>${opt('Bulanan','Rapor Bulanan',f.jenis)}${opt('Semester','Rapor Semester',f.jenis)}</select>
+    <select id="rpxATA" onchange="rpxArsipFilter(true)">${taList().map(t=>opt(t,'TA '+E(t),RPX.ta)).join('')}</select>
+    <select id="rpxAStatus" onchange="rpxArsipFilter()"><option value="">Semua Status</option>${STATUSES.slice(1).map(s=>opt(s,s,f.status)).join('')}</select>
+    <input type="search" id="rpxAQ" placeholder="Cari nama, NIS, atau no. dokumen..." value="${E(f.q)}" oninput="rpxArsipFilter()" autocomplete="off">
+    <span class="ti-spacer"></span><button class="btn-outline-sm" onclick="rpxArsipLoad()">Muat Ulang</button></div>`;
+  r.innerHTML=bannerHtml()+`<div class="panel rpx-panel"><div class="rpx-head"><h3>Arsip Rapor</h3></div>${head}<p class="desc">Seluruh dokumen rapor (semua versi) pada tahun ajaran terpilih. PDF terbit dibuat ulang dari snapshot sehingga isinya sama persis dengan saat diterbitkan.</p><div id="rpxArsipBody"><div class="rpx-loading">Memuat arsip...</div></div></div>`;
+  if(RPX.arsip===null) await rpxArsipLoad(true); else arsipBody();
+}
+window.rpxArsipLoad=async function(quiet){
+  RPX.arsip=[];
+  if(!live()){ RPX.tableOk=false; RPX.tableMsg='demo'; }
+  else try{ RPX.arsip=await dbFetchAll(TBL,DOC_COLS,'created_at',q=>q.eq('tahun_ajaran',RPX.ta)); RPX.tableOk=true; RPX.tableMsg=''; }
+  catch(e){ RPX.tableOk=false; RPX.tableMsg=tblMissing(e)?'missing':errMsg(e); }
+  if(!quiet){ render(); return; }
+  arsipBody();
+};
+window.rpxArsipFilter=function(taChanged){
+  const v=id=>{ const e=document.getElementById(id); return e?e.value:''; };
+  RPX.arsipF={jenis:v('rpxAJenis'),status:v('rpxAStatus'),q:v('rpxAQ')};
+  if(taChanged){ RPX.ta=v('rpxATA')||RPX.ta; RPX.arsip=null; render(); return; }
+  arsipBody();
+};
+function arsipBody(){
+  const el=document.getElementById('rpxArsipBody'); if(!el) return;
+  if(!RPX.tableOk){ el.innerHTML='<p class="rpx-muted">Arsip belum tersedia.</p>'; const r=root(); if(r&&!r.querySelector('.rpx-banner')) r.insertAdjacentHTML('afterbegin',bannerHtml()); return; }
+  const f=RPX.arsipF, q=(f.q||'').trim().toLowerCase();
+  const allowed=new Set(scopeStudents().map(s=>String(s.id)));
+  const rows=(RPX.arsip||[]).map(d=>{ const s=studentsData.find(x=>String(x.id)===String(d.student_id)); const P=docPeriod(d); return {d,s,P,no:P?docNoOf(d,P):'-'}; })
+    .filter(x=>!x.s||allowed.has(String(x.s.id)))
+    .filter(x=>(!f.jenis||x.d.jenis===f.jenis)&&(!f.status||x.d.status===f.status)&&(!q||(x.s&&(U(x.s.nama).toLowerCase().includes(q)||String(x.s.nis).toLowerCase().includes(q)))||x.no.toLowerCase().includes(q)))
+    .sort((a,b)=>String(b.d.updated_at).localeCompare(String(a.d.updated_at)));
+  if(!rows.length){ el.innerHTML=acadEmptyStateHtml('Belum ada dokumen rapor','Belum ada rapor yang dibuat pada tahun ajaran ini, atau ubah filter.'); return; }
+  el.innerHTML=`<div class="rpx-tblwrap"><table class="rpx-tbl"><thead><tr><th>No. Dokumen</th><th>Santri</th><th>Kelas</th><th>Jenis</th><th>Periode</th><th>Versi</th><th>Status</th><th>Diterbitkan</th><th>Aksi</th></tr></thead><tbody>
+    ${rows.map(x=>{ const d=x.d, id=E(d.id), fin=isFinal(d);
+      return `<tr><td class="rpx-mono">${fin?E(x.no):'-'}</td><td><b>${x.s?x.s.nama:'(santri tidak ditemukan)'}</b>${x.s?`<div class="rpx-sub">NIS ${x.s.nis||'-'}</div>`:''}</td><td>${x.s?x.s.kelas:'-'}</td>
+        <td>${E(d.jenis)}</td><td>${x.P?E(x.P.label):'-'}</td><td>v${d.versi}</td><td>${badge(d.status)}</td><td>${d.diterbitkan_at?tglJam(d.diterbitkan_at)+'<div class="rpx-sub">'+E(d.diterbitkan_oleh||'')+'</div>':'-'}</td>
+        <td><div class="rpx-acts-row">${fin?`<button class="btn-primary-sm" onclick="rpxDlDoc('${id}')">PDF</button>`:''}<button class="btn-outline-sm" onclick="rpxHist('${id}')">Riwayat</button>${canPub()&&d.status==='Diterbitkan'?`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive('${id}')">Arsipkan</button>`:''}</div></td></tr>`; }).join('')}
+  </tbody></table></div>`;
+}
+window.rpxHist=function(id){
+  const d=(RPX.arsip||[]).concat(RPX.docs).find(x=>String(x.id)===String(id)); if(!d) return;
+  const h=(Array.isArray(d.riwayat)?d.riwayat:[]).slice().reverse();
+  openAcadDrawer('Riwayat Dokumen Rapor',`${dwRow('Jenis',E(d.jenis))}${dwRow('Versi','v'+d.versi)}${dwRow('Status',badge(d.status))}${dwRow('Dibuat oleh',E(d.dibuat_oleh||'-'))}
+    <div class="rpx-sect">Riwayat</div>${h.length?h.map(x=>`<div class="rpx-hist"><b>${E(x.aksi)}</b> · ${E(x.oleh||'-')} (${E(x.role||'-')})<span>${tglJam(x.t)}</span>${x.ket?`<div>${E(x.ket)}</div>`:''}</div>`).join(''):'<p class="rpx-muted">Belum ada riwayat.</p>'}`);
+};
+
+/* ---------- Render utama ---------- */
+function render(){
+  const r=root(); if(!r) return;
+  showRoots();
+  if(RPX.tab==='kartu') return;
+  if(RPX.tab==='arsip'){ renderArsip(); return; }
+  if(RPX.ed){ r.innerHTML=editorHtml(); if(RPX.ed.D&&!RPX.ed.loading){ refreshGaps(); preview(); } return; }
+  renderList(RPX.tab==='dash'?'dash':'work');
+}
+
+/* ---------- Pasang ke halaman Raport (ak-rapor) ---------- */
+const PG=AKADEMIK_PAGES['ak-rapor'], _html=PG.html, _init=PG.init;
+PG.html=function(){
+  const h=_html.apply(this,arguments);
+  RPX.tab=canEdit()?'dash':'kartu'; RPX.ed=null; RPX.arsip=null;
+  if(!RPX.bulan) RPX.bulan=defMonth(RPX.ta,RPX.sem);
+  let out=h.replace('<div id="rpRoot">',navHtml()+'<div id="rpxRoot"'+(RPX.tab==='kartu'?' style="display:none"':'')+'></div><div id="rpRoot"'+(RPX.tab==='kartu'?'':' style="display:none"')+'>');
+  if(canEdit()) out=out.replace('<h1>Rapor Akademik</h1>','<h1>Raport</h1>').replace('Lihat dan kelola rapor akademik siswa.','Rapor Bulanan &amp; Semester (Akademik + Boarding) per santri dalam satu PDF, beserta Kartu Rapor Akademik.');
+  return out;
+};
+PG.init=function(){
+  const p=_init.apply(this,arguments);
+  try{ render(); }catch(e){ console.error('[rapor-pdf] init',e); }
+  return p;
+};
+/* Data siswa/kelas dimuat ulang (mis. setelah login) -> segarkan daftar bila sedang tampil */
+if(typeof stAfterDataChange==='function'){ const _a=stAfterDataChange; stAfterDataChange=function(){ const r=_a.apply(this,arguments); try{ if(root()&&!RPX.ed&&(RPX.tab==='dash'||RPX.tab==='bulanan'||RPX.tab==='semester')){ const b=document.getElementById('rpxListBody'); if(b) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); } }catch(e){} return r; }; }
+window.RPX_DEBUG={state:RPX,buildModel,fetchDataset,periodOf};
+})();
+
 </script>
 
 </body>
