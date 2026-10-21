@@ -9958,6 +9958,110 @@ window.rbComputeShared=rbCompute; window.rbPredShared=rbPred;
 .rpx-prev>.rpx-loading,.rpx-prev>.rpx-banner{align-self:center;margin:20px}
 .rpx-mobprev{align-self:center;text-align:center;padding:30px 16px;font-size:12.5px;color:var(--ink)}
 .rpx-mobprev a{display:inline-flex;margin:10px 0;text-decoration:none}
+/* ===== MONTHLY REPORT — desain referensi (navy, putih, teal, emas) ===== */
+.mrd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;margin-top:6px}
+.mrd-card{border:1px solid var(--line);border-top:3px solid var(--teal);border-radius:12px;background:var(--card);padding:14px;display:flex;flex-direction:column;gap:10px}
+.mrd-card-top{display:flex;gap:10px;align-items:center}
+.mrd-card-top>div:nth-child(2){flex:1;min-width:0}
+.mrd-card-top b{display:block;font-size:13.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrd-card-top span{display:block;font-size:11px;color:var(--sub)}
+.mrd-av{width:46px;height:46px;border-radius:50%;background:linear-gradient(135deg,#C9D9E6,#8FB0C8);color:#0B2540;display:flex;align-items:center;justify-content:center;font-weight:800;overflow:hidden;flex-shrink:0;outline:2px solid #C9A227;outline-offset:1px}
+.mrd-av img{width:100%;height:100%;object-fit:cover}
+.mrd-card-m{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mrd-card-m div{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px}
+.mrd-card-m small{display:block;font-size:10.5px;color:var(--sub)}
+.mrd-card-m b{font-size:15px;color:var(--ink)}
+.mrd-card-f{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.mrd-muted{font-size:11px;color:var(--sub)}
+#rpxPrev.rpx-prev{display:block;overflow:auto;padding:12px;min-height:420px;background:#DCE5EC;border-radius:10px}
+.mrd-doc{display:flex;flex-direction:column;align-items:center;gap:22px;padding:6px 0}
+.mrd-sheet{width:210mm;height:297mm;flex-shrink:0;background:#fff;color:#122A3B;position:relative;overflow:hidden;box-shadow:0 6px 22px rgba(11,37,64,.18);display:flex;flex-direction:column;zoom:.72;font-family:"Segoe UI",Roboto,Inter,Arial,sans-serif;text-align:left}
+.mrd-sheet .mrd-muted{color:#5B7285}
+.mrd-hdr{display:flex;justify-content:space-between;align-items:flex-start;padding:10mm 14mm 4mm;border-bottom:3px solid #2A9D8F;position:relative}
+.mrd-hdr:after{content:"";position:absolute;left:0;right:0;bottom:-3px;height:3px;background:linear-gradient(90deg,#2A9D8F,#C9A227)}
+.mrd-brand{display:flex;gap:9px;align-items:center}
+.mrd-logo{width:34px;height:34px;border-radius:9px;background:#0B2540;color:#C9A227;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0}
+.mrd-brand b{display:block;font-size:11px;color:#0B2540}
+.mrd-brand span{font-size:8.5px;color:#5B7285}
+.mrd-rt{text-align:right;font-size:9px;color:#0B2540;font-weight:700}
+.mrd-rt small{display:block;font-size:7.5px;color:#5B7285;font-weight:400}
+.mrd-body{flex:1;padding:6mm 14mm 0;display:flex;flex-direction:column;gap:4mm;position:relative;z-index:1;overflow:hidden}
+.mrd-sec{display:flex;align-items:center;gap:10px}
+.mrd-num{width:38px;height:38px;border-radius:50%;background:#0B2540;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0}
+.mrd-sheet h2{font-size:18px;color:#0B2540;font-weight:700}
+.mrd-sub{font-size:9px;color:#5B7285}
+.mrd-sheet h3{font-size:11px;color:#0B2540;margin-top:1mm}
+.mrd-sheet h4{font-size:11px;color:#0B2540}
+.mrd-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.mrd-cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mrd-card2{border:1px solid #D5E1EA;border-radius:10px;padding:8px;text-align:center;background:#fff}
+.mrd-ic{width:26px;height:26px;border-radius:50%;background:#2A9D8F;color:#fff;margin:0 auto 4px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
+.mrd-card2 small{display:block;font-size:8.5px;color:#0B2540;font-weight:700}
+.mrd-card2 b{display:block;font-size:17px;color:#0B2540;margin:2px 0}
+.mrd-card2 em{display:block;font-size:7.5px;color:#5B7285;font-style:normal}
+.mrd-tbl{width:100%;border-collapse:collapse;font-size:9px}
+.mrd-tbl th{background:#0B2540;color:#fff;text-align:left;padding:5px 7px;font-weight:700}
+.mrd-tbl td{padding:5px 7px;border-bottom:1px solid #D5E1EA}
+.mrd-tbl tr:nth-child(even) td{background:#F6FAFC}
+.mrd-two{display:grid;grid-template-columns:1fr 1fr;gap:6mm}
+.mrd-al{align-items:center}
+.mrd-box{border:1px solid #D5E1EA;border-radius:10px;padding:8px 10px;background:#EAF3F8}
+.mrd-box small,.mrd-center small{display:block;font-size:8.5px;color:#5B7285}
+.mrd-box b.big,.mrd-center b.big{display:block;font-size:20px;color:#0B2540}
+.mrd-center{text-align:center}
+.mrd-row{display:flex;gap:10px;align-items:center}
+.mrd-ico{width:40px;height:40px;border-radius:50%;background:#0B2540;color:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mrd-note{border:1px solid #D5E1EA;border-left:4px solid #C9A227;border-radius:8px;padding:8px 10px;font-size:8.5px;line-height:1.5;background:#fff}
+.mrd-note b{display:block;color:#0B2540;font-size:9.5px;margin-bottom:3px}
+.mrd-note i{display:block;text-align:right;margin-top:4px;color:#0B2540;font-style:normal;font-weight:700}
+.mrd-bars{display:flex;align-items:flex-end;gap:12px;height:120px;padding:6px 10px;border:1px solid #D5E1EA;border-radius:10px}
+.mrd-bars>div{flex:1;text-align:center;font-size:8px;color:#0B2540}
+.mrd-bars i{display:block;border-radius:4px 4px 0 0;background:#1D6FA3;margin:0 auto 3px;width:42px}
+.mrd-proj{border:1px solid #D5E1EA;border-radius:10px;padding:8px 10px;display:grid;grid-template-columns:110px 1fr 56px;gap:8px;align-items:center;background:#fff}
+.mrd-thumb{height:76px;border-radius:8px;background:#EAF3F8;border:1px dashed #8FB0C8;color:#5B7285;font-size:8px;display:flex;align-items:center;justify-content:center;text-align:center;padding:4px}
+.mrd-pb h4{font-size:10px;color:#0B2540}
+.mrd-pb p{font-size:8px;line-height:1.45;margin-top:2px}
+.mrd-pb p span{color:#0B2540;font-weight:700}
+.mrd-score{width:56px;height:56px;border-radius:50%;background:#2A9D8F;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+.mrd-score small{font-size:6.5px;font-weight:600}
+.mrd-li{display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid #D5E1EA;font-size:9px}
+.mrd-wave{position:absolute;left:0;right:0;bottom:0;height:24mm;z-index:0}
+.mrd-wave svg{position:absolute;bottom:0;width:100%;height:100%}
+.mrd-pg{position:absolute;right:14mm;bottom:6mm;font-size:8px;color:#5B7285;z-index:2}
+.mrd-cover{padding:14mm 16mm;background:linear-gradient(170deg,#0B2540,#0E3358 60%,#155A82);color:#fff}
+.mrd-cover .mrd-brand b{color:#fff;font-size:14px}
+.mrd-cover .mrd-brand span{color:#D7E6F0}
+.mrd-cover h1{font-family:Georgia,serif;font-size:50px;line-height:1;font-weight:400;margin-top:10mm}
+.mrd-lap{color:#C9A227;font-weight:700;font-size:13px;letter-spacing:.08em;margin-top:4mm}
+.mrd-pill{display:inline-block;background:#C9A227;color:#3A2E05;font-weight:700;font-size:11px;padding:5px 16px;border-radius:20px;margin-top:6mm;align-self:flex-start}
+.mrd-ta{font-size:10px;margin-top:4mm;color:#D7E6F0}
+.mrd-id{display:flex;gap:14px;align-items:center;background:#fff;color:#122A3B;border-radius:14px;padding:12px 16px;margin-top:12mm}
+.mrd-photo{width:74px;height:74px;border-radius:50%;background:linear-gradient(135deg,#C9D9E6,#8FB0C8);display:flex;align-items:center;justify-content:center;color:#0B2540;font-weight:800;font-size:22px;overflow:hidden;outline:2px solid #C9A227;flex-shrink:0}
+.mrd-photo img{width:100%;height:100%;object-fit:cover}
+.mrd-id h4{font-size:15px;color:#0B2540}
+.mrd-id td{font-size:10px;padding:1px 0}
+.mrd-q{font-family:Georgia,serif;font-style:italic;font-size:12px;line-height:1.6;color:#E6EEF5;margin-top:12mm;text-align:center}
+.mrd-quote{font-family:Georgia,serif;font-style:italic;font-size:12px;line-height:1.6;color:#0B2540;text-align:center;background:#EAF3F8;border-radius:10px;padding:14px}
+.mrd-closing{background:linear-gradient(180deg,#0B2540,#0E3358);color:#fff;align-items:center;justify-content:center;text-align:center}
+.mrd-cl{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:#D7E6F0;position:relative;z-index:1}
+.mrd-cl .mrd-logo{width:64px;height:64px;font-size:20px;background:#fff;color:#0B2540}
+.mrd-cl b{color:#fff;font-size:16px;margin-top:8px}
+.mrd-cl .mrd-q{font-size:17px;line-height:1.6;margin-top:10mm;color:#fff}
+.mrd-sign{display:grid;grid-template-columns:repeat(3,1fr);gap:6mm;margin-top:4mm;text-align:center;font-size:9px}
+.mrd-sign div{display:flex;flex-direction:column}
+.mrd-ln{height:22mm;border-bottom:1px solid #0B2540;margin-bottom:3px}
+.mrd-sign b{display:block;color:#0B2540}
+.mrd-sign span{color:#5B7285;font-size:8px}
+@media (max-width:820px){.mrd-sheet{zoom:.42}.mrd-cards{grid-template-columns:repeat(2,1fr)}.mrd-two{grid-template-columns:1fr}.mrd-grid{grid-template-columns:1fr}}
+@media print{
+  body.mrd-printing *{visibility:hidden!important}
+  body.mrd-printing #rpxPrev,body.mrd-printing #rpxPrev *{visibility:visible!important}
+  body.mrd-printing #rpxPrev{position:absolute;left:0;top:0;width:100%;height:auto;min-height:0;overflow:visible;padding:0;background:#fff;border-radius:0}
+  body.mrd-printing .mrd-sheet{zoom:1;box-shadow:none;page-break-after:always}
+  body.mrd-printing .mrd-doc{gap:0;padding:0}
+  @page{size:A4;margin:0}
+}
+
 </style>
 <script id="rapor-pdf">
 /* ========================================================================
@@ -10010,7 +10114,7 @@ const toast=t=>showAcadToast(t);
 
 const P0=akDefaultPeriod();
 const RPX={tab:'dash',jenis:'Bulanan',ta:P0.ta,sem:P0.sem,bulan:'',kelas:'',q:'',status:'',bidang:'Gabungan',
-  docs:[],docsKey:'',tableOk:null,tableMsg:'',checks:{},ed:null,arsip:null,arsipF:{jenis:'',status:'',q:''},busy:'',settingsLoaded:false};
+  docs:[],docsKey:'',tableOk:null,tableMsg:'',checks:{},sum:{},ed:null,arsip:null,arsipF:{jenis:'',status:'',q:''},busy:'',settingsLoaded:false};
 
 /* ---------- Periode ---------- */
 function ym(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
@@ -10135,6 +10239,15 @@ function predBoarding(v){ if(typeof window.rbPredShared==='function') return win
 function emptyEv(){ const o={}; FIELDS.forEach(f=>o[f.k]=''); return o; }
 function clean(v){ const t=U(v==null?'':v).trim(); return (t&&t!=='-')?t:''; }
 
+/* Proyek siswa untuk Monthly Report: periode & semester mengikuti periode laporan (satu sumber dengan modul Galeri Proyek). */
+function mrProyek(s,P){
+  const sid=String(s.id);
+  return (typeof projectsData!=='undefined'?projectsData:[])
+    .filter(p=>String(p.studentId)===sid&&akUnesc(p.tahunAjaran)===P.ta&&akUnesc(p.semester)===P.sem)
+    .sort((x,y)=>String(x.tanggalSelesai||'').localeCompare(String(y.tanggalSelesai||'')))
+    .map(p=>({judul:akUnesc(p.judul||'-'),bidang:akUnesc(p.bidang||''),deskripsi:akUnesc(p.deskripsi||''),nilai:(p.nilai==null||p.nilai==='')?null:Number(p.nilai),tanggal:p.tanggalSelesai||''}));
+}
+
 function buildModel(s,P,D,ev,meta){
   meta=meta||{}; ev=Object.assign(emptyEv(),ev||{});
   const sid=String(s.id), mine=arr=>(arr||[]).filter(x=>String(x.studentId)===sid);
@@ -10233,7 +10346,7 @@ function buildModel(s,P,D,ev,meta){
   return {v:1,title,coverTitle:'RAPOR '+P.jenis.toUpperCase(),fileTitle:title+' - '+U(s.nama)+' - '+P.label,draft:!!meta.draft,
     school,period:{jenis:P.jenis,ta:P.ta,sem:P.sem,bulan:P.bulan,label:P.label,coverLine1:P.coverLine1,coverLine2:P.coverLine2,rangeLabel:P.rangeLabel,endLabel:P.endLabel},
     s:{id:s.id,nama:U(s.nama),nis:clean(s.nis),nisn:clean(s.nisn),kelas:U(s.kelas),jurusan:clean(s.jurusan),jk:jkL,wali,musyrif:clean(s.musyrif),asrama:clean(s.asrama),kamar:clean(s.kamar),ortu,boarding:!!s.boarding},
-    ak,bd,ks:{prestasi},ev,
+    ak,bd,ks:{prestasi},proyek:mrProyek(s,P),ev,
     sign:{tanggal:fmtTglID(pubDate),tempat,cols,kepsek:{name:clean(sc.principal)}},
     footerLeft:meta.draft?('DRAF - dibuat '+fmtTglID(today)+' dari sistem AIS, belum diterbitkan'):('Diterbitkan '+fmtTglID(pubDate)+'  |  Versi '+(meta.versi||1)+'  |  No. '+(meta.docNo||'-')),
     gaps,dataAt:D.at};
@@ -10648,24 +10761,24 @@ async function pdfFromDoc(d){
 
 
 /* ---------- UI: navigasi ---------- */
-const TABS=[['dash','Dashboard Raport'],['bulanan','Rapor Bulanan'],['semester','Rapor Semester'],['arsip','Arsip'],['kartu','Kartu Rapor Akademik']];
+const TABS=[['bulanan','Monthly Report'],['semester','Rapor Semester'],['arsip','Arsip Laporan']];
 function navHtml(){
-  const tabs=canEdit()?TABS:TABS.filter(t=>t[0]==='kartu');
+  const tabs=canEdit()?TABS:TABS.filter(t=>t[0]==='arsip');
   return `<div class="rpx-nav" id="rpxNav">${tabs.map(t=>`<button class="rpx-navb${RPX.tab===t[0]?' active':''}" data-t="${t[0]}" onclick="rpxTab('${t[0]}')">${t[1]}</button>`).join('')}</div>`+
-    (canEdit()?'':'<p class="desc rpx-note">Pembuatan Rapor Bulanan &amp; Semester hanya untuk Wali Kelas, Musyrif, Kepala Sekolah, dan Super Admin. Anda tetap dapat melihat Kartu Rapor Akademik sesuai akses.</p>');
+    (canEdit()?'':'<p class="desc rpx-note">Pembuatan rapor hanya untuk Wali Kelas, Musyrif, Kepala Sekolah, dan Super Admin. Anda dapat melihat arsip rapor yang sudah diterbitkan.</p>');
 }
+
 function root(){ return document.getElementById('rpxRoot'); }
 function showRoots(){
-  const k=RPX.tab==='kartu', a=root(), b=document.getElementById('rpRoot');
-  if(a) a.style.display=k?'none':''; if(b) b.style.display=k?'':'none';
   document.querySelectorAll('#rpxNav .rpx-navb').forEach(x=>x.classList.toggle('active',x.dataset.t===RPX.tab));
 }
 window.rpxTab=function(t){
   if(RPX.ed&&RPX.ed.dirty&&!confirm('Perubahan catatan belum disimpan. Tinggalkan halaman ini?')) return;
   RPX.tab=t; RPX.ed=null;
   if(t==='bulanan') RPX.jenis='Bulanan'; else if(t==='semester') RPX.jenis='Semester';
-  showRoots(); if(t!=='kartu') render();
+  showRoots(); render();
 };
+
 function bannerHtml(){
   if(RPX.tableOk) return '';
   if(RPX.tableMsg==='demo') return '<div class="rpx-banner warn"><b>Mode demo.</b> Aplikasi belum terhubung ke database produksi. Pratinjau tetap dapat dibuat (bertanda DRAF), tetapi rapor tidak dapat disimpan atau diterbitkan.</div>';
@@ -10710,7 +10823,7 @@ window.rpxOnFilter=function(typing){
   render();
 };
 window.rpxReload=async function(){
-  RPX.docsKey=''; RPX.checks={}; Object.keys(ASSET).forEach(k=>delete ASSET[k]);
+  RPX.docsKey=''; RPX.checks={}; RPX.sum={}; Object.keys(ASSET).forEach(k=>delete ASSET[k]);
   try{ if(typeof stReload==='function') await stReload({silent:true}); }catch(e){}
   if(RPX.ed){ const sid=RPX.ed.s.id; RPX.ed=null; await loadDocs(curPeriod(),true); return openEditor(sid); }
   render();
@@ -10732,15 +10845,9 @@ function listBodyHtml(mode){
   const rows=filteredStudents();
   if(!scopeStudents().length) return acadEmptyStateHtml('Belum ada santri','Belum ada siswa aktif yang memiliki kelas dalam akses Anda.');
   if(!rows.length) return acadEmptyStateHtml('Tidak ada santri yang cocok','Ubah filter kelas, status, atau pencarian.');
-  return `<div class="rpx-tblwrap"><table class="rpx-tbl"><thead><tr><th>No</th><th>Santri</th><th>Kelas</th><th>Boarding</th><th>Status</th><th>Versi</th><th>Kelengkapan Data</th><th>Diperbarui</th><th>Aksi</th></tr></thead><tbody>
-    ${rows.map((s,i)=>{ const d=docOf(s.id), p=pubOf(s.id), sid=E(s.id);
-      const extra=(p&&d&&p.id!==d.id)?`<div class="rpx-sub">v${p.versi} terbit</div>`:'';
-      return `<tr><td>${i+1}</td><td><b>${s.nama}</b><div class="rpx-sub">NIS ${s.nis||'-'}</div></td><td>${s.kelas}</td><td>${s.boarding?'Ya':'Tidak'}</td>
-        <td>${badge(d?d.status:'Belum Dibuat')}${extra}</td><td>${d?'v'+d.versi:'-'}</td><td>${gapChips(gapsFor(s.id),mode==='dash'?RPX.bidang:'Gabungan')}</td>
-        <td>${d?tglJam(d.updated_at):'-'}</td>
-        <td><div class="rpx-acts-row"><button class="btn-primary-sm" onclick="rpxOpen('${sid}')">${d?'Buka':'Buat'}</button>${p?`<button class="btn-outline-sm" onclick="rpxDlDoc('${E(p.id)}')" title="Unduh PDF terbit">PDF</button>`:''}</div></td></tr>`; }).join('')}
-  </tbody></table></div>`;
+  return `<div class="mrd-grid">${rows.map(s=>mrdCardHtml(s,mode)).join('')}</div>`;
 }
+
 function statsHtml(){
   const ss=scopeStudents(), c={}; STATUSES.forEach(s=>c[s]=0); ss.forEach(s=>c[statusOf(s.id)]++);
   return acadStatRowHtml([
@@ -10751,21 +10858,22 @@ function statsHtml(){
 async function renderList(mode){
   const r=root(); if(!r) return;
   const P=curPeriod();
-  const title=mode==='dash'?'Dashboard Raport':(RPX.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester');
+  const title=RPX.jenis==='Bulanan'?'Monthly Report':'Rapor Semester';
   if(!P){ r.innerHTML=bannerHtml()+`<div class="panel">${filtersHtml(mode)}<p class="desc">Tahun ajaran / semester tidak valid.</p></div>`; return; }
   r.innerHTML=bannerHtml()+`<div class="panel rpx-panel">${filtersHtml(mode)}<div class="rpx-loading">Memuat status rapor ${E(P.label)}...</div></div>`;
   await loadDocs(P);
-  if(root()!==r||RPX.ed||RPX.tab==='arsip'||RPX.tab==='kartu') return;
-  const desc=mode==='dash'
-    ?`Ringkasan pembuatan <b>${E(RPX.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester')} ${E(P.label)}</b>. Setiap santri mendapat <b>satu PDF</b> berisi laporan Akademik dan Boarding. Halaman ini hanya untuk pengelola, tidak ikut ke PDF.`
-    :`Periode <b>${E(P.label)}</b> (${E(P.rangeLabel)}). Klik <b>Buat/Buka</b> untuk mengisi evaluasi, memeriksa kelengkapan, pratinjau A4, dan menerbitkan PDF.`;
-  r.innerHTML=bannerHtml()+`${mode==='dash'?statsHtml():''}<div class="panel rpx-panel">
+  if(root()!==r||RPX.ed||RPX.tab==='arsip') return;
+  const desc=RPX.jenis==='Bulanan'
+    ?`Laporan perkembangan individual untuk periode <b>${E(P.label)}</b> (${E(P.rangeLabel)}). Setiap santri ditampilkan dalam satu kartu. Klik <b>Lihat Selengkapnya</b> untuk membuka laporan.`
+    :`Periode <b>${E(P.label)}</b>. Klik <b>Lihat Selengkapnya</b> untuk membuka rapor semester santri.`;
+  r.innerHTML=bannerHtml()+`${statsHtml()}<div class="panel rpx-panel">
     <div class="rpx-head"><h3>${title}</h3><div class="rpx-head-acts">
-      <button class="btn-outline-sm" id="rpxChkBtn" onclick="rpxCheck()" title="Ambil data semua santri pada filter ini dan periksa kelengkapannya">Periksa Kelengkapan</button>
-      ${mode==='work'?`<button class="btn-outline-sm" id="rpxZipBtn" onclick="rpxZip()" title="Unduh semua rapor berstatus Diterbitkan pada filter ini dalam satu berkas ZIP">Unduh Massal (ZIP)</button>`:''}
+      <button class="btn-outline-sm" id="rpxChkBtn" onclick="rpxCheck()" title="Ambil data semua santri pada filter ini dan hitung ringkasan serta kelengkapannya">Muat Ringkasan</button>
+      <button class="btn-outline-sm" id="rpxZipBtn" onclick="rpxZip()" title="Unduh semua rapor berstatus Diterbitkan pada filter ini dalam satu berkas ZIP">Unduh Massal (ZIP)</button>
     </div></div>
     ${filtersHtml(mode)}<p class="desc">${desc}</p><div id="rpxListBody">${listBodyHtml(mode)}</div></div>`;
 }
+
 
 /* ---------- Periksa kelengkapan massal ---------- */
 window.rpxCheck=async function(){
@@ -10777,7 +10885,7 @@ window.rpxCheck=async function(){
     for(let i=0;i<studs.length;i+=40){
       if(btn){ btn.disabled=true; btn.textContent='Memeriksa '+Math.min(i+40,studs.length)+'/'+studs.length+'...'; }
       const part=studs.slice(i,i+40), D=await fetchDataset(part,P);
-      part.forEach(s=>{ const d=docOf(s.id); RPX.checks[pkey(P)+'|'+s.id]=buildModel(s,P,D,d&&d.catatan).gaps; });
+      await Promise.all(part.map(async s=>{ const d=docOf(s.id), m=buildModel(s,P,D,d&&d.catatan), k=pkey(P)+'|'+s.id; RPX.checks[k]=m.gaps; RPX.sum[k]=mrdSummary(m,await photoOf(s.id)); }));
     }
     toast('Pemeriksaan kelengkapan selesai untuk '+studs.length+' santri.');
   }catch(e){ console.error('[rapor-pdf] cek',e); toast('Pemeriksaan gagal: '+errMsg(e)); }
@@ -10895,13 +11003,13 @@ function actionsHtml(ed){
   if(!d||st==='Draft'||st==='Data Belum Lengkap'){
     if(canEdit()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Draf</button>`,`<button class="btn-primary-sm" onclick="rpxSubmit()"${dis}>Ajukan Review</button>`);
     if(canPub()) b.push(`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
-    b.push(`<button class="btn-outline-sm" onclick="rpxDownload()">Unduh PDF Draf</button>`);
+    b.push(`<button class="btn-outline-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
   } else if(st==='Menunggu Review'){
     if(canPub()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Perubahan</button>`,`<button class="btn-outline-sm" onclick="rpxReturn()"${dis}>Kembalikan ke Draf</button>`,`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
     else b.push('<p class="rpx-muted">Menunggu review Kepala Sekolah / Super Admin. Catatan dikunci selama review.</p>');
-    b.push(`<button class="btn-outline-sm" onclick="rpxDownload()">Unduh PDF Draf</button>`);
+    b.push(`<button class="btn-outline-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
   } else {
-    b.push(`<button class="btn-primary-sm" onclick="rpxDownload()">Unduh PDF</button>`);
+    b.push(`<button class="btn-primary-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
     if(navigator.canShare&&typeof File==='function') b.push(`<button class="btn-outline-sm" onclick="rpxShare()">Bagikan (WhatsApp, dll.)</button>`);
     if(canEdit()&&ed.doc.id===(docOf(ed.s.id)||{}).id) b.push(`<button class="btn-outline-sm" onclick="rpxRevise()"${dis}>Buat Revisi</button>`);
     if(canPub()&&st==='Diterbitkan') b.push(`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive()"${dis}>Arsipkan</button>`);
@@ -10944,22 +11052,174 @@ function setPreview(blob,name){
     ?`<div class="rpx-mobprev"><p>Pratinjau PDF tidak dapat ditampilkan langsung di perangkat ini.</p><a class="btn-primary-sm" href="${u}" target="_blank" rel="noopener">Buka Pratinjau PDF</a><p class="rpx-sub">${E(name)}</p></div>`
     :`<iframe title="Pratinjau rapor" src="${u}#toolbar=1&navpanes=0&view=FitH"></iframe>`;
 }
+/* ---------- Monthly Report: lembar A4 (HTML) dari MODEL rapor (sumber data yang sama dengan PDF/arsip) ---------- */
+const MRD_WAVE='<svg viewBox="0 0 1000 200" preserveAspectRatio="none"><path d="M0 80 C250 150 500 20 1000 90 L1000 200 L0 200Z" fill="#EAF3F8"/><path d="M0 110 C300 170 600 60 1000 120 L1000 200 L0 200Z" fill="#0E3358"/><path d="M0 130 C320 180 650 100 1000 150 L1000 200 L0 200Z" fill="#C9A227" opacity=".85"/></svg>';
+const MRD_Q='Teruslah berjalan dan jangan berhenti hingga kamu meraih apa yang kamu cita-citakan.';
+const mrX=v=>E(v==null?'':String(v));
+const mrN=v=>(v==null||v===''||isNaN(v))?'-':String(Math.round(Number(v)*10)/10).replace('.',',');
+const mrP=v=>(v==null||v===''||isNaN(v))?'-':mrN(v)+'%';
+const mrCatB=v=>(v==null||v===''||isNaN(v))?'-':predBoarding(v);
+const mrCatA=v=>(v==null||v===''||isNaN(v))?'-':capaian(v);
+const mrDash=v=>(v==null||String(v).trim()==='')?'<span class="mrd-muted">Belum diisi</span>':mrX(v);
+const mrTbl=(head,rows)=>`<table class="mrd-tbl"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.length?rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join('')}</tr>`).join(''):`<tr><td colspan="${head.length}" class="mrd-muted">Belum ada data pada periode ini.</td></tr>`}</tbody></table>`;
+const mrSheet=(inner,n,T)=>`<section class="mrd-sheet">${inner}<div class="mrd-wave">${MRD_WAVE}</div><div class="mrd-pg">Halaman ${n} dari ${T}</div></section>`;
+const mrHdr=()=>`<div class="mrd-hdr"><div class="mrd-brand"><div class="mrd-logo">AH</div><div><b>SMK IT AL-HIDAYAH</b><span>Boarding School</span></div></div><div class="mrd-rt">Monthly Report<small>Laporan Perkembangan Santri</small></div></div>`;
+const mrSec=(n,t,s)=>`<div class="mrd-sec"><div class="mrd-num">${n}</div><div><h2>${t}</h2>${s?`<div class="mrd-sub">${s}</div>`:''}</div></div>`;
+
+function mrdSheets(J,photo){
+  const S=J.s||{}, P=J.period||{}, ak=J.ak||{}, att=ak.att||{}, bd=J.bd||{}, ev=J.ev||{}, dis=bd.dis||{}, ib=bd.ib||{}, keg=bd.keg||{}, tf=bd.tf||{};
+  const pr=J.proyek||[], ks=(J.ks&&J.ks.prestasi)||[], sc=J.school||{}, sg=J.sign||{}, cols=sg.cols||[];
+  const aspek=[['Adab',dis.att],['Ibadah',ib.nilai],['Kedisiplinan',dis.tot],['Aktivitas Asrama',keg.nilai]];
+  const pages=[];
+
+  /* Sampul */
+  pages.push((n,T)=>`<section class="mrd-sheet mrd-cover">
+    <div class="mrd-brand"><div class="mrd-logo">AH</div><div><b>${mrX(sc.name||'SMK IT AL-HIDAYAH')}</b><span>Boarding School · Berilmu · Berakhlak · Berprestasi</span></div></div>
+    <h1>MONTHLY<br>REPORT</h1>
+    <div class="mrd-lap">LAPORAN PERKEMBANGAN SANTRI</div>
+    <div class="mrd-pill">Periode: ${mrX(P.label)}</div>
+    <div class="mrd-ta">Tahun Ajaran: ${mrX(P.ta)}</div>
+    <div class="mrd-id"><div class="mrd-photo">${photo?`<img src="${photo}" alt="">`:mrX(String(S.nama||'?').trim().charAt(0).toUpperCase())}</div>
+      <div><h4>${mrX(S.nama)}</h4><table><tr><td>NIS</td><td>: ${mrX(S.nis||'-')}</td></tr><tr><td>Kelas</td><td>: ${mrX(S.kelas||'-')}</td></tr><tr><td>Program</td><td>: ${mrX(S.jurusan||'-')}</td></tr></table></div></div>
+    <div class="mrd-q">"${MRD_Q}"</div>
+    <div class="mrd-pg">Halaman ${n} dari ${T}</div></section>`);
+
+  if(S.boarding){
+    /* 01 Boarding Report */
+    pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">${mrSec('01','Boarding Report','Laporan Perkembangan Asrama &amp; Pembinaan')}
+      <div class="mrd-cards">${aspek.map(([l,v])=>`<div class="mrd-card2"><div class="mrd-ic">${l[0]}</div><small>${l}</small><b>${mrP(v)}</b><em>${mrCatB(v)}</em></div>`).join('')}</div>
+      <h3>1. Rincian Penilaian Boarding</h3>
+      ${mrTbl(['No','Aspek Penilaian','Nilai','Kategori'],[['Attitude',dis.att],['Kerapian',dis.ker],['Kebersihan',dis.bers],['Penilaian Harian (total)',dis.tot]].map((r,i)=>[i+1,r[0],mrP(r[1]),mrCatB(r[1])]))}
+      <div class="mrd-two"><div class="mrd-box mrd-center"><small>Rata-rata Nilai</small><b class="big">${mrP(bd.total)}</b><small>Kategori</small><strong>${mrCatB(bd.total)}</strong></div>
+        <div class="mrd-note"><b>Catatan Pembina</b>${mrDash(ev.evalMusyrif)}<i>${mrX(S.musyrif||'')}</i></div></div></div>`,n,T));
+
+    /* 01 lanjutan: Ibadah, Kegiatan Asrama, grafik */
+    pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">
+      <h3>2. Ibadah</h3>${mrTbl(['No','Jenis Ibadah','Nilai','Kategori'],(ib.rows||[]).map((r,i)=>[i+1,mrX(r.label),r.count?'-':mrP(r.nilai),r.count?`Total ${mrX(r.total)} kali`:mrCatB(r.nilai)]))}
+      <h3>3. Kegiatan Asrama</h3>${mrTbl(['No','Kegiatan','Nilai','Kategori'],(keg.rows||[]).map((r,i)=>[i+1,mrX(r.nama),mrP(r.nilai),mrCatB(r.nilai)]))}
+      <h3>Grafik Perkembangan Boarding</h3>
+      <div class="mrd-bars">${aspek.map(([l,v])=>`<div><i style="height:${Math.max(0,Math.min(100,Number(v)||0))*0.9}px"></i>${mrP(v)}<br>${l}</div>`).join('')}</div>
+      </div>`,n,T));
+  }
+
+  /* Academic Report */
+  pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">${mrSec('02','Academic Report','Laporan Akademik')}
+    <div class="mrd-two">
+      <div class="mrd-box mrd-row"><b class="mrd-ico">★</b><div><small>Rata-rata Nilai</small><b class="big">${mrN(ak.avg)}</b><small>${mrCatA(ak.avg)}</small></div></div>
+      <div class="mrd-box mrd-row"><b class="mrd-ico">▦</b><div><small>Kehadiran KBM</small><b class="big">${mrP(att.pct)}</b><small>${mrCatA(att.pct)}</small></div></div></div>
+    <h3>1. Mata Pelajaran</h3>
+    ${mrTbl(['No','Mata Pelajaran','Nilai Akhir','Keterangan'],(ak.grades||[]).map((g,i)=>[i+1,mrX(g.mapel),mrN(g.akhir),mrX(g.capaian)+(g.partial?' <em>(komponen belum lengkap)</em>':'')]))}
+    <h3>2. Kehadiran Belajar</h3>
+    <div class="mrd-cards3"><div class="mrd-card2"><small>Sakit</small><b>${att.sakit||0} hari</b></div><div class="mrd-card2"><small>Izin</small><b>${att.izin||0} hari</b></div><div class="mrd-card2"><small>Alpa</small><b>${att.alpa||0} hari</b></div></div>
+    </div>`,n,T));
+
+  /* Kegiatan & catatan lainnya */
+  pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">
+    <h3>3. Tahfidz</h3>${S.boarding&&tf.hasData?mrTbl(['Juz Awal','Juz Saat Ini','Target','Progres','Setoran Periode'],[[mrN(tf.awal),mrN(tf.juz),mrN(tf.target),tf.progress!=null?tf.progress+'%':'-',mrN(tf.setoranP)+' hal']]):'<p class="mrd-muted">Data tahfidz belum tersedia untuk periode ini.</p>'}
+    <h3>4. Prestasi</h3>${mrTbl(['No','Tanggal','Nama Prestasi','Kategori','Tingkat','Peringkat'],ks.map((x,i)=>[i+1,mrX(x.tanggal),mrX(x.nama),mrX(x.kategori),mrX(x.tingkat),mrX(x.peringkat)]))}
+    <h3>5. Pelanggaran Sekolah</h3>${mrTbl(['No','Tanggal','Pelanggaran','Tingkat','Poin','Status'],(ak.pel||[]).map((x,i)=>[i+1,mrX(x.tanggal),mrX(x.pelanggaran),mrX(x.tingkat),mrX(x.poin),mrX(x.status)]))}
+    </div>`,n,T));
+
+  /* Project Report */
+  if(pr.length) pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">${mrSec('03','Project Report','Laporan Proyek / Kegiatan')}
+    ${pr.map((p,i)=>`<div class="mrd-proj"><div class="mrd-thumb">Gambar proyek belum tersedia</div>
+      <div class="mrd-pb"><h4>${i+1}. ${mrX(p.judul)}</h4><p><span>Deskripsi :</span> ${mrDash(p.deskripsi)}</p><p><span>Kategori :</span> ${mrDash(p.bidang)}</p><p><span>Tanggal Selesai :</span> ${p.tanggal?mrX(fmtTglID(p.tanggal)):'-'}</p></div>
+      <div class="mrd-score">${mrN(p.nilai)}<small>Nilai</small></div></div>`).join('')}
+    </div>`,n,T));
+
+  /* Rekap Proyek */
+  if(pr.length) pages.push((n,T)=>{
+    const sc2=pr.filter(p=>p.nilai!=null), avg=sc2.length?Math.round(sc2.reduce((t,p)=>t+Number(p.nilai),0)/sc2.length*10)/10:null;
+    const c=2*Math.PI*44, off=c*(1-Math.min(100,avg||0)/100);
+    return mrSheet(`${mrHdr()}<div class="mrd-body"><h3>Rekapitulasi Nilai Proyek</h3>
+      <div class="mrd-two mrd-al"><svg viewBox="0 0 120 120" width="150" height="150">
+        <circle cx="60" cy="60" r="44" fill="none" stroke="#D5E1EA" stroke-width="13"/>
+        <circle cx="60" cy="60" r="44" fill="none" stroke="#0E3358" stroke-width="13" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 60 60)"/>
+        <text x="60" y="56" text-anchor="middle" font-size="9" fill="#0B2540">Rata-rata</text>
+        <text x="60" y="74" text-anchor="middle" font-size="18" font-weight="800" fill="#0B2540">${avg==null?'-':mrN(avg)}</text>
+        <text x="60" y="88" text-anchor="middle" font-size="7" fill="#5B7285">${avg==null?'':mrCatA(avg)}</text></svg>
+        <div>${pr.map(p=>`<div class="mrd-li"><span>${mrX(p.judul)}</span><b>${mrN(p.nilai)}</b></div>`).join('')}</div></div>
+      <div class="mrd-note"><b>Catatan Pembimbing Proyek</b><span class="mrd-muted">Belum tersedia dalam data aplikasi.</span></div></div>`,n,T);
+  });
+
+  /* Teacher Notes */
+  pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">${mrSec('04','Teacher Notes','Catatan Wali Kelas / Musyrif')}
+    <div class="mrd-note"><b>Catatan Wali Kelas</b>${mrDash(ev.catatanWali)}<i>${mrX(S.wali||'')}</i></div>
+    ${S.boarding?`<div class="mrd-note"><b>Catatan Musyrif</b>${mrDash(ev.evalMusyrif)}<i>${mrX(S.musyrif||'')}</i></div>`:''}
+    <div class="mrd-two">
+      <div class="mrd-box"><b style="color:#0B2540;font-size:10px">Kelebihan</b><div style="font-size:9px;line-height:1.6;margin-top:4px">${mrDash(ev.kelebihan)}</div></div>
+      <div class="mrd-box" style="background:#FFF8EA"><b style="color:#A5730C;font-size:10px">Yang Perlu Ditingkatkan</b><div style="font-size:9px;line-height:1.6;margin-top:4px">${mrDash(ev.perbaikan)}</div></div>
+    </div>
+    <div class="mrd-note"><b>Rekomendasi</b>${mrDash(ev.rekomOrtu||ev.rekomAkademik||ev.rekomBoarding)}</div>
+    </div>`,n,T));
+
+  /* Kesimpulan & Pengesahan */
+  pages.push((n,T)=>mrSheet(`${mrHdr()}<div class="mrd-body">${mrSec('05','Kesimpulan &amp; Pengesahan','')}
+    <div class="mrd-note"><b>Kesimpulan</b>${mrDash(ev.ringkasan)}</div>
+    ${ev.kerjasama?`<div class="mrd-note"><b>Saran Kerja Sama Sekolah/Asrama dengan Orang Tua</b>${mrX(ev.kerjasama)}</div>`:''}
+    <div class="mrd-quote">"${MRD_Q}"</div>
+    <h3>Pengesahan</h3>
+    <div class="mrd-sign">${cols.filter(c=>c.role!=='Orang Tua / Wali Santri').map(c=>`<div><div class="mrd-ln"></div><b>${mrX(c.name||'(belum diatur)')}</b><span>${mrX(c.role)}</span></div>`).join('')}
+      <div><div class="mrd-ln"></div><b>${mrX((sg.kepsek&&sg.kepsek.name)||'(belum diatur)')}</b><span>Mengetahui, Kepala Sekolah</span></div></div>
+    </div>`,n,T));
+
+  /* Penutup */
+  pages.push((n,T)=>`<section class="mrd-sheet mrd-closing"><div class="mrd-cl"><div class="mrd-logo">AH</div><b>${mrX(sc.name||'SMK IT AL-HIDAYAH')}</b><span>Boarding School</span><span>Berilmu · Berakhlak · Berprestasi</span><div class="mrd-q">"${MRD_Q}"</div><small>Monthly Report | ${mrX(P.label)}</small></div><div class="mrd-wave">${MRD_WAVE}</div><div class="mrd-pg">Halaman ${n} dari ${T}</div></section>`);
+
+  const T=pages.length;
+  return pages.map((f,i)=>f(i+1,T)).join('');
+}
+
+function mrdSummary(m,foto){
+  const pr=m.proyek||[], sc2=pr.filter(p=>p.nilai!=null);
+  return {avg:m.ak.avg,kehadiran:m.ak.att?m.ak.att.pct:null,boarding:m.s.boarding?m.bd.total:null,
+    proyekN:pr.length,proyekAvg:sc2.length?Math.round(sc2.reduce((t,p)=>t+Number(p.nilai),0)/sc2.length*10)/10:null,foto:foto||''};
+}
+
+function mrdCardHtml(s,mode){
+  const d=docOf(s.id), sid=E(s.id), sm=RPX.sum[pkey(curPeriod())+'|'+s.id]||null, gs=gapsFor(s.id);
+  const st=d?d.status:'Belum Dibuat';
+  return `<article class="mrd-card">
+    <div class="mrd-card-top"><div class="mrd-av">${sm&&sm.foto?`<img src="${sm.foto}" alt="">`:E(String(s.nama||'?').trim().charAt(0).toUpperCase())}</div>
+      <div><b>${E(s.nama)}</b><span>NIS ${E(s.nis||'-')} · ${E(s.kelas||'-')}</span><span>${s.boarding?'Boarding':'Non-boarding'}${s.jurusan?' · '+E(s.jurusan):''}</span></div>
+      ${badge(st)}</div>
+    <div class="mrd-card-m">
+      <div><small>Nilai Akademik</small><b>${sm?mrN(sm.avg):'—'}</b></div>
+      <div><small>Kehadiran KBM</small><b>${sm?mrP(sm.kehadiran):'—'}</b></div>
+      <div><small>Nilai Boarding</small><b>${sm?mrN(sm.boarding):'—'}</b></div>
+      <div><small>Proyek${sm?' ('+sm.proyekN+')':''}</small><b>${sm?mrN(sm.proyekAvg):'—'}</b></div>
+    </div>
+    <div class="mrd-card-f"><div>${sm?gapChips(gs,mode==='dash'?RPX.bidang:'Gabungan'):'<span class="mrd-muted">Klik Muat Ringkasan untuk nilai</span>'}</div>
+      <button class="btn-primary-sm" onclick="rpxOpen('${sid}')">Lihat Selengkapnya</button></div>
+  </article>`;
+}
+
+function mrdShow(J,photo){
+  const el=document.getElementById('rpxPrev'); if(!el) return;
+  el.innerHTML=(J.draft?`<div class="rpx-banner warn" style="width:100%">Pratinjau draf. ${mrX(J.footerLeft||'')}</div>`:'')+`<div class="mrd-doc">${mrdSheets(J,photo)}</div>`;
+}
+
 window.rpxPreview=async function preview(){
   const ed=RPX.ed; if(!ed||!ed.D) return;
-  const el=document.getElementById('rpxPrev'); if(el) el.innerHTML='<div class="rpx-loading">Menyusun PDF...</div>';
+  const el=document.getElementById('rpxPrev'); if(el) el.innerHTML='<div class="rpx-loading">Menyusun pratinjau...</div>';
   refreshGaps();
   try{
-    let doc, name;
-    if(isFinal(ed.doc)){ const r=await pdfFromDoc(ed.doc); doc=r.doc; name=r.name; }
-    else {
-      collectEv();
-      if(ed.photo===undefined) ed.photo=await photoOf(ed.s.id);
-      doc=await pdfFromModel(buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}),ed.photo); name=fileNameOf(ed.P,ed.s.nama,{draft:true});
-    }
+    let J, photo='';
+    if(isFinal(ed.doc)){ const sn=await getSnapshot(ed.doc.id); J=sn.snapshot.model; photo=sn.snapshot.photo||''; }
+    else { collectEv(); if(ed.photo===undefined) ed.photo=await photoOf(ed.s.id); photo=ed.photo||''; J=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}); }
     if(RPX.ed!==ed) return;
-    setPreview(doc.output('blob'),name);
+    mrdShow(J,photo);
   }catch(e){ console.error('[rapor-pdf] pratinjau',e); const x=document.getElementById('rpxPrev'); if(x) x.innerHTML=`<div class="rpx-banner err">Pratinjau gagal: ${E(errMsg(e))}</div>`; }
 };
+window.rpxPrint=function(){
+  const el=document.getElementById('rpxPrev');
+  if(!el||!el.querySelector('.mrd-sheet')){ toast('Pratinjau belum siap untuk dicetak.'); return; }
+  const done=()=>{ document.body.classList.remove('mrd-printing'); window.removeEventListener('afterprint',done); };
+  window.addEventListener('afterprint',done);
+  document.body.classList.add('mrd-printing');
+  setTimeout(()=>window.print(),60);
+};
+
 const preview=window.rpxPreview;
 window.rpxDownload=async function(){
   const ed=RPX.ed; if(!ed) return;
@@ -11124,22 +11384,20 @@ window.rpxHist=function(id){
 function render(){
   const r=root(); if(!r) return;
   showRoots();
-  if(RPX.tab==='kartu') return;
   if(RPX.tab==='arsip'){ renderArsip(); return; }
   if(RPX.ed){ r.innerHTML=editorHtml(); if(RPX.ed.D&&!RPX.ed.loading){ refreshGaps(); preview(); } return; }
-  renderList(RPX.tab==='dash'?'dash':'work');
+  renderList('work');
 }
 
 /* ---------- Pasang ke halaman Raport (ak-rapor) ---------- */
-const PG=AKADEMIK_PAGES['ak-rapor'], _html=PG.html, _init=PG.init;
+const PG=AKADEMIK_PAGES['ak-rapor'], _init=PG.init;
 PG.html=function(){
-  const h=_html.apply(this,arguments);
-  RPX.tab=canEdit()?'dash':'kartu'; RPX.ed=null; RPX.arsip=null;
   if(!RPX.bulan) RPX.bulan=defMonth(RPX.ta,RPX.sem);
-  let out=h.replace('<div id="rpRoot">',navHtml()+'<div id="rpxRoot"'+(RPX.tab==='kartu'?' style="display:none"':'')+'></div><div id="rpRoot"'+(RPX.tab==='kartu'?'':' style="display:none"')+'>');
-  if(canEdit()) out=out.replace('<h1>Rapor Akademik</h1>','<h1>Raport</h1>').replace('Lihat dan kelola rapor akademik siswa.','Rapor Bulanan &amp; Semester (Akademik + Boarding) per santri dalam satu PDF, beserta Kartu Rapor Akademik.');
-  return out;
+  RPX.tab=canEdit()?'bulanan':'arsip'; RPX.ed=null; RPX.arsip=null;
+  const sub=canEdit()?'Laporan perkembangan individual setiap santri per periode (Akademik dan Boarding). Klik Lihat Selengkapnya untuk membuka, memeriksa, dan menerbitkan Monthly Report.':'Arsip rapor yang sudah diterbitkan untuk santri dalam akses Anda.';
+  return acadPageHeaderHtml('indigo','Akademik','Raport',sub)+navHtml()+'<div id="rpxRoot"></div>';
 };
+
 PG.init=function(){
   const p=_init.apply(this,arguments);
   try{ render(); }catch(e){ console.error('[rapor-pdf] init',e); }
