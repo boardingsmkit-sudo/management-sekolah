@@ -10878,18 +10878,32 @@ async function renderList(mode){
     :`Periode <b>${E(P.label)}</b>. Klik <b>Lihat Selengkapnya</b> untuk membuka rapor semester santri.`;
   r.innerHTML=bannerHtml()+`${statsHtml()}<div class="panel rpx-panel">
     <div class="rpx-head"><h3>${title}</h3><div class="rpx-head-acts">
-      <button class="btn-outline-sm" id="rpxChkBtn" onclick="rpxCheck()" title="Ambil data semua santri pada filter ini dan hitung ringkasan serta kelengkapannya">Muat Ringkasan</button>
+      <button class="btn-outline-sm" id="rpxChkBtn" onclick="rpxResum()" title="Ambil ulang data semua santri pada filter ini (ringkasan juga dimuat otomatis)">Muat Ulang Ringkasan</button>
       <button class="btn-outline-sm" id="rpxZipBtn" onclick="rpxZip()" title="Unduh semua rapor berstatus Diterbitkan pada filter ini dalam satu berkas ZIP">Unduh Massal (ZIP)</button>
     </div></div>
     ${filtersHtml(mode)}<p class="desc">${desc}</p><div id="rpxListBody">${listBodyHtml(mode)}</div></div>`;
+  autoSummary();
+}
+/* Ringkasan nilai (akademik, kehadiran, boarding, proyek) dimuat otomatis tanpa perlu klik tombol. */
+function autoSummary(){
+  RPX.sumPending=true;
+  setTimeout(async()=>{
+    try{ if(root()&&!RPX.ed&&RPX.tab!=='arsip'&&document.getElementById('rpxListBody')) await rpxCheck(true); }
+    finally{ RPX.sumPending=false; const b=document.getElementById('rpxListBody'); if(b&&!RPX.ed&&!RPX.busy) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); }
+  },50);
 }
 
 
 /* ---------- Periksa kelengkapan massal ---------- */
-window.rpxCheck=async function(){
+window.rpxResum=function(){ const P=curPeriod(); if(!P) return; const k=pkey(P)+'|'; Object.keys(RPX.sum).forEach(x=>{ if(x.startsWith(k)) delete RPX.sum[x]; }); rpxCheck(); };
+/* auto=true: dijalankan otomatis saat daftar tampil; hanya santri yang ringkasannya belum ada, tanpa notifikasi. */
+window.rpxCheck=async function(auto){
+  auto=auto===true;
   if(RPX.busy) return; const P=curPeriod(); if(!P) return;
-  const studs=filteredStudents(); if(!studs.length){ toast('Tidak ada santri pada filter ini.'); return; }
-  if(studs.length>400){ toast('Terlalu banyak santri ('+studs.length+'). Pilih kelas terlebih dahulu.'); return; }
+  let studs=filteredStudents();
+  if(auto) studs=studs.filter(s=>!RPX.sum[pkey(P)+'|'+s.id]);
+  if(!studs.length){ if(!auto) toast('Tidak ada santri pada filter ini.'); return; }
+  if(studs.length>400){ if(!auto) toast('Terlalu banyak santri ('+studs.length+'). Pilih kelas terlebih dahulu.'); return; }
   RPX.busy='check'; const btn=document.getElementById('rpxChkBtn');
   try{
     for(let i=0;i<studs.length;i+=40){
@@ -10897,9 +10911,10 @@ window.rpxCheck=async function(){
       const part=studs.slice(i,i+40), D=await fetchDataset(part,P);
       await Promise.all(part.map(async s=>{ const d=docOf(s.id), m=buildModel(s,P,D,d&&d.catatan), k=pkey(P)+'|'+s.id; RPX.checks[k]=m.gaps; RPX.sum[k]=mrdSummary(m,await photoOf(s.id)); }));
     }
-    toast('Pemeriksaan kelengkapan selesai untuk '+studs.length+' santri.');
-  }catch(e){ console.error('[rapor-pdf] cek',e); toast('Pemeriksaan gagal: '+errMsg(e)); }
-  finally{ RPX.busy=''; const b=document.getElementById('rpxListBody'); if(b) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); if(btn){ btn.disabled=false; btn.textContent='Periksa Kelengkapan'; } }
+    if(!auto) toast('Ringkasan nilai dan kelengkapan dimuat untuk '+studs.length+' santri.');
+  }catch(e){ console.error('[rapor-pdf] cek',e); toast('Ringkasan gagal dimuat: '+errMsg(e)); }
+  finally{ RPX.busy=''; const b=document.getElementById('rpxListBody'); if(b&&!RPX.ed&&pkey(curPeriod())===pkey(P)) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work');
+    const b2=document.getElementById('rpxChkBtn'); if(b2){ b2.disabled=false; b2.textContent='Muat Ulang Ringkasan'; } }
 };
 
 /* ---------- Unduh massal (hanya rapor Diterbitkan, dari snapshot) ---------- */
@@ -11199,7 +11214,7 @@ function mrdCardHtml(s,mode){
       <div><small>Nilai Boarding</small><b>${sm?mrN(sm.boarding):'—'}</b></div>
       <div><small>Proyek${sm?' ('+sm.proyekN+')':''}</small><b>${sm?mrN(sm.proyekAvg):'—'}</b></div>
     </div>
-    <div class="mrd-card-f"><div>${sm?gapChips(gs,mode==='dash'?RPX.bidang:'Gabungan'):'<span class="mrd-muted">Klik Muat Ringkasan untuk nilai</span>'}</div>
+    <div class="mrd-card-f"><div>${sm?gapChips(gs,mode==='dash'?RPX.bidang:'Gabungan'):((RPX.busy==='check'||RPX.sumPending)?'<span class="mrd-muted">Memuat ringkasan...</span>':'<span class="mrd-muted">Ringkasan belum dimuat. Klik Muat Ulang Ringkasan.</span>')}</div>
       <button class="btn-primary-sm" onclick="rpxOpen('${sid}')">Lihat Selengkapnya</button></div>
   </article>`;
 }
@@ -11414,7 +11429,7 @@ PG.init=function(){
   return p;
 };
 /* Data siswa/kelas dimuat ulang (mis. setelah login) -> segarkan daftar bila sedang tampil */
-if(typeof stAfterDataChange==='function'){ const _a=stAfterDataChange; stAfterDataChange=function(){ const r=_a.apply(this,arguments); try{ if(root()&&!RPX.ed&&(RPX.tab==='dash'||RPX.tab==='bulanan'||RPX.tab==='semester')){ const b=document.getElementById('rpxListBody'); if(b) b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); } }catch(e){} return r; }; }
+if(typeof stAfterDataChange==='function'){ const _a=stAfterDataChange; stAfterDataChange=function(){ const r=_a.apply(this,arguments); try{ if(root()&&!RPX.ed&&(RPX.tab==='dash'||RPX.tab==='bulanan'||RPX.tab==='semester')){ const b=document.getElementById('rpxListBody'); if(b){ b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); autoSummary(); } } }catch(e){} return r; }; }
 window.RPX_DEBUG={state:RPX,buildModel,fetchDataset,periodOf};
 })();
 
