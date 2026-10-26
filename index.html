@@ -2146,10 +2146,16 @@ function personalAcademicPageHtml(pageKey){
     if(!s) return `${acadPageHeaderHtml(color,'Akademik',title,'Data siswa tidak ditemukan untuk akun ini.')}`;
     const who=curRole==='Orang Tua'?`Data anak Anda: ${s.nama} (${s.kelas})`:`Data akademik Anda (${s.kelas})`;
     const att=attendanceRecordsData.filter(a=>String(a.studentId)===String(s.id));
-    const hadir=att.length?Math.round(att.filter(a=>a.status==='Hadir').length/att.length*100):0;
+    const hadir=att.length?Math.round(att.filter(a=>a.status==='Hadir').length/att.length*100):null;
     const gr=gradesData.filter(g=>String(g.studentId)===String(s.id)&&g.nilaiAkhir!=null);
     const avg=gr.length?Math.round(gr.reduce((a,g)=>a+g.nilaiAkhir,0)/gr.length*10)/10:'-';
     rpBuild(); const rc=reportCardsData.find(x=>String(x.studentId)===String(s.id));
+    /* Status rapor resmi = dokumen berstatus Diterbitkan di report_documents. Bila tidak ada/ditolak RLS, tampilan lama dipertahankan. */
+    setTimeout(async()=>{ try{ const sb=dkClient(); const el=document.getElementById('pRaporStatus'); if(!sb||!el) return;
+      const {data,error}=await sb.from('report_documents').select('jenis,tahun_ajaran,semester,bulan,versi,diterbitkan_at').eq('student_id',s.id).eq('status','Diterbitkan').order('diterbitkan_at',{ascending:false}).limit(1);
+      if(error||!data||!data.length) return; const d=data[0];
+      el.textContent='Terbit: '+(d.jenis==='Bulanan'?(BULAN_ID[Number(String(d.bulan).slice(5,7))-1]||'')+' '+String(d.bulan).slice(0,4):'Semester '+d.semester+' '+d.tahun_ajaran);
+    }catch(e){ console.warn('[rapor-personal] status terbit',e); } },0);
     let tbl='';
     if(pageKey==='jadwal'){ const rows=schedulesData.filter(x=>String(x.classId)===String(s.classId)).slice().sort((a,b)=>HARI_LIST.indexOf(a.hari)-HARI_LIST.indexOf(b.hari)||String(a.jamMulai).localeCompare(String(b.jamMulai)));
       tbl=rows.length?`<table><tr><th>Hari</th><th>Jam</th><th>Mapel</th><th>Guru</th><th>Ruang</th></tr>${rows.map(x=>`<tr><td>${x.hari}</td><td>${x.jam}</td><td>${x.mapel}</td><td>${x.guru}</td><td>${x.ruang}</td></tr>`).join('')}</table>`:acadEmptyStateHtml('Belum ada jadwal','Jadwal kelas belum diisi.'); }
@@ -2158,9 +2164,9 @@ function personalAcademicPageHtml(pageKey){
     else if(pageKey==='nilai'){ tbl=gr.length?`<table><tr><th>Mapel</th><th>Periode</th><th>Tugas</th><th>Ulangan</th><th>PTS</th><th>PAS</th><th>Project</th><th>Akhir</th></tr>${gr.map(g=>`<tr><td>${g.mapel}</td><td>${g.semester} ${g.tahunAjaran}</td><td>${g.tugas==null?'-':g.tugas}</td><td>${g.ulangan==null?'-':g.ulangan}</td><td>${g.pts==null?'-':g.pts}</td><td>${g.pas==null?'-':g.pas}</td><td>${g.project==null?'-':g.project}</td><td>${nlBadge(g.nilaiAkhir)}</td></tr>`).join('')}</table>`:acadEmptyStateHtml('Belum ada nilai','Nilai belum diinput.'); }
     return `${acadPageHeaderHtml(color,'Akademik',title,who+' — tampilan read-only.')}
       <div class="panel"><div class="pstat-grid">
-        <div class="pstat"><div class="p-ic">✅</div><div class="p-val">${hadir}%</div><div class="p-label">Kehadiran</div></div>
+        <div class="pstat"><div class="p-ic">✅</div><div class="p-val">${hadir==null?'-':hadir+'%'}</div><div class="p-label">Kehadiran</div></div>
         <div class="pstat"><div class="p-ic">📝</div><div class="p-val">${avg}</div><div class="p-label">Rata-rata Nilai</div></div>
-        <div class="pstat"><div class="p-ic">📄</div><div class="p-val">${rc?rc.status:'Belum Lengkap'}</div><div class="p-label">Status Rapor</div></div>
+        <div class="pstat"><div class="p-ic">📄</div><div class="p-val" id="pRaporStatus">${rc?rc.status:'Belum Lengkap'}</div><div class="p-label">Status Rapor</div></div>
       </div>${tbl?'<div style="margin-top:14px">'+tbl+'</div>':''}</div>`;
   }
   const who=curRole==='Orang Tua'?`Data anak Anda: ${p.anak} (${p.kelas})`:`Data akademik Anda (${p.kelas})`;
@@ -7662,7 +7668,7 @@ async function dbFetchAll(table,select,orderCol,filterFn){
   q=q.range(from,from+step-1);
   if(orderCol)q=q.order(orderCol,{ascending:true});
   const {data,error}=await q;if(error)throw error;
-  out.push(...(data||[]));if(!data||data.length<step)break}
+  out.push(...(data||[]));if(from+step>=50000&&data&&data.length>=step){console.warn('[dbFetchAll] '+table+' mencapai batas 50.000 baris, sebagian data tidak dimuat');if(typeof showAcadToast==='function')showAcadToast('Data tabel '+table+' melebihi 50.000 baris; sebagian tidak dimuat.');}if(!data||data.length<step)break}
  return out}
 /* Peta state yang MASIH lokal/dummy dan tujuan tabelnya di Supabase (tahap berikutnya).
    Cek di konsol browser: aisLocalStateReport() */
@@ -10302,7 +10308,7 @@ function buildModel(s,P,D,ev,meta){
   if(s.boarding){
     ['ba','bi','bt','bh','bk','pz'].forEach(k=>{ if(D.err[k]) bd.err[k]=D.err[k]; if(k==='bt'&&D.err.btg) bd.err.bt=D.err.btg; });
     fail('ba','Presensi kegiatan asrama'); fail('bi',"Mutaba'ah ibadah"); fail('bt','Setoran tahfidz'); fail('btg','Target tahfidz'); fail('bh','Penilaian harian'); fail('bk','Pelanggaran asrama'); fail('pz','Perizinan');
-    const roleHint=curRole==='Wali Kelas'?' (bila seharusnya ada, pastikan akun ini berhak membaca data asrama)':'';
+    const roleHint=curRole==='Wali Kelas'?' (kemungkinan akun ini tidak berhak membaca data asrama, jadi kosong bisa berarti diblokir, bukan belum ada. Konfirmasi dengan Musyrif sebelum menerbitkan)':'';
     if(typeof window.rbComputeShared!=='function'){ G('kritis','bd','Modul perhitungan Rapor Boarding tidak ditemukan.'); }
     else {
       const ib=mine(D.bi), ba=mine(D.ba), bh=mine(D.bh), bk=mine(D.bk);
