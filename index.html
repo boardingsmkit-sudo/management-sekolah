@@ -9625,7 +9625,7 @@ window.pjSave=async function(pid){
 window.pjOpenPhotoForm=function(sid){
   if(!pjCanWrite()){ showAcadToast('Anda tidak memiliki izin untuk mengubah foto profil.'); return; }
   if(!dkClient()){ showAcadToast('Mode demo: Supabase belum terhubung, foto tidak dapat disimpan.'); return; }
-  const r=reportCardsData.find(x=>String(x.studentId)===String(sid)); if(!r){ showAcadToast('Data siswa tidak ditemukan. Muat ulang halaman.'); return; }
+  const r=reportCardsData.find(x=>String(x.studentId)===String(sid))||studentsData.find(x=>String(x.id)===String(sid)); if(!r){ showAcadToast('Data siswa tidak ditemukan. Muat ulang halaman.'); return; }
   const ini=dkEsc(ksInitials(akUnesc(r.nama))), has=!!pjPhotoPath(sid);
   openAcadDrawer('Edit Foto Profil',AK_ERRBOX+dwRow('Siswa',r.nama+' · '+r.kelas)+
     '<div class="pjf-avprev" id="pjfAvPrev">'+ini+pjAvatarImg(sid)+'</div>'+
@@ -9640,7 +9640,7 @@ window.pjPreviewPhoto=function(inp){
   if(box.__u) URL.revokeObjectURL(box.__u); box.__u=URL.createObjectURL(f);
   box.querySelectorAll('img').forEach(i=>i.remove()); const im=document.createElement('img'); im.alt=''; im.src=box.__u; box.appendChild(im);
 };
-async function pjAfterPhoto(sid){ await kscLoad('pf',{silent:true}); closeAcadDrawer(); rpRefresh(); }
+async function pjAfterPhoto(sid){ await kscLoad('pf',{silent:true}); closeAcadDrawer(); if(window.rpxPhotoChanged&&window.rpxPhotoChanged(sid)) return; rpRefresh(); }
 window.pjSavePhoto=async function(sid){
   const M=KSC.pf; if(M.submitting) return;
   const sb=dkClient(); if(!sb){ akFormErr('akfError','Supabase belum terhubung.'); return; }
@@ -10521,7 +10521,7 @@ function render(J,m,a){
     else if(!ak.pel.length) empty('Tidak ada catatan pelanggaran sekolah pada periode ini.');
     else table(['Tanggal','Pelanggaran','Tingkat','Poin','Status'],ak.pel.map(v=>[v.tanggal,v.pelanggaran,v.tingkat,{content:v.poin,styles:{halign:'center'}},v.status]),{fs:8.3,cols:{0:{cellWidth:28},2:{cellWidth:20},3:{cellWidth:13},4:{cellWidth:38}}});
     sec('Catatan & Evaluasi Wali Kelas');
-    box('Catatan Wali Kelas',m.ev.catatanWali,{always:true});
+    box('Catatan Guru Kejuruan',m.ev.catatanWali,{always:true});
     box('Evaluasi Perkembangan Akademik',m.ev.evalAkademik);
     box('Rekomendasi Tindak Lanjut Akademik',m.ev.rekomAkademik);
   }
@@ -10580,8 +10580,8 @@ function render(J,m,a){
       {cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'},4:{halign:'center'}},after:1.5});
     note('Nilai Boarding = rata-rata komponen yang memiliki data. Predikat: >= 90 Sangat Baik, >= 75 Baik, di bawah 75 Perlu Pembinaan. Poin pelanggaran tidak mengurangi nilai (sesuai aturan Rapor Boarding di aplikasi).'); }
     sec('Evaluasi Musyrif');
-    box('Evaluasi Musyrif',m.ev.evalMusyrif,{always:true});
-    box('Rekomendasi Pembinaan Boarding',m.ev.rekomBoarding);
+    box('Evaluasi Boarding/Asrama',m.ev.evalMusyrif,{always:true});
+    box('Catatan Musyrif/Musyrifah',m.ev.rekomBoarding);
   }
 
   /* ---------- Bagian III: Kesimpulan & Pengesahan ---------- */
@@ -10790,7 +10790,7 @@ function showRoots(){
 }
 window.rpxTab=function(t){
   if(RPX.ed&&RPX.ed.dirty&&!confirm('Perubahan catatan belum disimpan. Tinggalkan halaman ini?')) return;
-  RPX.tab=t; RPX.ed=null;
+  RPX.tab=t; RPX.ed=null; RPX.backTab='';
   if(t==='bulanan') RPX.jenis='Bulanan'; else if(t==='semester') RPX.jenis='Semester';
   showRoots(); render();
 };
@@ -10964,6 +10964,7 @@ async function openEditor(sid){
   const P=curPeriod(); if(!P) return;
   RPX.ed={s,P,loading:true,dirty:false}; render();
   try{
+    if(typeof schedulesData!=='undefined'&&!schedulesData.length&&dkClient()){ try{ await kscLoad('jd',{silent:true}); }catch(e){ console.warn('[rapor-pdf] jadwal',e); } }
     const [D]=await Promise.all([fetchDataset([s],P,{notes:true}),loadDocs(P)]);
     const ed=RPX.ed; if(!ed||ed.s!==s) return;
     ed.D=D; ed.doc=docOf(s.id); ed.pub=pubOf(s.id);
@@ -10971,45 +10972,68 @@ async function openEditor(sid){
     ed.prefill='';
     if(!ed.doc&&P.jenis==='Semester'){
       const rec=rpRecords.find(r=>String(r.studentId)===String(s.id)&&U(r.tahunAjaran)===P.ta&&r.semester===P.sem);
-      const cw=rec&&rec.raw?String(rec.raw.catatan_wali||'').trim():'';
-      if(cw){ ed.ev.catatanWali=cw; ed.prefill='Catatan Wali Kelas diambil dari Rapor Akademik semester ini. Periksa sebelum disimpan.'; }
+      /* Catatan Wali Kelas tidak lagi disalin: kolom ini sekarang milik Guru Kejuruan. */
     }
+    ed.evOrig=Object.assign({},ed.ev);
     ed.loading=false; render();
   }catch(e){ console.error('[rapor-pdf] buka',e); if(RPX.ed){ RPX.ed.loading=false; RPX.ed.err=errMsg(e); render(); } }
 }
 window.rpxBack=function(){
   if(RPX.ed&&RPX.ed.dirty&&!confirm('Perubahan catatan belum disimpan. Kembali ke daftar?')) return;
-  RPX.ed=null; render();
+  RPX.ed=null; if(RPX.backTab){ RPX.tab=RPX.backTab; RPX.backTab=''; RPX.arsip=null; } render();
 };
 const isFinal=d=>!!d&&(d.status==='Diterbitkan'||d.status==='Diarsipkan');
-function locked(ed){ if(!canEdit()) return true; const d=ed.doc; if(!d) return false; if(isFinal(d)) return true; if(d.status==='Menunggu Review'&&!canPub()) return true; return false; }
+function locked(ed){ if(!canEdit()) return true; const d=ed.doc; if(!d) return false; if(isFinal(d)) return !(ed.archEdit&&canPub()&&d.status==='Diterbitkan'); if(d.status==='Menunggu Review'&&!canPub()) return true; return false; }
 function collectEv(){
   const ed=RPX.ed; if(!ed||!ed.ev) return;
-  FIELDS.forEach(f=>{ const el=document.getElementById('rpxf_'+f.k); if(el&&!el.disabled) ed.ev[f.k]=el.value.trim(); });
+  Object.keys(ED_FIELDS).forEach(k=>{ const el=document.getElementById('rpxf_'+k); if(el&&!el.disabled) ed.ev[k]=el.value.trim(); });
+  const gk=document.getElementById('rpxf_guruKejuruan'); if(gk&&!gk.disabled) ed.ev.guruKejuruan=gk.value;
 }
 function gapsHtml(gs){
-  if(!gs.length) return '<div class="rpx-gap ok">Data dan evaluasi lengkap.</div>';
-  const L={kritis:['kr','Kritis'],wajib:['wj','Wajib diisi'],peringatan:['pw','Peringatan'],info:['in','Info']};
-  return ['kritis','wajib','peringatan','info'].map(l=>gs.filter(g=>g.lvl===l).map(g=>`<div class="rpx-gap ${L[l][0]}"><b>${L[l][1]}</b> ${E(g.text)}</div>`).join('')).join('');
+  /* Hanya kegagalan pemuatan data (kritis) yang ditampilkan; catatan kosong cukup tampil sebagai "-" pada lembar laporan. */
+  return gs.filter(g=>g.lvl==='kritis').map(g=>`<div class="rpx-gap kr"><b>Data gagal dimuat</b> ${E(g.text)}</div>`).join('');
 }
 function refreshGaps(){
   const ed=RPX.ed, el=document.getElementById('rpxGaps'); if(!ed||!ed.D||!el) return;
-  if(isFinal(ed.doc)){ el.innerHTML='<div class="rpx-gap ok">Rapor sudah diterbitkan; isi dokumen dibekukan (snapshot).</div>'; return; }
+  if(isFinal(ed.doc)){ el.innerHTML=''; return; }
   collectEv(); el.innerHTML=gapsHtml(buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}).gaps);
 }
 const NONLATIN=/[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u20AC\u2122\s]/;
 window.rpxDirty=function(el){
   const ed=RPX.ed; if(!ed) return; ed.dirty=true;
   const w=document.getElementById(el.id+'_w'); if(w) w.style.display=NONLATIN.test(el.value)?'':'none';
-  clearTimeout(RPX._gt); RPX._gt=setTimeout(refreshGaps,350);
+  clearTimeout(RPX._gt); RPX._gt=setTimeout(refreshGaps,350); clearTimeout(RPX._lt); RPX._lt=setTimeout(()=>{ if(window.rpxLive) window.rpxLive(); },450);
 };
+const ED_FIELDS={evalAkademik:['ak','Evaluasi Akademik','Perkembangan belajar, kompetensi, dan hasil pembelajaran santri.'],catatanWali:['ak','Catatan Guru Kejuruan','Kemampuan, tugas, praktik, atau hal yang perlu ditingkatkan.'],
+  evalMusyrif:['bd','Evaluasi Boarding/Asrama','Perkembangan adab, ibadah, kedisiplinan, dan aspek lain yang dinilai di modul Boarding.'],rekomBoarding:['bd','Catatan Musyrif/Musyrifah','Catatan pembinaan, perkembangan perilaku, hal yang perlu ditingkatkan, dan tindak lanjut.']};
+const GRP2={ak:'Evaluasi Akademik — Guru Kejuruan',bd:'Evaluasi Boarding/Asrama — Musyrif/Musyrifah'};
+function gkOptions(ed){
+  const out=[], seen=new Set(); if(typeof schedulesData==='undefined') return out;
+  schedulesData.forEach(x=>{ if(String(x.classId)!==String(ed.s.classId)) return;
+    if(x.tahunAjaran&&x.tahunAjaran!==ed.P.ta) return; if(x.semester&&x.semester!==ed.P.sem) return;
+    const mp=akUnesc(x.mapel), g=akUnesc(x.guru); if(!/kejuruan|produktif/i.test(mp)||!g||seen.has(g)) return; seen.add(g); out.push({guru:g,mapel:mp}); });
+  return out;
+}
+function gkBlock(ed,lock){
+  const o=gkOptions(ed), cur=ed.ev.guruKejuruan||'';
+  if(!o.length&&!cur) return '<div class="rpx-sub" style="margin:4px 0 8px">Guru Kejuruan: penugasan mata pelajaran kejuruan untuk kelas ini belum tersedia di Jadwal.</div>';
+  if(o.length===1&&!cur) ed.ev.guruKejuruan=o[0].guru;
+  const val=ed.ev.guruKejuruan||'', list=o.slice(); if(val&&!list.some(x=>x.guru===val)) list.push({guru:val,mapel:'tersimpan'});
+  return `<div class="dw-field rpx-field"><label for="rpxf_guruKejuruan">Guru Kejuruan</label><select id="rpxf_guruKejuruan" onchange="rpxDirty(this)" ${lock||list.length===1?'disabled':''}>${list.length>1||!val?'<option value="">— pilih guru —</option>':''}${list.map(x=>`<option value="${E(x.guru)}"${x.guru===val?' selected':''}>${E(x.guru)} (${E(x.mapel)})</option>`).join('')}</select></div>`;
+}
+function stampAuthors(ed){
+  const o=ed.evOrig||{}, e=ed.ev, a={oleh:(typeof akMyName==='function'&&akMyName())||me(),role:curRole,t:new Date().toISOString()};
+  if(['evalAkademik','catatanWali','guruKejuruan'].some(k=>(e[k]||'')!==(o[k]||''))) e.penulisAkademik=a;
+  if(['evalMusyrif','rekomBoarding'].some(k=>(e[k]||'')!==(o[k]||''))) e.penulisBoarding=a;
+  ed.evOrig=Object.assign({},e);
+}
 function fieldsHtml(ed,lock){
   const s=ed.s, groups={};
-  FIELDS.filter(f=>!f.only||f.only===ed.P.jenis).filter(f=>f.grp!=='bd'||s.boarding).forEach(f=>(groups[f.grp]=groups[f.grp]||[]).push(f));
-  return Object.keys(groups).map(g=>`<div class="rpx-fg"><div class="rpx-fgt">${GRP[g]}</div>${groups[g].map(f=>`
-    <div class="dw-field rpx-field"><label for="rpxf_${f.k}">${f.label}${f.req?' <span class="rpx-req">*</span>':''}</label>
-      <textarea id="rpxf_${f.k}" rows="${f.req?4:3}" maxlength="1500" oninput="rpxDirty(this)" ${lock?'disabled':''}>${E(ed.ev[f.k]||'')}</textarea>
-      <div class="rpx-warnt" id="rpxf_${f.k}_w" style="display:${NONLATIN.test(ed.ev[f.k]||'')?'':'none'}">Huruf non-Latin (mis. Arab) belum didukung font PDF dan akan tampil sebagai "?". Gunakan transliterasi Latin.</div></div>`).join('')}</div>`).join('');
+  Object.keys(ED_FIELDS).filter(k=>ED_FIELDS[k][0]!=='bd'||s.boarding).forEach(k=>(groups[ED_FIELDS[k][0]]=groups[ED_FIELDS[k][0]]||[]).push(k));
+  return Object.keys(groups).map(g=>`<div class="rpx-fg"><div class="rpx-fgt">${GRP2[g]}</div>${g==='ak'?gkBlock(ed,lock):''}${groups[g].map(k=>`
+    <div class="dw-field rpx-field"><label for="rpxf_${k}">${ED_FIELDS[k][1]}</label>
+      <textarea id="rpxf_${k}" rows="4" maxlength="1500" placeholder="${ED_FIELDS[k][2]}" oninput="rpxDirty(this)" ${lock?'disabled':''}>${E(ed.ev[k]||'')}</textarea>
+      <div class="rpx-warnt" id="rpxf_${k}_w" style="display:${NONLATIN.test(ed.ev[k]||'')?'':'none'}">Huruf non-Latin (mis. Arab) belum didukung font PDF dan akan tampil sebagai "?". Gunakan transliterasi Latin.</div></div>`).join('')}</div>`).join('');
 }
 function notesRefHtml(ed,lock){
   if(!ed.s.boarding) return '';
@@ -11029,23 +11053,11 @@ function histHtml(d){
   return `<details class="rpx-det"><summary>Riwayat dokumen (${h.length})</summary>${h.map(x=>`<div class="rpx-hist"><b>${E(x.aksi)}</b> · ${E(x.oleh||'-')} (${E(x.role||'-')})<span>${tglJam(x.t)}</span>${x.ket?`<div>${E(x.ket)}</div>`:''}</div>`).join('')}</details>`;
 }
 function actionsHtml(ed){
-  const d=ed.doc, st=d?d.status:'Belum Dibuat', ok=RPX.tableOk, dis=ok?'':' disabled title="Tabel rapor belum tersedia"';
-  const b=[];
-  if(!d||st==='Draft'||st==='Data Belum Lengkap'){
-    if(canEdit()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Draf</button>`,`<button class="btn-primary-sm" onclick="rpxSubmit()"${dis}>Ajukan Review</button>`);
-    if(canPub()) b.push(`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
-    b.push(`<button class="btn-outline-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
-  } else if(st==='Menunggu Review'){
-    if(canPub()) b.push(`<button class="btn-outline-sm" onclick="rpxSave()"${dis}>Simpan Perubahan</button>`,`<button class="btn-outline-sm" onclick="rpxReturn()"${dis}>Kembalikan ke Draf</button>`,`<button class="btn-primary-sm rpx-pub" onclick="rpxPublish()"${dis}>Terbitkan</button>`);
-    else b.push('<p class="rpx-muted">Menunggu review Kepala Sekolah / Super Admin. Catatan dikunci selama review.</p>');
-    b.push(`<button class="btn-outline-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
-  } else {
-    b.push(`<button class="btn-primary-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
-    if(navigator.canShare&&typeof File==='function') b.push(`<button class="btn-outline-sm" onclick="rpxShare()">Bagikan (WhatsApp, dll.)</button>`);
-    if(canEdit()&&ed.doc.id===(docOf(ed.s.id)||{}).id) b.push(`<button class="btn-outline-sm" onclick="rpxRevise()"${dis}>Buat Revisi</button>`);
-    if(canPub()&&st==='Diterbitkan') b.push(`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive()"${dis}>Arsipkan</button>`);
-  }
-  if(ed.pub&&d&&ed.pub.id!==d.id) b.push(`<button class="btn-outline-sm" onclick="rpxDlDoc('${E(ed.pub.id)}')">Unduh versi ${ed.pub.versi} (terbit)</button>`);
+  const dis=RPX.tableOk?'':' disabled title="Tabel rapor belum tersedia"';
+  const b=[`<button class="btn-primary-sm" onclick="rpxWA()">Kirim WhatsApp</button>`];
+  if(ed.archEdit&&isFinal(ed.doc)&&canPub()) b.push(`<button class="btn-outline-sm" onclick="rpxArsipUpdate()"${dis}>Simpan Perubahan</button>`);
+  else if(canEdit()) b.push(`<button class="btn-outline-sm" onclick="rpxArsipSave()"${dis}>Simpan Arsip</button>`);
+  b.push(`<button class="btn-outline-sm" onclick="rpxPrint()">Cetak / Simpan PDF</button>`);
   return b.join('');
 }
 function editorHtml(){
@@ -11056,12 +11068,12 @@ function editorHtml(){
   return bannerHtml()+`<div class="rpx-ed">
     <aside class="panel rpx-side">
       <button class="rp-back" onclick="rpxBack()">&larr; Kembali ke Daftar</button>
-      <div class="rpx-who"><b>${s.nama}</b><span>NIS ${s.nis||'-'} · Kelas ${s.kelas}${s.boarding?' · Boarding':''}</span><span>${E(P.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester')} · ${E(P.label)}</span></div>
+      <div class="rpx-who"><b>${s.nama}</b><span>NIS ${s.nis||'-'} · Kelas ${s.kelas}${s.boarding?' · Boarding':''}</span><span>${E(P.jenis==='Bulanan'?'Rapor Bulanan':'Rapor Semester')} · ${E(P.label)}</span>${(typeof window.pjOpenPhotoForm==='function'&&typeof kscCan==='function'&&kscCan('pj','write'))?`<button class="btn-outline-sm" style="margin-top:6px" onclick="pjOpenPhotoForm('${E(s.id)}')">Edit Foto</button>`:''}</div>
       <div class="rpx-stline">${badge(st)}${d?` <span class="rpx-sub">Versi ${d.versi}${isFinal(d)?' · No. '+E(docNoOf(d,P)):''}</span>`:''}</div>
       ${d&&d.diterbitkan_at?`<div class="rpx-sub">Diterbitkan ${tglJam(d.diterbitkan_at)} oleh ${E(d.diterbitkan_oleh||'-')}</div>`:''}
       ${d&&d.status==='Menunggu Review'&&d.diajukan_at?`<div class="rpx-sub">Diajukan ${tglJam(d.diajukan_at)} oleh ${E(d.diajukan_oleh||'-')}</div>`:''}
       <div class="rpx-acts">${actionsHtml(ed)}</div>
-      <div class="rpx-sect">Kelengkapan Data</div><div id="rpxGaps"></div>
+      <div id="rpxGaps"></div>
       <div class="rpx-sect">Evaluasi &amp; Catatan ${lock?'<span class="rpx-sub">(terkunci)</span>':''}</div>
       ${ed.prefill?`<div class="rpx-gap in">${E(ed.prefill)}</div>`:''}
       ${fieldsHtml(ed,lock)}
@@ -11234,6 +11246,7 @@ window.rpxPreview=async function preview(){
   const ed=RPX.ed; if(!ed||!ed.D) return;
   const el=document.getElementById('rpxPrev'); if(el) el.innerHTML='<div class="rpx-loading">Menyusun pratinjau...</div>';
   refreshGaps();
+  if(ed.archEdit&&isFinal(ed.doc)){ await window.rpxLive(); return; }
   try{
     let J, photo='';
     if(isFinal(ed.doc)){ const sn=await getSnapshot(ed.doc.id); J=sn.snapshot.model; photo=sn.snapshot.photo||''; }
@@ -11274,7 +11287,7 @@ window.rpxShare=async function(){
 
 /* ---------- Aksi status ---------- */
 async function persist(status,extra,aksi,ket){
-  const ed=RPX.ed; collectEv();
+  const ed=RPX.ed; collectEv(); stampAuthors(ed);
   if(ed.doc){
     const patch=Object.assign({catatan:ed.ev,status},extra||{});
     if(aksi) patch.riwayat=hist(ed.doc,aksi,ket);
@@ -11397,11 +11410,11 @@ function arsipBody(){
     .filter(x=>(!f.jenis||x.d.jenis===f.jenis)&&(!f.status||x.d.status===f.status)&&(!q||(x.s&&(U(x.s.nama).toLowerCase().includes(q)||String(x.s.nis).toLowerCase().includes(q)))||x.no.toLowerCase().includes(q)))
     .sort((a,b)=>String(b.d.updated_at).localeCompare(String(a.d.updated_at)));
   if(!rows.length){ el.innerHTML=acadEmptyStateHtml('Belum ada dokumen rapor','Belum ada rapor yang dibuat pada tahun ajaran ini, atau ubah filter.'); return; }
-  el.innerHTML=`<div class="rpx-tblwrap"><table class="rpx-tbl"><thead><tr><th>No. Dokumen</th><th>Santri</th><th>Kelas</th><th>Jenis</th><th>Periode</th><th>Versi</th><th>Status</th><th>Diterbitkan</th><th>Aksi</th></tr></thead><tbody>
+  el.innerHTML=`<div class="rpx-tblwrap"><table class="rpx-tbl"><thead><tr><th>No. Dokumen</th><th>Santri</th><th>Kelas</th><th>Jenis</th><th>Periode</th><th>Versi</th><th>Status</th><th>Tanggal Simpan</th><th>Aksi</th></tr></thead><tbody>
     ${rows.map(x=>{ const d=x.d, id=E(d.id), fin=isFinal(d);
       return `<tr><td class="rpx-mono">${fin?E(x.no):'-'}</td><td><b>${x.s?x.s.nama:'(santri tidak ditemukan)'}</b>${x.s?`<div class="rpx-sub">NIS ${x.s.nis||'-'}</div>`:''}</td><td>${x.s?x.s.kelas:'-'}</td>
-        <td>${E(d.jenis)}</td><td>${x.P?E(x.P.label):'-'}</td><td>v${d.versi}</td><td>${badge(d.status)}</td><td>${d.diterbitkan_at?tglJam(d.diterbitkan_at)+'<div class="rpx-sub">'+E(d.diterbitkan_oleh||'')+'</div>':'-'}</td>
-        <td><div class="rpx-acts-row">${fin?`<button class="btn-primary-sm" onclick="rpxDlDoc('${id}')">PDF</button>`:''}<button class="btn-outline-sm" onclick="rpxHist('${id}')">Riwayat</button>${canPub()&&d.status==='Diterbitkan'?`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive('${id}')">Arsipkan</button>`:''}</div></td></tr>`; }).join('')}
+        <td>${E(d.jenis)}</td><td>${x.P?E(x.P.label):'-'}</td><td>v${d.versi}</td><td>${badge(d.status)}</td><td>${tglJam(d.diterbitkan_at||d.updated_at||d.created_at)}${d.diterbitkan_oleh?'<div class="rpx-sub">'+E(d.diterbitkan_oleh)+'</div>':''}</td>
+        <td><div class="rpx-acts-row">${canEdit()&&d.status!=='Diarsipkan'&&(!fin||canPub())?`<button class="btn-primary-sm" onclick="rpxEditArsip('${id}')">Edit</button>`:''}${fin?`<button class="btn-outline-sm" onclick="rpxWADoc('${id}')">Kirim WA</button>`:''}<button class="btn-outline-sm" onclick="rpxHist('${id}')">Riwayat</button>${canPub()&&d.status==='Diterbitkan'?`<button class="btn-outline-sm rpx-danger" onclick="rpxArchive('${id}')">Arsipkan</button>`:''}${canPub()?`<button class="btn-outline-sm" title="Hapus arsip" aria-label="Hapus arsip" style="color:#8a94a3;padding:4px 8px" onclick="rpxArsipDelete('${id}')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg></button>`:''}</div></td></tr>`; }).join('')}
   </tbody></table></div>`;
 }
 window.rpxHist=function(id){
@@ -11409,6 +11422,134 @@ window.rpxHist=function(id){
   const h=(Array.isArray(d.riwayat)?d.riwayat:[]).slice().reverse();
   openAcadDrawer('Riwayat Dokumen Rapor',`${dwRow('Jenis',E(d.jenis))}${dwRow('Versi','v'+d.versi)}${dwRow('Status',badge(d.status))}${dwRow('Dibuat oleh',E(d.dibuat_oleh||'-'))}
     <div class="rpx-sect">Riwayat</div>${h.length?h.map(x=>`<div class="rpx-hist"><b>${E(x.aksi)}</b> · ${E(x.oleh||'-')} (${E(x.role||'-')})<span>${tglJam(x.t)}</span>${x.ket?`<div>${E(x.ket)}</div>`:''}</div>`).join(''):'<p class="rpx-muted">Belum ada riwayat.</p>'}`);
+};
+
+
+/* ---------- Tiga tindakan utama: Kirim WhatsApp, Simpan Arsip, Cetak/Simpan PDF ---------- */
+function waNumber(s){
+  const raw=String(s&&s.kontakOrtu||'').trim(); if(!raw||raw==='-') return '';
+  let n=raw.replace(/[^\d+]/g,'').replace(/^\+/,''); if(n.startsWith('0')) n='62'+n.slice(1); else if(n.startsWith('8')) n='62'+n;
+  return n.replace(/\D/g,'').length>=9?n:'';
+}
+async function waSend(s,doc,P){
+  const num=waNumber(s);
+  if(!num){ toast('Nomor WhatsApp wali santri belum diisi (Data Santri > Kontak Orang Tua).'); return; }
+  const who=[s.ayah,s.ibu].filter(x=>x&&x!=='-').join(' / ')||'(nama wali belum diisi)';
+  openAcadConfirm('Kirim ke wali santri ini?','Santri: '+s.nama+' (NIS '+(s.nis||'-')+')\nWali: '+who+'\nNomor WhatsApp: +'+num+'\n\nPDF akan diunduh dan WhatsApp dibuka ke nomor tersebut. Pengiriman otomatis belum tersedia (belum ada integrasi WhatsApp API), jadi file PDF perlu dilampirkan secara manual.',async()=>{
+    try{
+      const r=await pdfFromDoc(doc); r.doc.save(r.name);
+      const msg="Assalamu'alaikum Bapak/Ibu wali dari "+s.nama+". Berikut kami sampaikan "+(P&&P.jenis==='Bulanan'?'Rapor Bulanan ':'Rapor Semester ')+(P?P.label:'')+" SMK IT Al-Hidayah. File PDF: "+r.name;
+      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank','noopener');
+      toast('PDF diunduh dan WhatsApp dibuka. Lampirkan file PDF lalu kirim; laporan belum terkirim sebelum Anda menekan Kirim di WhatsApp.');
+    }catch(e){ console.error('[rapor-pdf] wa',e); toast('Gagal menyiapkan PDF: '+errMsg(e)); }
+  },'Lanjut ke WhatsApp');
+}
+window.rpxWA=function(){
+  const ed=RPX.ed; if(!ed||ed.loading) return;
+  const src=isFinal(ed.doc)?ed.doc:ed.pub;
+  if(!src){ toast('Simpan Arsip terlebih dahulu (oleh Kepala Sekolah/Super Admin). Draf tidak dikirim ke wali santri.'); return; }
+  waSend(ed.s,src,ed.P);
+};
+window.rpxWADoc=function(id){
+  const d=(RPX.arsip||[]).concat(RPX.docs).find(x=>String(x.id)===String(id)); if(!d||!isFinal(d)) return;
+  const s=studentsData.find(x=>String(x.id)===String(d.student_id)); if(!s){ toast('Santri tidak ditemukan.'); return; }
+  waSend(s,d,docPeriod(d));
+};
+window.rpxOpenDoc=async function(id){
+  const d=(RPX.arsip||[]).concat(RPX.docs).find(x=>String(x.id)===String(id)); if(!d||!isFinal(d)) return;
+  const w=window.open('','_blank');
+  try{ const r=await pdfFromDoc(d); const u=r.doc.output('bloburl'); if(w) w.location.href=u; else toast('Pop-up diblokir. Gunakan tombol PDF.'); }
+  catch(e){ if(w) w.close(); console.error('[rapor-pdf] buka',e); toast('Gagal membuka laporan: '+errMsg(e)); }
+};
+async function publishNow(ed){
+  if(!ed.doc) await persist(draftStatus(ed),null,null);
+  const d=ed.doc, today=ksToday(), docNo=docNoOf(d,ed.P);
+  const m=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:false,versi:d.versi,docNo,tglTerbit:today});
+  const photo=await photoOf(ed.s.id); ed.photo=photo; await ensureLib();
+  await persist('Diterbitkan',{snapshot:{v:1,model:m,photo,frozenAt:new Date().toISOString()},file_name:fileNameOf(ed.P,ed.s.nama,{versi:d.versi}),diterbitkan_oleh:me(),diterbitkan_at:new Date().toISOString()},'Disimpan ke Arsip','');
+  const older=RPX.docs.filter(x=>String(x.student_id)===String(ed.s.id)&&x.id!==ed.doc.id&&x.status==='Diterbitkan');
+  for(const o of older){ try{ putDoc(await docUpdate(o,{status:'Diarsipkan',riwayat:hist(o,'Diarsipkan otomatis','Digantikan versi '+ed.doc.versi)})); }catch(e){ console.warn('[rapor-pdf] arsip versi lama',e); } }
+  ed.pub=ed.doc;
+}
+window.rpxArsipSave=function(){
+  if(!tableReady()) return; const ed=RPX.ed; if(!ed||ed.loading||!ed.D) return; collectEv();
+  if(isFinal(ed.doc)){
+    openAcadConfirm('Laporan sudah diarsipkan','Laporan santri ini untuk periode yang sama sudah tersimpan di Arsip (v'+ed.doc.versi+'). Buat versi baru (v'+(ed.doc.versi+1)+') untuk diubah lalu diarsipkan ulang? Versi lama tetap tersimpan.',()=>run('Buat versi baru',async()=>{
+      const base=ed.doc;
+      const nd=await docInsert({student_id:ed.s.id,class_id:ed.s.classId,jenis:ed.P.jenis,tahun_ajaran:ed.P.ta,semester:ed.P.sem,bulan:ed.P.bulan||'',periode_mulai:ed.P.range[0],periode_selesai:ed.P.range[1],
+        status:'Draft',versi:base.versi+1,catatan:Object.assign(emptyEv(),base.catatan||{}),dibuat_oleh:me(),riwayat:hist(null,'Revisi dibuat','Dari versi '+base.versi)});
+      putDoc(nd); ed.doc=nd; ed.ev=Object.assign(emptyEv(),nd.catatan||{}); ed.D=await fetchDataset([ed.s],ed.P,{notes:true});
+      toast('Versi baru v'+nd.versi+' siap diubah. Tekan Simpan Arsip lagi setelah selesai.');
+    }),'Buat Versi Baru');
+    return;
+  }
+  if(ed.doc&&ed.doc.status==='Menunggu Review'&&!canPub()){ toast('Laporan ini sudah tersimpan dan menunggu persetujuan Kepala Sekolah/Super Admin.'); return; }
+  run('Simpan Arsip',async()=>{
+    ed.D=await fetchDataset([ed.s],ed.P,{notes:true});
+    const kr=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}).gaps.filter(x=>x.lvl==='kritis');
+    if(kr.length){ toast('Belum bisa disimpan: '+kr[0].text); return; }
+    if(!canPub()){
+      await persist('Menunggu Review',{diajukan_oleh:me(),diajukan_at:new Date().toISOString()},'Disimpan ke Arsip (menunggu persetujuan)');
+      toast('Laporan tersimpan di Arsip dengan status Menunggu Review. Kepala Sekolah/Super Admin perlu menyetujui sebelum dikirim ke wali santri.'); return;
+    }
+    await publishNow(ed);
+    toast('Laporan tersimpan di Arsip Laporan (v'+ed.doc.versi+').');
+  });
+};
+
+
+/* ---------- Pratinjau langsung, Edit arsip, Hapus arsip ---------- */
+window.rpxLive=async function(){
+  const ed=RPX.ed; if(!ed||!ed.D||ed.loading) return; collectEv();
+  try{
+    let J, photo;
+    if(ed.photo===undefined) ed.photo=await photoOf(ed.s.id);
+    if(isFinal(ed.doc)){
+      if(!ed.snap) ed.snap=(await getSnapshot(ed.doc.id)).snapshot;
+      photo=(ed.archEdit?ed.photo:'')||ed.snap.photo||'';
+      J=Object.assign({},ed.snap.model,{ev:Object.assign({},ed.snap.model.ev||{},ed.archEdit?ed.ev:{})});
+    } else { photo=ed.photo||''; J=buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}); }
+    if(RPX.ed!==ed) return; mrdShow(J,photo);
+  }catch(e){ console.warn('[rapor-pdf] pratinjau langsung',e); }
+};
+window.rpxPhotoChanged=function(sid){
+  const ed=RPX.ed; if(!ed||String(ed.s.id)!==String(sid)) return false;
+  ed.photo=undefined; window.rpxLive(); return true;
+};
+window.addEventListener('beforeunload',e=>{ if(RPX.ed&&RPX.ed.dirty){ e.preventDefault(); e.returnValue=''; } });
+window.rpxEditArsip=async function(id){
+  const d=(RPX.arsip||[]).find(x=>String(x.id)===String(id)); if(!d) return;
+  const P=docPeriod(d); if(!P){ toast('Periode laporan tidak dikenali.'); return; }
+  if(isFinal(d)&&!canPub()){ toast('Hanya Kepala Sekolah/Super Admin yang dapat mengedit laporan yang sudah diarsipkan.'); return; }
+  if(d.status==='Diarsipkan'){ toast('Versi ini sudah digantikan versi lain. Edit versi yang terbaru.'); return; }
+  RPX.jenis=d.jenis; RPX.ta=d.tahun_ajaran; RPX.sem=d.semester; if(d.jenis==='Bulanan') RPX.bulan=d.bulan;
+  RPX.kelas=''; RPX.q=''; RPX.tab=d.jenis==='Bulanan'?'bulanan':'semester'; RPX.backTab='arsip'; showRoots();
+  await openEditor(d.student_id);
+  const ed=RPX.ed; if(!ed||ed.loading||ed.err) return;
+  if(!ed.doc||String(ed.doc.id)!==String(d.id)){ const row=RPX.docs.find(x=>String(x.id)===String(d.id))||d; ed.doc=row; ed.pub=pubOf(ed.s.id); ed.ev=Object.assign(emptyEv(),row.catatan||{}); }
+  ed.evOrig=Object.assign({},ed.ev); ed.archEdit=isFinal(ed.doc); render();
+};
+window.rpxArsipUpdate=function(){
+  if(!tableReady()||!canPub()) return; const ed=RPX.ed; if(!ed||!ed.archEdit||!isFinal(ed.doc)) return;
+  run('Simpan Perubahan',async()=>{
+    collectEv(); stampAuthors(ed); const d=ed.doc;
+    const sn=(await getSnapshot(d.id)).snapshot, photo=(await photoOf(ed.s.id))||sn.photo||'';
+    const snap=Object.assign({},sn,{photo,model:Object.assign({},sn.model,{ev:Object.assign({},sn.model.ev||{},ed.ev)})});
+    ed.doc=await docUpdate(d,{catatan:ed.ev,snapshot:snap,riwayat:hist(d,'Evaluasi diedit','Diperbarui dari Arsip')});
+    putDoc(ed.doc); ed.dirty=false; ed.snap=null; ed.photo=undefined;
+    toast('Perubahan tersimpan. Laporan v'+ed.doc.versi+' diperbarui.');
+  });
+};
+window.rpxArsipDelete=function(id){
+  if(!tableReady()||!canPub()) return;
+  const d=(RPX.arsip||[]).find(x=>String(x.id)===String(id)); if(!d) return;
+  const s=studentsData.find(x=>String(x.id)===String(d.student_id)), P=docPeriod(d);
+  openAcadConfirm('Hapus arsip laporan?','Yakin ingin menghapus arsip laporan santri ini?\n\nSantri: '+(s?s.nama:'-')+'\nJenis: '+d.jenis+(P?' · '+P.label:'')+'\nVersi: v'+d.versi+'\n\nHanya arsip laporan ini yang dihapus. Nilai, presensi, dan penilaian sumber tidak terpengaruh. Tindakan ini tidak dapat dibatalkan.',()=>run('Hapus arsip',async()=>{
+    const {data,error}=await dkClient().from(TBL).delete().eq('id',d.id).select('id');
+    if(error) throw error; if(!data||!data.length) throw {message:'Penghapusan ditolak (hak akses/RLS) atau arsip tidak ditemukan.'};
+    RPX.arsip=(RPX.arsip||[]).filter(x=>x.id!==d.id); RPX.docs=RPX.docs.filter(x=>x.id!==d.id);
+    toast('Arsip laporan dihapus.');
+  }),'Hapus');
 };
 
 /* ---------- Render utama ---------- */
@@ -11739,7 +11880,7 @@ function build(J,photo,det,status){
       blk('Kehadiran Kegiatan Asrama',tbl(kegHead,kegRows,Object.assign({center:kegHead.map((_,i)=>i).filter(i=>i>0)},bErr.ba?{err:bErr.ba}:{empty:'Belum ada presensi kegiatan asrama pada periode ini.'})))+
       blk('Pelanggaran &amp; Pembinaan Asrama'+((bd.pel||[]).length?' ('+bd.pel.length+' catatan, '+X(bd.poin)+' poin)':''),tbl(['Tanggal','Pelanggaran','Kategori','Poin','Status'],(bd.pel||[]).map(v=>[X(v.tanggal),X(v.pelanggaran),X(v.kategori),X(v.poin),X(v.status)]),Object.assign({center:[3]},bErr.bk?{err:bErr.bk}:{empty:'Tidak ada catatan pelanggaran asrama pada periode ini.'})))+
       blk('Perizinan',tbl(['Jenis Izin','Jumlah','Total Hari dalam Periode'],(bd.izin||[]).map(z=>[X(z.jenis),z.n,z.hari]),Object.assign({center:[1,2]},bErr.pz?{err:bErr.pz}:{empty:'Tidak ada perizinan pada periode ini.'})))+
-      memo('Rekomendasi Pembinaan Boarding',ev.rekomBoarding,S.musyrif,true),H));
+      memo('Catatan Musyrif/Musyrifah',ev.rekomBoarding,S.musyrif,true),H));
   }
 
   /* Akademik */
@@ -11774,10 +11915,10 @@ function build(J,photo,det,status){
   }
 
   /* Teacher notes */
-  const opt=[['Evaluasi Perkembangan Akademik',ev.evalAkademik,S.wali],['Rekomendasi Tindak Lanjut Akademik',ev.rekomAkademik,S.wali]].filter(x=>has(x[1]));
+  const opt=[['Evaluasi Perkembangan Akademik',ev.evalAkademik,ev.guruKejuruan||''],['Rekomendasi Tindak Lanjut Akademik',ev.rekomAkademik,ev.guruKejuruan||'']].filter(x=>has(x[1]));
   pages.push(sheet(sec(nx(),'Teacher Notes','Catatan wali kelas'+(S.boarding?' dan musyrif':''))+
-    memo('Catatan Wali Kelas',ev.catatanWali,S.wali)+opt.map(x=>memo(x[0],x[1],x[2])).join('')+
-    (S.boarding?memo('Evaluasi Musyrif',ev.evalMusyrif,S.musyrif):'')+
+    memo('Catatan Guru Kejuruan',ev.catatanWali,ev.guruKejuruan||'')+opt.map(x=>memo(x[0],x[1],x[2])).join('')+
+    (S.boarding?memo('Evaluasi Boarding/Asrama',ev.evalMusyrif,S.musyrif):'')+
     `<div class="mr2-two">${memo('Kelebihan / Pencapaian',ev.kelebihan,'',true)}${memo('Hal yang Perlu Ditingkatkan',ev.perbaikan,'',true)}</div>`+
     (has(ev.rekomOrtu)?memo('Rekomendasi untuk Santri dan Orang Tua',ev.rekomOrtu):''),H));
 
