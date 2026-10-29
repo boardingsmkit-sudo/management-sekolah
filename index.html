@@ -1500,20 +1500,27 @@ function pkExport(){
   if(!rows.length){ showAcadToast('Tidak ada data presensi untuk diekspor.'); return; }
   akDownloadCsv('presensi-kbm-'+ksToday()+'.csv',['Tanggal','Nama Siswa','Kelas','Mata Pelajaran','Guru','Status','Jam','Keterangan'],rows.map(r=>[r.tanggal,r.nama,r.kelas,r.mapel,r.guru,r.status,r.jam==='-'?'':r.jam,r.ket==='-'?'':r.ket]));
 }
-function pkOpenRekap(){
-  const rows=pkFilteredRows();
-  if(!rows.length){ showAcadToast('Tidak ada data presensi untuk direkap. Ubah filter dulu.'); return; }
-  const by={}; rows.forEach(r=>{ const k=String(r.studentId); const b=(by[k]=by[k]||{nama:r.nama,kelas:r.kelas,Hadir:0,Izin:0,Sakit:0,Alpa:0,t:0}); b[r.status]=(b[r.status]||0)+1; b.t++; });
+const pkFm=n=>String(Math.round(n*10)/10).replace('.',',');
+async function pkRekapData(){
+  if(window.KBMD) await KBMD.load();
+  const rows=pkFilteredRows(); const by={};
+  rows.forEach(r=>{ const k=String(r.studentId); const b=(by[k]=by[k]||{nama:r.nama,kelas:r.kelas,Hadir:0,Izin:0,Sakit:0,Alpa:0,t:0,recs:[]}); b[r.status]=(b[r.status]||0)+1; b.t++; b.recs.push(r); });
   const list=Object.values(by).sort((a,b)=>akUnesc(a.nama).localeCompare(akUnesc(b.nama)));
-  openAcadDrawer('Rekap Presensi KBM',`<p class="dw-para">Berdasarkan filter yang sedang aktif (${rows.length} catatan, ${list.length} siswa).</p>
-    <table><tr><th>Siswa</th><th>Kelas</th><th>H</th><th>I</th><th>S</th><th>A</th><th>% Hadir</th></tr>
-    ${list.map(b=>`<tr><td>${b.nama}</td><td>${b.kelas}</td><td>${b.Hadir}</td><td>${b.Izin}</td><td>${b.Sakit}</td><td>${b.Alpa}</td><td>${Math.round(b.Hadir/b.t*1000)/10}%</td></tr>`).join('')}</table>
+  list.forEach(b=>{ b.kd=window.KBMD?KBMD.compute(b.recs,KBMD.cfg):null; });
+  return {rows,list};
+}
+async function pkOpenRekap(){
+  const {rows,list}=await pkRekapData();
+  if(!rows.length){ showAcadToast('Tidak ada data presensi untuk direkap. Ubah filter dulu.'); return; }
+  openAcadDrawer('Rekap Presensi KBM',`<p class="dw-para">Berdasarkan filter yang sedang aktif (${rows.length} catatan, ${list.length} siswa). Periode nilai presensi mengikuti filter tanggal yang aktif.</p>
+    <table><tr><th>Siswa</th><th>Kelas</th><th>H</th><th>I</th><th>S</th><th>A</th><th>% Hadir</th><th>Pelanggaran</th><th>Nilai Presensi</th></tr>
+    ${list.map(b=>`<tr><td>${b.nama}</td><td>${b.kelas}</td><td>${b.Hadir}</td><td>${b.Izin}</td><td>${b.Sakit}</td><td>${b.Alpa}</td><td>${Math.round(b.Hadir/b.t*1000)/10}%</td><td>${b.kd&&b.kd.ada?b.kd.jumlah:'-'}</td><td>${b.kd&&b.kd.ada?pkFm(b.kd.akhir):'-'}</td></tr>`).join('')}</table>
+    <p class="dw-para">Nilai Presensi = nilai awal dikurangi bobot kategori pelanggaran. Keterangan bebas tidak mengurangi nilai; Alpa/Izin/Sakit tercermin pada % Hadir.</p>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="pkExportRekap()">⬇️ Unduh Rekap (CSV)</button><button class="btn-primary-sm" onclick="closeAcadDrawer()">Tutup</button></div>`);
 }
-function pkExportRekap(){
-  const rows=pkFilteredRows(); const by={};
-  rows.forEach(r=>{ const k=String(r.studentId); const b=(by[k]=by[k]||{nama:r.nama,kelas:r.kelas,Hadir:0,Izin:0,Sakit:0,Alpa:0,t:0}); b[r.status]=(b[r.status]||0)+1; b.t++; });
-  akDownloadCsv('rekap-presensi-kbm-'+ksToday()+'.csv',['Siswa','Kelas','Hadir','Izin','Sakit','Alpa','% Hadir'],Object.values(by).map(b=>[b.nama,b.kelas,b.Hadir,b.Izin,b.Sakit,b.Alpa,Math.round(b.Hadir/b.t*1000)/10]));
+async function pkExportRekap(){
+  const {list}=await pkRekapData();
+  akDownloadCsv('rekap-presensi-kbm-'+ksToday()+'.csv',['Siswa','Kelas','Hadir','Izin','Sakit','Alpa','% Hadir','Pelanggaran','Nilai Presensi'],list.map(b=>[b.nama,b.kelas,b.Hadir,b.Izin,b.Sakit,b.Alpa,Math.round(b.Hadir/b.t*1000)/10,b.kd&&b.kd.ada?b.kd.jumlah:'',b.kd&&b.kd.ada?pkFm(b.kd.akhir):'']));
 }
 /* ---- Form sesi presensi: satu kelas + satu mapel + satu tanggal, semua siswa sekaligus ---- */
 function pkSessExisting(tanggal,classId,mapel){
@@ -1590,13 +1597,20 @@ async function pkSessSave(){
   if(!pkMapelOfDay(classId,tanggal).some(m=>m.toLowerCase()===mapel.toLowerCase())){ akFormErr('akfError','Mata pelajaran "'+mapel+'" tidak dijadwalkan pada hari '+(pkHariOf(tanggal)||'tersebut')+' untuk kelas ini.'); return; }
   if(!guru){ akFormErr('akfError','Nama guru wajib diisi.'); return; }
   const studs=akStudentsOfClass(classId); if(!studs.length){ akFormErr('akfError','Tidak ada siswa aktif di kelas ini.'); return; }
-  const ex=pkSessExisting(tanggal,classId,mapel); const ins=[], upd=[];
+  const ex=pkSessExisting(tanggal,classId,mapel); const ins=[], upd=[], needKet=[];
   studs.forEach(s=>{
     const row={student_id:s.id,class_id:classId,tanggal,mapel,guru,jam:jam||null,status:document.getElementById('pks_st_'+s.id).value,keterangan:(document.getElementById('pks_kt_'+s.id).value.trim())||null};
     const e=ex[String(s.id)]; const kat=window.KBMD?KBMD.read(s.id,row.status):[];
-    if(kat.length||(e&&Array.isArray(e.kategori)&&e.kategori.length)) row.kategori_pelanggaran=kat;
+    if(kat.includes('lainnya')&&!row.keterangan) needKet.push(akUnesc(s.nama));
+    const had=(e&&Array.isArray(e.kategori))?e.kategori:[];
+    if(kat.length||had.length){
+      row.kategori_pelanggaran=kat;
+      if(JSON.stringify(kat.slice().sort())!==JSON.stringify(had.slice().sort())){ row.dievaluasi_oleh=kat.length?(akMyName()||curRole):null; row.dievaluasi_at=kat.length?new Date().toISOString():null; }
+      else { row.dievaluasi_oleh=(e&&e.dievaluasiOleh)||null; row.dievaluasi_at=(e&&e.dievaluasiAt)||null; }
+    }
     if(e){ row.id=e.id; upd.push(row); } else ins.push(row);
   });
+  if(needKet.length){ akFormErr('akfError','Kategori "Pelanggaran lainnya" wajib disertai keterangan: '+needKet.slice(0,5).join(', ')+(needKet.length>5?' dan lainnya':'')+'.'); return; }
   akFormErr('akfError','');
   M.submitting=true; const btn=document.getElementById('pksSubmit'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
@@ -1605,7 +1619,7 @@ async function pkSessSave(){
     closeAcadDrawer(); showAcadToast('Presensi '+studs.length+' siswa berhasil disimpan.');
     await kscLoad('pk',{silent:true});
   }catch(e){
-    console.error('pkSessSave',e); akFormErr('akfError','Gagal menyimpan: '+(/kategori_pelanggaran/.test((e&&e.message)||'')?'kolom kategori_pelanggaran belum ada; jalankan supabase-kbm-disiplin-setup.sql terlebih dahulu.':kscErrMsg(e,'tambah',M.cfg))); showAcadToast('Gagal menyimpan presensi.');
+    console.error('pkSessSave',e); akFormErr('akfError','Gagal menyimpan: '+(/kategori_pelanggaran|dievaluasi_/.test((e&&e.message)||'')?'kolom evaluasi belum ada; jalankan supabase-kbm-disiplin-setup.sql dan supabase-kbm-disiplin-tahap2.sql terlebih dahulu.':kscErrMsg(e,'tambah',M.cfg))); showAcadToast('Gagal menyimpan presensi.');
   }finally{ M.submitting=false; const b=document.getElementById('pksSubmit'); if(b){ b.disabled=false; b.textContent='Simpan Presensi'; } }
 }
 
@@ -2011,7 +2025,8 @@ function rpKdHtml(r){
   return `<h4 class="rpd-h">Nilai Presensi KBM</h4><table class="rpd-tbl"><thead><tr><th>Nilai Awal</th><th>Catatan Pelanggaran</th><th>Total Pengurangan</th><th>Nilai Presensi Akhir</th></tr></thead><tbody><tr><td class="c">${fm(kd.awal)}</td><td class="c">${kd.jumlah}</td><td class="c">${fm(kd.awal-kd.akhir)}</td><td class="c"><b>${fm(kd.akhir)}</b></td></tr></tbody></table>`
    +(kd.rincian.length?`<table class="rpd-tbl" style="margin-top:4px"><thead><tr><th>Jenis Pelanggaran</th><th>Jumlah</th><th>Bobot</th><th>Pengurangan</th></tr></thead><tbody>${kd.rincian.map(x=>`<tr><td>${dkEsc(x.label)}</td><td class="c">${x.n}</td><td class="c">${fm(x.bobot)}</td><td class="c">${fm(x.potong)}</td></tr>`).join('')}</tbody></table>`:'<p class="rpd-note">Tidak ada catatan pelanggaran pada periode ini.</p>')
    +(kd.catatan.length?`<ul class="rpd-note" style="margin:4px 0;padding-left:16px">${kd.catatan.slice(0,20).map(c=>`<li>${fmtTglID(c.tanggal)} — ${dkEsc(c.label)}${c.mapel?' ('+c.mapel+')':''}${c.ket?'. '+c.ket:''}</li>`).join('')}</ul>`:'')
-   +`<p class="rpd-note">Nilai awal ${fm(kd.awal)} dikurangi bobot tiap pelanggaran yang dicatat guru (minimum ${fm(kd.min)}). Alpa, izin, dan sakit tercermin pada persentase kehadiran.${kd.dibatasi?' Nilai dibatasi batas minimum.':''}</p>`;
+   +(kd.catatanGuru.length?`<p class="rpd-note"><b>Catatan guru (tidak mengurangi nilai)</b></p><ul class="rpd-note" style="margin:4px 0;padding-left:16px">${kd.catatanGuru.slice(0,20).map(c=>`<li>${fmtTglID(c.tanggal)}${c.status&&c.status!=='Hadir'?' ('+c.status+')':''}${c.mapel?' — '+c.mapel:''}: ${c.ket}</li>`).join('')}</ul>`:'')
+   +`<p class="rpd-note">Dievaluasi ${kd.dievaluasi} dari ${kd.total} pertemuan. Nilai awal ${fm(kd.awal)} dikurangi bobot tiap pelanggaran yang dicatat guru (minimum ${fm(kd.min)}). Alpa, izin, dan sakit tercermin pada persentase kehadiran.${kd.dibatasi?' Nilai dibatasi batas minimum.':''}</p>`;
 }
 function rpDocHtml(r){
   const sc=rpSchool(), logo=rpLogoSrc(), range=akPeriodRange(rpSel.ta,rpSel.sem), ta=dkEsc(rpSel.ta);
@@ -3025,7 +3040,7 @@ KSC.pk={loading:false,raw:{},missing:new Set(),submitting:false,cfg:{
   key:'pk',prefix:'pk',table:'attendance_kbm',title:'Presensi KBM',arr:attendanceRecordsData,sortKey:'tanggal',needClasses:true,
   writeRoles:['Super Admin','Kepala Sekolah','Guru','Wali Kelas'],deleteRoles:AK_WRITE_GURU,fields:[],
   fromRow:r=>akStudentGetters({id:r.id,studentId:r.student_id,classId:r.class_id,tanggal:kscD(r.tanggal),mapel:dkEsc(r.mapel||''),guru:dkEsc(r.guru||''),
-    status:dkEsc(r.status||'Hadir'),jam:dkDash(r.jam),ket:dkDash(r.keterangan),kategori:Array.isArray(r.kategori_pelanggaran)?r.kategori_pelanggaran.filter(x=>typeof x==='string'):[]}),
+    status:dkEsc(r.status||'Hadir'),jam:dkDash(r.jam),ket:dkDash(r.keterangan),kategori:Array.isArray(r.kategori_pelanggaran)?r.kategori_pelanggaran.filter(x=>typeof x==='string'):[],dievaluasiOleh:r.dievaluasi_oleh||'',dievaluasiAt:r.dievaluasi_at||''}),
   refresh:()=>pkRefresh()
 }};
 
@@ -10095,7 +10110,7 @@ window.rbComputeShared=rbCompute; window.rbPredShared=rbPred;
 'use strict';
 const KEY='kbmDisiplin', clone=o=>JSON.parse(JSON.stringify(o)), num=(v,d)=>{ const n=Number(v); return Number.isFinite(n)?n:d; };
 const DEFAULT={awal:100,min:60,kategori:[
-  {k:'terlambat',label:'Terlambat masuk kelas',bobot:2},{k:'tidak_rapi',label:'Pakaian/atribut tidak rapi',bobot:2},
+  {k:'terlambat',label:'Terlambat masuk kelas',bobot:2},{k:'tidak_rapi',label:'Kurang rapi',bobot:2},
   {k:'kurang_aktif',label:'Kurang aktif dalam pembelajaran',bobot:1},{k:'tanpa_perlengkapan',label:'Tidak membawa perlengkapan belajar',bobot:1},
   {k:'mengganggu',label:'Mengganggu pembelajaran',bobot:5},{k:'lainnya',label:'Pelanggaran lainnya',bobot:2}]};
 const K={cfg:clone(DEFAULT),fromDb:false,missing:false,loadedAt:0};
@@ -10123,26 +10138,37 @@ K.save=async function(awal,min,bobot){
   K.cfg=K.merge(val); K.fromDb=true; K.missing=false; K.loadedAt=Date.now();
 };
 /* recs: catatan presensi SATU santri pada SATU periode. Kembalian tidak menyimpan apa pun. */
+K.NONE='tidak_ada'; K.NONE_LABEL='Tidak ada pelanggaran';
 K.compute=function(recs,cfg){
   cfg=cfg||K.cfg; const lab={}, bob={}; cfg.kategori.forEach(k=>{ lab[k.k]=k.label; bob[k.k]=k.bobot; });
-  const seen=new Map();   /* satu sesi = tanggal + mapel + jam; baris ganda (mis. dua penyimpanan bersamaan) dihitung satu kali */
+  const seen=new Map();   /* satu sesi = tanggal + mapel + jam; baris ganda dihitung satu kali */
   (recs||[]).forEach(r=>seen.set([r.tanggal,String(r.mapel||'').trim().toLowerCase(),String(r.jam||'').trim().toLowerCase()].join('|'),r));
-  const rows=[...seen.values()], cnt={}, catatan=[];
-  rows.forEach(r=>{ if(r.status!=='Hadir') return;
-    [...new Set(Array.isArray(r.kategori)?r.kategori:[])].forEach(k=>{ if(!(k in bob)) return; cnt[k]=(cnt[k]||0)+1; catatan.push({tanggal:r.tanggal,k,label:lab[k],mapel:r.mapel||'',ket:(r.ket&&r.ket!=='-')?r.ket:''}); }); });
+  const rows=[...seen.values()], cnt={}, catatan=[], catatanGuru=[]; let dievaluasi=0;
+  rows.forEach(r=>{
+    const ks=[...new Set(Array.isArray(r.kategori)?r.kategori:[])], ket=(r.ket&&r.ket!=='-')?r.ket:''; let potong=false;
+    if(r.status==='Hadir'){
+      if(ks.some(k=>k in bob||k===K.NONE)) dievaluasi++;
+      ks.forEach(k=>{ if(!(k in bob)) return; potong=true; cnt[k]=(cnt[k]||0)+1; catatan.push({tanggal:r.tanggal,k,label:lab[k],mapel:r.mapel||'',ket}); });
+    }
+    /* Keterangan bebas TIDAK mengurangi nilai; ditampilkan terpisah bila catatan itu tidak berkategori pengurang. */
+    if(ket&&!potong) catatanGuru.push({tanggal:r.tanggal,status:r.status,mapel:r.mapel||'',ket});
+  });
   const rincian=cfg.kategori.filter(k=>cnt[k.k]).map(k=>({k:k.k,label:k.label,n:cnt[k.k],bobot:k.bobot,potong:cnt[k.k]*k.bobot}));
   const potong=rincian.reduce((a,x)=>a+x.potong,0), ada=rows.length>0, mentah=cfg.awal-potong;
-  catatan.sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
-  return {ada,total:rows.length,awal:cfg.awal,min:cfg.min,jumlah:catatan.length,rincian,potong,akhir:ada?Math.max(cfg.min,mentah):null,dibatasi:ada&&mentah<cfg.min,catatan};
+  catatan.sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))); catatanGuru.sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
+  return {ada,total:rows.length,dievaluasi,awal:cfg.awal,min:cfg.min,jumlah:catatan.length,rincian,potong,akhir:ada?Math.max(cfg.min,mentah):null,dibatasi:ada&&mentah<cfg.min,catatan,catatanGuru};
 };
-K.badges=function(arr){ if(!Array.isArray(arr)||!arr.length) return ''; const lab={}; K.cfg.kategori.forEach(k=>lab[k.k]=k.label); return '<div class="rpx-sub">⚠ '+esc(arr.map(k=>lab[k]||k).join(', '))+'</div>'; };
+K.badges=function(arr){ if(!Array.isArray(arr)||!arr.length) return ''; const lab={}; K.cfg.kategori.forEach(k=>lab[k.k]=k.label); lab[K.NONE]=K.NONE_LABEL; return '<div class="rpx-sub">'+(arr.includes(K.NONE)?'✔ ':'⚠ ')+esc(arr.map(k=>lab[k]||k).join(', '))+'</div>'; };
 /* ---- komponen di form presensi ---- */
+K.sumText=function(a){ return a.includes(K.NONE)?'Tidak ada pelanggaran':(a.length?a.length+' dipilih':'Pilih'); };
 K.pickHtml=function(sid,sel,on){
-  sel=Array.isArray(sel)?sel:[]; const n=sel.length;
-  return `<details class="kbd-det"><summary id="kbd_sum_${sid}">${n?n+' dipilih':'Pilih'}</summary><div class="kbd-box">${K.cfg.kategori.map(k=>
-    `<label><input type="checkbox" class="kbd-cb" data-sid="${sid}" value="${k.k}"${sel.includes(k.k)?' checked':''}${on?'':' disabled'} onchange="KBMD.sum('${sid}')"> ${esc(k.label)}</label>`).join('')}</div></details>`;
+  sel=Array.isArray(sel)?sel:[]; const dis=on?'':' disabled';
+  const row=(v,l)=>`<label><input type="checkbox" class="kbd-cb" data-sid="${sid}" value="${v}"${sel.includes(v)?' checked':''}${dis} onchange="KBMD.chg('${sid}',this)"> ${esc(l)}</label>`;
+  return `<details class="kbd-det"><summary id="kbd_sum_${sid}">${K.sumText(sel)}</summary><div class="kbd-box">${row(K.NONE,K.NONE_LABEL)}${K.cfg.kategori.map(k=>row(k.k,k.label)).join('')}</div></details>`;
 };
-K.sum=function(sid){ const n=document.querySelectorAll('.kbd-cb[data-sid="'+sid+'"]:checked').length, el=document.getElementById('kbd_sum_'+sid); if(el) el.textContent=n?n+' dipilih':'Pilih'; };
+K.sum=function(sid){ const a=[...document.querySelectorAll('.kbd-cb[data-sid="'+sid+'"]:checked')].map(c=>c.value), el=document.getElementById('kbd_sum_'+sid); if(el) el.textContent=K.sumText(a); };
+/* "Tidak ada pelanggaran" tidak bisa dipilih bersama kategori lain */
+K.chg=function(sid,el){ if(el.checked) document.querySelectorAll('.kbd-cb[data-sid="'+sid+'"]').forEach(c=>{ if(c!==el&&(el.value===K.NONE||c.value===K.NONE)) c.checked=false; }); K.sum(sid); };
 K.stChanged=function(sid){
   const st=document.getElementById('pks_st_'+sid); const on=!st||st.value==='Hadir';
   document.querySelectorAll('.kbd-cb[data-sid="'+sid+'"]').forEach(c=>{ c.disabled=!on; if(!on) c.checked=false; }); K.sum(sid);
@@ -10534,7 +10560,7 @@ function buildModel(s,P,D,ev,meta){
     const k=U(j.mapel)||'-'; const o=jm[k]||(jm[k]={mapel:k,n:0,materi:[]}); o.n++; const mt=clean(j.materi); if(mt&&!o.materi.includes(mt)&&o.materi.length<4) o.materi.push(mt); });
   const progList=(D.pa||[]).filter(r=>paRel(r,s)).slice(0,6).map(r=>({tanggal:tglS(r.tanggal),nama:clean(r.nama),deskripsi:String(r.deskripsi||'').trim().slice(0,260),fotos:Array.isArray(r.fotoData)?r.fotoData:[]}));
   const kdRes=KBMD.compute(mine(D.pk).map(x=>({tanggal:x.tanggal,status:U(x.status),mapel:U(x.mapel),jam:U(x.jam),ket:U(x.ket),kategori:x.kategori})),D.kd||KBMD.cfg);
-  kdRes.catatan.forEach(c=>{ c.tgl=tglS(c.tanggal); });
+  kdRes.catatan.forEach(c=>{ c.tgl=tglS(c.tanggal); }); kdRes.catatanGuru.forEach(c=>{ c.tgl=tglS(c.tanggal); });
   const ak={kd:kdRes,program:progList,programErr:D.err.pa||'',att,attErr:D.err.pk||'',gradeErr:D.err.nl||'',jurnalErr:D.err.jg||'',pelErr:D.err.pl||'',kktp:kktpVal(),avg,avgCapaian:capaian(avg),partialN:partial.length,
     grades:gr.map(g=>({mapel:U(g.mapel),tugas:g.tugas,ulangan:g.ulangan,pts:g.pts,pas:g.pas,project:g.project,akhir:g.nilaiAkhir,partial:NL_COMPS.some(k=>g[k]==null),capaian:capaian(g.nilaiAkhir)})),
     jurnal:Object.values(jm).sort((x,y)=>x.mapel.localeCompare(y.mapel)).map(o=>({mapel:o.mapel,n:o.n,materi:o.materi.join('; ')+(o.n>o.materi.length?' ...':'')})),
@@ -10748,10 +10774,13 @@ function render(J,m,a){
     if(ak.kd&&ak.kd.ada){ const kd=ak.kd, fm=n=>String(Math.round(n*10)/10).replace('.',',');
       sec('Nilai Presensi KBM');
       table(['Nilai Awal','Catatan Pelanggaran','Total Pengurangan','Nilai Presensi Akhir'],[[fm(kd.awal),kd.jumlah,fm(kd.awal-kd.akhir),{content:fm(kd.akhir),styles:{fontStyle:'bold'}}]],{cols:{0:{halign:'center'},1:{halign:'center'},2:{halign:'center'},3:{halign:'center'}}});
+      note('Dievaluasi '+kd.dievaluasi+' dari '+kd.total+' pertemuan.');
       if(kd.rincian.length) table(['Jenis Pelanggaran','Jumlah','Bobot','Pengurangan'],kd.rincian.map(r=>[r.label,r.n,fm(r.bobot),fm(r.potong)]),{cols:{1:{halign:'center'},2:{halign:'center'},3:{halign:'center'}}});
       else empty('Tidak ada catatan pelanggaran pada periode ini.');
       kd.catatan.slice(0,20).forEach(c=>{ F('normal',8.4,INK); doc.splitTextToSize(tx('• '+c.tgl+' — '+c.label+(c.mapel?' ('+c.mapel+')':'')+(c.ket?'. '+c.ket:'')),CW).forEach(l=>{ ensure(4.2); doc.text(l,ML,y+3); y+=4; }); });
       if(kd.catatan.length>20) note('Dan '+(kd.catatan.length-20)+' catatan lainnya.');
+      if(kd.catatanGuru&&kd.catatanGuru.length){ ensure(8); F('bold',8.6,NAVY); doc.text('Catatan guru (tidak mengurangi nilai)',ML,y+3.4); y+=5.4;
+        kd.catatanGuru.slice(0,20).forEach(c=>{ F('normal',8.4,INK); doc.splitTextToSize(tx('• '+c.tgl+(c.status&&c.status!=='Hadir'?' ('+c.status+')':'')+(c.mapel?' — '+c.mapel:'')+': '+c.ket),CW).forEach(l=>{ ensure(4.2); doc.text(l,ML,y+3); y+=4; }); }); }
       note('Nilai awal '+fm(kd.awal)+' dikurangi bobot tiap pelanggaran yang dicatat guru (minimum '+fm(kd.min)+'). Alpa, izin, dan sakit tercermin pada persentase kehadiran.'+(kd.dibatasi?' Nilai dibatasi batas minimum.':'')); }
     sec(m.period.jenis==='Semester'?'Nilai Mata Pelajaran':'Nilai Semester Berjalan (Sementara)');
     if(ak.gradeErr) empty('Data nilai gagal dimuat: '+ak.gradeErr);
@@ -11850,7 +11879,7 @@ PG.init=function(){
 };
 /* Data siswa/kelas dimuat ulang (mis. setelah login) -> segarkan daftar bila sedang tampil */
 if(typeof stAfterDataChange==='function'){ const _a=stAfterDataChange; stAfterDataChange=function(){ const r=_a.apply(this,arguments); try{ if(root()&&!RPX.ed&&(RPX.tab==='dash'||RPX.tab==='bulanan'||RPX.tab==='semester')){ const b=document.getElementById('rpxListBody'); if(b){ b.innerHTML=listBodyHtml(RPX.tab==='dash'?'dash':'work'); autoSummary(); } } }catch(e){} return r; }; }
-window.RPX_DEBUG={state:RPX,buildModel,fetchDataset,periodOf};
+window.RPX_DEBUG={state:RPX,buildModel,fetchDataset,periodOf,pdfFromModel};
 })();
 
 </script>
@@ -11966,7 +11995,7 @@ window.RPX_DEBUG={state:RPX,buildModel,fetchDataset,periodOf};
 .mr2-idcard{margin-top:14mm;background:#fff;color:var(--ink);border-radius:4mm;padding:6mm;display:grid;grid-template-columns:36mm 1fr;gap:7mm;align-items:center;box-shadow:0 3mm 10mm rgba(0,0,0,.22)}
 .mr2-photo{width:36mm;height:46mm;border-radius:3mm;background:linear-gradient(160deg,#DCE7EF,#9FB9CC);border:1.4pt solid var(--gd);display:flex;align-items:center;justify-content:center;overflow:hidden;color:#0B2540;font-weight:800;font-size:24pt;position:relative}
 .mr2-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.mr2-kdc{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm;margin-bottom:2mm}.mr2-kdc div{border:.3pt solid #C9D3DD;border-radius:1.6mm;padding:1.6mm 2mm}.mr2-kdc small{display:block;font-size:7pt;color:#5B6B7C}.mr2-kdc b{font-size:12pt}.mr2-kdl{margin:1mm 0;padding-left:4mm;font-size:8.2pt}.mr2-kdl li{margin:.4mm 0}
+.mr2-kdc{display:grid;grid-template-columns:repeat(4,1fr);gap:2mm;margin-bottom:2mm}.mr2-kdc div{border:.3pt solid #C9D3DD;border-radius:1.6mm;padding:1.6mm 2mm}.mr2-kdc small{display:block;font-size:7pt;color:#5B6B7C}.mr2-kdc b{font-size:12pt}.mr2-kdl{margin:1mm 0;padding-left:4mm;font-size:8.2pt}.mr2-kdl li{margin:.4mm 0}.mr2-kdn{font-size:8pt;color:#5B6B7C;margin:0 0 1.6mm}.mr2-kdh{font-size:8.4pt;font-weight:700;margin:1.6mm 0 .4mm}
 .mr2-pa{margin:0 0 2.2mm;break-inside:avoid}.mr2-pat{display:flex;justify-content:space-between;gap:3mm;font-size:8.6pt}.mr2-pat span{color:#5B6B7C}.mr2-pa p{margin:.6mm 0 1.2mm;font-size:8.2pt;line-height:1.45}.mr2-pag{display:flex;gap:2mm}.mr2-pag img{height:26mm;max-width:46%;object-fit:cover;border-radius:1.6mm;border:.3pt solid #C9D3DD}
 .mr2-photo.none{font-size:7.6pt;font-weight:600;color:#3E5266;text-align:center;padding:2mm;flex-direction:column;gap:1.4mm}
 .mr2-photo.none b{font-size:22pt;color:#0B2540}
@@ -12049,7 +12078,8 @@ const fmK=n=>String(Math.round(n*10)/10).replace('.',',');
 const kdBlk=(kd,PL)=>{ if(!kd||!kd.ada) return '';
   const cards=`<div class="mr2-kdc"><div><small>Nilai Awal</small><b>${fmK(kd.awal)}</b></div><div><small>Catatan Pelanggaran</small><b>${kd.jumlah}</b></div><div><small>Total Pengurangan</small><b>${fmK(kd.awal-kd.akhir)}</b></div><div><small>Nilai Presensi Akhir</small><b>${fmK(kd.akhir)}</b></div></div>`;
   const list=kd.catatan.length?`<ul class="mr2-kdl">${kd.catatan.slice(0,20).map(c=>`<li><b>${X(c.tgl)}</b> — ${X(c.label)}${c.mapel?' ('+X(c.mapel)+')':''}${c.ket?'. '+X(c.ket):''}</li>`).join('')}</ul>${kd.catatan.length>20?'<p>Dan '+(kd.catatan.length-20)+' catatan lainnya.</p>':''}`:'';
-  return blk('Nilai Presensi KBM'+(PL?' — '+PL:''),cards+tbl(['Jenis Pelanggaran','Jumlah','Bobot','Pengurangan'],kd.rincian.map(r=>[X(r.label),r.n,fmK(r.bobot),fmK(r.potong)]),{center:[1,2,3],empty:'Tidak ada catatan pelanggaran pada periode ini.'})+list+note('Nilai awal '+fmK(kd.awal)+' dikurangi bobot tiap pelanggaran yang dicatat guru (minimum '+fmK(kd.min)+'). Alpa, izin, dan sakit tercermin pada persentase kehadiran, bukan pada nilai ini.'+(kd.dibatasi?' Nilai dibatasi batas minimum.':'')));
+  const guruList=kd.catatanGuru&&kd.catatanGuru.length?`<div class="mr2-kdh">Catatan guru (tidak mengurangi nilai)</div><ul class="mr2-kdl">${kd.catatanGuru.slice(0,20).map(c=>`<li><b>${X(c.tgl)}</b>${c.status&&c.status!=='Hadir'?' ('+X(c.status)+')':''}${c.mapel?' — '+X(c.mapel):''}: ${X(c.ket)}</li>`).join('')}</ul>${kd.catatanGuru.length>20?'<p>Dan '+(kd.catatanGuru.length-20)+' catatan lainnya.</p>':''}`:'';
+  return blk('Nilai Presensi KBM'+(PL?' — '+PL:''),cards+`<p class="mr2-kdn">Dievaluasi ${kd.dievaluasi} dari ${kd.total} pertemuan.</p>`+tbl(['Jenis Pelanggaran','Jumlah','Bobot','Pengurangan'],kd.rincian.map(r=>[X(r.label),r.n,fmK(r.bobot),fmK(r.potong)]),{center:[1,2,3],empty:'Tidak ada catatan pelanggaran pada periode ini.'})+list+guruList+note('Nilai awal '+fmK(kd.awal)+' dikurangi bobot tiap pelanggaran yang dicatat guru (minimum '+fmK(kd.min)+'). Alpa, izin, dan sakit tercermin pada persentase kehadiran, bukan pada nilai ini.'+(kd.dibatasi?' Nilai dibatasi batas minimum.':'')));
 };
 const blk=(title,inner,cls)=>`<div class="mr2-blk${cls?' '+cls:''}">${title?`<h3>${title}</h3>`:''}${inner}</div>`;
 const sec=(no,t,s)=>`<div class="mr2-sec"><div class="mr2-num">${no}</div><div><h2>${t}</h2>${s?`<span>${s}</span>`:''}</div></div>`;
