@@ -11348,7 +11348,7 @@ function editorHtml(){
     </aside>
     <section class="panel rpx-prevwrap">
       <div class="rpx-prevbar"><b>Pratinjau A4</b><span class="rpx-sub">${isFinal(d)?'Dokumen terbit (snapshot)':'Draf: diperbarui dari data terbaru + catatan di formulir'}</span><span class="ti-spacer"></span>
-        ${isFinal(d)?'':'<button class="btn-outline-sm" onclick="rpxPreview()">Perbarui Pratinjau</button>'}</div>
+        ${isFinal(d)?'':'<button class="btn-outline-sm" onclick="rpxRefreshData()">Perbarui Pratinjau</button>'}</div>
       <div id="rpxPrev" class="rpx-prev"><div class="rpx-loading">Menyiapkan pratinjau...</div></div>
     </section></div>`;
 }
@@ -11520,6 +11520,13 @@ window.rpxPreview=async function preview(){
     if(RPX.ed!==ed) return;
     mrdShow(J,photo);
   }catch(e){ console.error('[rapor-pdf] pratinjau',e); const x=document.getElementById('rpxPrev'); if(x) x.innerHTML=`<div class="rpx-banner err">Pratinjau gagal: ${E(errMsg(e))}</div>`; }
+};
+/* Ambil ulang data sumber (presensi KBM, nilai, dst.) dari database lalu gambar ulang pratinjau. Teks evaluasi yang sedang diketik dipertahankan. */
+window.rpxRefreshData=async function(){
+  const ed=RPX.ed; if(!ed||ed.loading||isFinal(ed.doc)) return; collectEv();
+  const el=document.getElementById('rpxPrev'); if(el) el.innerHTML='<div class="rpx-loading">Mengambil data terbaru...</div>';
+  try{ ed.D=await fetchDataset([ed.s],ed.P,{notes:true}); await window.rpxPreview(); toast('Data diperbarui dari database: '+((ed.D.pk||[]).length)+' catatan presensi KBM pada periode ini.'); }
+  catch(e){ console.error('[rapor-pdf] perbarui data',e); toast('Gagal mengambil data terbaru: '+errMsg(e)); await window.rpxPreview(); }
 };
 window.rpxPrint=function(){
   const el=document.getElementById('rpxPrev');
