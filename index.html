@@ -10253,6 +10253,144 @@ const _sv=showView; showView=function(id){ if(id==='bd-catatan') arguments[0]='b
 })();
 </script>
 
+<style id="tahfidz-target-css">
+.tt-prog{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:8px 0 4px}
+.tt-prog>div{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;text-align:center}
+.tt-prog small{display:block;font-size:10.5px;color:var(--sub);font-weight:600}
+.tt-prog b{display:block;font-size:17px;margin-top:2px;color:var(--ink)}
+.tt-prog em{display:block;font-style:normal;font-size:10px;color:var(--sub);margin-top:1px}
+.tt-bar{height:6px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px}
+.tt-bar i{display:block;height:100%;background:var(--navy,#0B2540)}
+@media(max-width:720px){.tt-prog{grid-template-columns:repeat(3,minmax(0,1fr))}}
+</style>
+<script id="tahfidz-target">
+/* ========================================================================
+   TAHFIDZ BERBASIS TARGET + INPUT PER AYAT
+   Target: 1 juz per semester selama 3 tahun (6 semester).
+     Semester 1 → Juz 30 · Semester 2 → Juz 1 · Semester 3 → Juz 2 · Semester 4 → Juz 3 · Semester 5 → Juz 4 · Semester 6 → Juz 5
+   - Semester ke- santri dihitung dari tingkat kelas (X / XI / XII = tahun 1 / 2 / 3) dan semester berjalan (Ganjil / Genap).
+   - Input setoran memakai Surat + "Dari ayat" sampai "Sampai ayat" (bukan jumlah halaman).
+     Kolom halaman tetap terisi otomatis (perkiraan = ayat ÷ jumlah ayat juz × 20) agar Rapor, dasbor, dan rumus
+     "total hafalan" yang sudah ada tetap berjalan. Kolom baru: ayat_dari, ayat_sampai → supabase-tahfidz-ayat-setup.sql.
+   - Capaian target = ayat unik pada juz target yang sudah disetor ÷ jumlah ayat juz tersebut.
+     Data lama (hanya halaman) tetap dihitung: halaman ÷ 20 × jumlah ayat juz.
+   - Kartu "Rata-rata Progres Target" = rata-rata progres target seluruh santri.
+   ======================================================================== */
+(function(){
+'use strict';
+if(typeof BOARDING_PAGES==='undefined'||!BOARDING_PAGES['bd-tahfidz']||typeof btRenderTable!=='function'||typeof btOpenDetail!=='function'||typeof btStatsArray!=='function'||typeof akDefaultPeriod!=='function'||!KSC.bt||typeof BT_SURAH==='undefined'){
+  console.warn('[tahfidz-target] modul Tahfidz tidak ditemukan, fitur dilewati'); return;
+}
+const PROGRAM=[30,1,2,3,4,5], E=dkEsc;
+/* Jumlah ayat tiap surat (urutan mushaf, 114 surat = 6.236 ayat) dan awal tiap juz (surat, ayat) */
+const AYAT=[7,286,200,176,120,165,206,75,129,109,123,111,43,52,99,128,111,110,98,135,112,78,118,64,77,227,93,88,69,60,34,30,73,54,45,83,182,88,75,85,54,53,89,59,37,35,38,29,18,45,60,49,62,55,78,96,29,22,24,13,14,11,11,18,12,12,30,52,52,44,28,28,20,56,40,31,50,40,46,42,29,19,36,25,22,17,19,26,30,20,15,21,11,8,8,19,5,8,8,11,11,8,3,9,5,4,7,3,6,3,5,4,5,6];
+const JUZ_START=[[1,1],[2,142],[2,253],[3,93],[4,24],[4,148],[5,82],[6,111],[7,88],[8,41],[9,93],[11,6],[12,53],[15,1],[17,1],[18,75],[21,1],[23,1],[25,21],[27,56],[29,46],[33,31],[36,28],[39,32],[41,47],[46,1],[51,31],[58,1],[67,1],[78,1]];
+const CUM=[0]; AYAT.forEach(a=>CUM.push(CUM[CUM.length-1]+a));
+const TOTAL_AYAT=CUM[CUM.length-1];
+const abs=(s,a)=>CUM[s-1]+a;
+function juzRange(j){ const lo=abs(JUZ_START[j-1][0],JUZ_START[j-1][1]), hi=j<30?abs(JUZ_START[j][0],JUZ_START[j][1])-1:TOTAL_AYAT; return [lo,hi]; }
+const juzTotal=j=>{ const r=juzRange(j); return r[1]-r[0]+1; };
+const norm=s=>String(akUnesc(s||'')).toLowerCase().replace(/[^a-z0-9]/g,'');
+const SURAT_IDX={}; BT_SURAH.forEach((n,i)=>{ SURAT_IDX[norm(n)]=i+1; });
+const suratNo=name=>SURAT_IDX[norm(name)]||0;
+
+/* ---- data: kolom ayat dari database ---- */
+const _fromRow=KSC.bt.cfg.fromRow;
+KSC.bt.cfg.fromRow=function(r){ const o=_fromRow.apply(this,arguments); o.ayatDari=r.ayat_dari==null?null:Number(r.ayat_dari); o.ayatSampai=r.ayat_sampai==null?null:Number(r.ayat_sampai); return o; };
+
+/* ---- form: ganti "Jumlah Halaman" dengan Dari ayat / Sampai ayat ---- */
+(function(){
+  const F=KSC.bt.cfg.fields, i=F.findIndex(f=>f.k==='halaman');
+  const af=[{k:'ayat_dari',label:'Dari Ayat (wajib)',type:'number',minv:1,maxv:286,def:1},{k:'ayat_sampai',label:'Sampai Ayat (wajib)',type:'number',minv:1,maxv:286,def:1}];
+  if(i>=0) F.splice(i,1,af[0],af[1]); else if(!F.some(f=>f.k==='ayat_dari')) F.push(af[0],af[1]);
+})();
+KSC.bt.cfg.validate=function(p,id){
+  const no=suratNo(p.surat);
+  if(!no) return 'Surat tidak dikenali. Pilih nama surat dari daftar yang muncul saat mengetik.';
+  const j=Number(p.juz), d=p.ayat_dari, s=p.ayat_sampai, raw=id&&KSC.bt.raw[id];
+  if(d==null&&s==null&&raw&&Number(raw.halaman)>0){ p.halaman=Number(raw.halaman); return ''; }   /* data lama (halaman) boleh diedit tanpa mengisi ayat */
+  if(d==null||s==null) return 'Dari ayat dan Sampai ayat wajib diisi.';
+  if(d<1||s<d) return 'Ayat awal harus ≥ 1 dan tidak boleh lebih besar dari ayat akhir.';
+  if(s>AYAT[no-1]) return 'Surat '+BT_SURAH[no-1]+' hanya memiliki '+AYAT[no-1]+' ayat.';
+  const r=juzRange(j), a=abs(no,d), b=abs(no,s);
+  if(a<r[0]||b>r[1]) return 'Ayat '+BT_SURAH[no-1]+' '+d+'–'+s+' tidak seluruhnya berada di Juz '+j+' (Juz '+j+': '+BT_SURAH[JUZ_START[j-1][0]-1]+' '+JUZ_START[j-1][1]+' s.d. '+(function(){ let k=0; while(CUM[k+1]<r[1]) k++; return BT_SURAH[k]+' '+(r[1]-CUM[k]); })()+'). Jika melewati batas juz, pisahkan menjadi dua input.';
+  p.halaman=Math.max(0.1,Math.round((s-d+1)/juzTotal(j)*200)/10);
+  return '';
+};
+
+/* ---- perhitungan capaian per juz ---- */
+function capaian(riwayat,j){
+  const r=juzRange(j), tot=r[1]-r[0]+1, seen=new Set(); let legacy=0;
+  (riwayat||[]).forEach(l=>{ if(l.jenis!=='Setoran') return; const no=suratNo(l.surat);
+    if(l.ayatDari!=null&&l.ayatSampai!=null&&no){ const a=Math.max(r[0],abs(no,l.ayatDari)), b=Math.min(r[1],abs(no,Math.min(l.ayatSampai,AYAT[no-1]))); for(let x=a;x<=b;x++) seen.add(x); }
+    else if(Number(l.juz)===j) legacy+=(l.halaman||0)/20*tot; });
+  const ayat=Math.min(tot,Math.round(seen.size+legacy));
+  return {ayat,total:tot,pr:Math.min(100,Math.round(ayat/tot*100))};
+}
+const semNow=()=>akDefaultPeriod().sem==='Ganjil'?1:2;
+function tingkat(kelas){
+  const k=String(akUnesc(kelas||'')).toUpperCase(); let m=/^\s*(XII|XI|X)\b/.exec(k); if(m) return {X:1,XI:2,XII:3}[m[1]];
+  m=/^\s*(10|11|12)\b/.exec(k); return m?{'10':1,'11':2,'12':3}[m[1]]:null;
+}
+const semKe=s=>{ const t=s?tingkat(s.kelas):null; return t?(t-1)*2+semNow():null; };
+function info(t){
+  const s=studentOf(t.studentId), k=semKe(s); if(!k) return {k:null,s};
+  const juz=PROGRAM[k-1], c=capaian(t.riwayat,juz);
+  return {k,s,juz,ayat:c.ayat,total:c.total,pr:c.pr,status:c.pr>=100?'Tercapai':c.ayat>0?'Berjalan':'Belum mulai'};
+}
+const stBadge=x=>'<span class="badge '+(x==='Tercapai'?'st-hadir':x==='Berjalan'?'b-amber':'st-alpa')+'">'+x+'</span>';
+const semLabel=k=>'Tahun '+Math.ceil(k/2)+' · '+(k%2?'Ganjil':'Genap');
+const ayatTxt=r=>(r.ayatDari!=null&&r.ayatSampai!=null)?'ayat '+r.ayatDari+'–'+r.ayatSampai+' ('+(r.ayatSampai-r.ayatDari+1)+' ayat)':r.halaman+' hlm (data lama)';
+
+btRenderTable=function(){
+  const body=document.getElementById('btBody'); if(!body) return;
+  const all=btRows(), {rows,page,totalPages,total}=acadPaginate(all,btPage,BT_PER_PAGE); btPage=page;
+  body.innerHTML=rows.length?'<table><tr><th>No</th><th>Santri</th><th>Kelas</th><th>Semester</th><th>Target Semester Ini</th><th>Capaian</th><th>Progres</th><th>Status</th><th>Terakhir</th><th>Aksi</th></tr>'
+    +rows.map((t,i)=>{ const x=info(t), s=x.s, can=kscCan('bt','write');
+      return '<tr><td>'+((page-1)*BT_PER_PAGE+i+1)+'</td><td><b>'+(s?s.nama:'-')+'</b></td><td>'+(s?s.kelas:'-')+'</td>'
+        +(x.k?'<td>Ke-'+x.k+'</td><td><b>Juz '+x.juz+'</b></td><td>'+x.ayat+' / '+x.total+' ayat</td><td><div class="tt-bar"><i style="width:'+x.pr+'%"></i></div><small>'+x.pr+'%</small></td><td>'+stBadge(x.status)+'</td>'
+          :'<td colspan="5" style="color:var(--sub)">Tingkat kelas tidak dikenali (X/XI/XII)</td>')
+        +'<td>'+(t.terakhir?fmtTglID(t.terakhir):'-')+'</td><td><div class="row-actions"><button title="Detail &amp; roadmap target" onclick="btOpenDetail(\''+E(t.studentId)+'\')">👁</button>'
+        +(can?'<button title="Tambah setoran" onclick="kscOpenForm(\'bt\',null,{student_id:\''+E(t.studentId)+'\''+(x.k?',juz:'+x.juz:'')+'})">➕</button>':'')+'</div></td></tr>'; }).join('')+'</table>'
+    :acadEmptyStateHtml('Belum ada data tahfidz','Belum ada santri boarding, atau ubah filter santri/pembimbing.');
+  const pg=document.getElementById('btPagination'); if(pg) pg.innerHTML=acadPaginationHtml(page,totalPages,total,'btGotoPage');
+};
+/* Rata-rata progres target = rata-rata progres target seluruh santri (yang semesternya dapat ditentukan) */
+btStatsArray=function(){
+  const rows=ksFilterByStudentId(tahfidzRecordsData), inf=rows.map(info).filter(x=>x.k), today=ksToday();
+  return [{color:'purple',val:rows.length,label:'Total Santri'},
+    {color:'blue',val:inf.length?Math.round(inf.reduce((a,x)=>a+x.pr,0)/inf.length)+'%':'-',label:'Rata-rata Progres Target ('+inf.length+' santri)'},
+    {color:'green',val:ksFilterByStudentId(tahfidzLogData).filter(l=>l.tanggal===today&&l.jenis==='Setoran').length,label:'Setoran Hari Ini'},
+    {color:'teal',val:inf.filter(x=>x.pr>=100).length,label:'Target Semester Tercapai'}];
+};
+btOpenDetail=function(studentId){
+  const t=tahfidzRecordsData.find(x=>bdEq(x.studentId,studentId)), s=studentOf(studentId); if(!t||!s) return;
+  const can=kscCan('bt','write'), del=kscCan('bt','delete'), x=info(t);
+  const road='<div class="dw-section">Target 3 Tahun (1 juz per semester)</div><table style="width:100%;font-size:12px"><tr><th style="text-align:left">Semester</th><th>Target</th><th>Capaian</th><th>Status</th></tr>'
+    +PROGRAM.map((j,i)=>{ const k=i+1, c=capaian(t.riwayat,j);
+      const st=!x.k?'-':c.pr>=100?stBadge('Tercapai'):k<x.k?'<span class="badge st-alpa">Belum tercapai</span>':k===x.k?'<span class="badge b-amber">Semester ini</span>':'<span style="color:var(--sub)">Akan datang</span>';
+      return '<tr'+(x.k===k?' style="background:var(--bg)"':'')+'><td>Smt '+k+' <small style="color:var(--sub)">'+semLabel(k)+'</small></td><td style="text-align:center">Juz '+j+'</td><td style="text-align:center">'+c.ayat+' / '+c.total+' ayat ('+c.pr+'%)</td><td style="text-align:center">'+st+'</td></tr>'; }).join('')+'</table>'
+    +(x.k?'':'<p class="dw-para" style="color:var(--sub)">Semester santri belum dapat ditentukan karena tingkat kelas tidak dikenali (X/XI/XII).</p>');
+  openAcadDrawer('Detail Tahfidz',dwRow('Santri',s.nama)+dwRow('Kelas',s.kelas)+dwRow('Semester Berjalan',x.k?('Ke-'+x.k+' · target Juz '+x.juz):'-')+dwRow('Total Hafalan',t.juz+' juz')+dwRow('Surat Terakhir',t.surat)+dwRow('Pembimbing',t.pembimbing)
+    +(t.target==null?'':dwRow('Target Manual (Rapor)',t.target+' juz'))+dwRow('Hafalan Awal',t.awal+' juz')
+    +(can?'<div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><button class="btn-primary-sm" onclick="kscOpenForm(\'bt\',null,{student_id:\''+E(studentId)+'\''+(x.k?',juz:'+x.juz:'')+'})">+ Setoran / Murojaah</button><button class="btn-outline-sm" onclick="btOpenTarget(\''+E(studentId)+'\')">🎯 Atur Target & Hafalan Awal</button></div>':'')
+    +road
+    +'<div class="dw-section">Riwayat ('+t.riwayat.length+')</div>'
+    +(t.riwayat.length?t.riwayat.slice(0,60).map(r=>'<div class="dw-row"><span>'+fmtTglID(r.tanggal)+' — '+r.jenis+' Juz '+r.juz+' '+r.surat+'</span><span>'+ayatTxt(r)+' · '+r.nilai+(can?' <button title="Edit" style="border:0;background:none;cursor:pointer" onclick="kscOpenForm(\'bt\',\''+E(r.id)+'\')">✏️</button>':'')+(del?'<button title="Hapus" style="border:0;background:none;cursor:pointer" onclick="kscConfirmDelete(\'bt\',\''+E(r.id)+'\')">🗑</button>':'')+'</span></div>').join(''):'<p class="dw-para">Belum ada riwayat setoran.</p>'));
+};
+function programHtml(){
+  return '<div class="panel"><h2>Target Tahfidz 3 Tahun</h2><p class="desc">1 juz per semester. Semester santri mengikuti tingkat kelas (X/XI/XII) dan semester berjalan. Capaian dihitung dari ayat yang sudah disetor pada juz target (input setoran: surat, dari ayat sampai ayat).</p><div class="tt-prog">'
+    +PROGRAM.map((j,i)=>'<div><small>Semester '+(i+1)+'</small><b>Juz '+j+'</b><em>'+semLabel(i+1)+'</em></div>').join('')+'</div></div>';
+}
+const bp=BOARDING_PAGES['bd-tahfidz'], _html=bp.html;
+bp.html=function(){
+  return _html.apply(this,arguments).replace('Pantau perkembangan hafalan, setoran, dan murojaah santri.','Target hafalan 1 juz per semester selama 3 tahun. Pantau capaian tiap santri terhadap target semesternya.')
+    .replace('\n  <div class="panel">','\n  '+programHtml()+'\n  <div class="panel">');
+};
+window.TahfidzAyat={AYAT,JUZ_START,juzTotal,juzRange,suratNo,capaian};
+})();
+</script>
+
 <style id="rapor-boarding-css">
 /* ===== RAPOR: TAB AKADEMIK | BOARDING ===== */
 .rb-tabs{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
