@@ -221,6 +221,42 @@ tr:last-child td{border-bottom:0}
 .acad-header .ah-crumb{font-size:10.5px;color:var(--sub);font-weight:600;letter-spacing:.03em;margin-bottom:4px;text-transform:uppercase}
 
 /* StatCard row (reusable) */
+/* ---- Grafik Perkembangan Ibadah (halaman Ibadah Harian) ---- */
+.bgi-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;background:linear-gradient(120deg,var(--acc-blue-bg,#EAF2FF),var(--card));border:1px solid var(--line);border-radius:16px;padding:16px 20px;margin-bottom:14px;box-shadow:0 4px 14px rgba(37,99,235,.07)}
+.bgi-head .bgi-ttl{display:flex;align-items:center;gap:14px}
+.bgi-head .bgi-mosque{font-size:44px;line-height:1}
+.bgi-head h2{margin:0;font-size:20px;font-weight:800;color:var(--ink)}
+.bgi-head p{margin:3px 0 0;font-size:12.5px;color:var(--sub)}
+.bgi-per{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);box-shadow:0 2px 8px rgba(37,99,235,.08)}
+.bgi-per button{border:0;background:transparent;color:var(--sub);padding:9px 14px;font-size:12px;font-weight:700;cursor:pointer}
+.bgi-per button.on{background:#1E3A8A;color:#fff}
+.bgi-grid{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;margin-bottom:14px}
+.bgi-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 4px 14px rgba(37,99,235,.06);min-width:0}
+.bgi-ch{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.bgi-ch h3{margin:0;display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--ink)}
+.bgi-ico{width:34px;height:34px;border-radius:50%;background:#2563EB;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:16px}
+.bgi-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;font-weight:600;color:var(--ink)}
+.bgi-leg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}
+.bgi-cv{position:relative;height:230px}
+.bgi-side h4{margin:0 0 10px;font-size:14.5px;font-weight:800;color:var(--ink)}
+.bgi-big{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.bgi-big b{font-size:38px;font-weight:800;color:var(--ink);line-height:1.1}
+.bgi-big small,.bgi-sub{display:block;font-size:12px;color:var(--sub);margin-top:4px}
+.bgi-circ{width:68px;height:68px;border-radius:50%;background:var(--acc-blue-bg,#EAF2FF);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0}
+.bgi-d{font-size:12px;font-weight:800;margin-left:6px}
+.bgi-d.up{color:#16A34A}.bgi-d.down{color:#DC2626}.bgi-d.flat,.bgi-d.na{color:var(--sub)}
+.bgi-li{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-top:1px solid var(--line);font-size:13px;color:var(--ink)}
+.bgi-li span{display:flex;align-items:center;gap:8px}
+.bgi-li i{width:12px;height:12px;border-radius:50%;display:inline-block}
+.bgi-sum{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:linear-gradient(120deg,var(--acc-blue-bg,#EAF2FF),var(--card));border:1px solid var(--line);border-radius:16px;padding:14px 20px;margin-bottom:14px}
+.bgi-sum .bgi-sico{width:46px;height:46px;border-radius:50%;background:#1E3A8A;color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.bgi-sum .bgi-stxt{flex:1 1 280px;min-width:220px}
+.bgi-sum .bgi-stxt b.t{display:block;font-size:15px;font-weight:800;color:var(--ink);margin-bottom:2px}
+.bgi-sum .bgi-stxt span{font-size:13px;color:var(--ink)}
+.bgi-sum .bgi-kv{padding-left:18px;border-left:1px solid var(--line);min-width:140px}
+.bgi-sum .bgi-kv small{display:block;font-size:12px;color:var(--sub)}
+.bgi-sum .bgi-kv b{font-size:24px;font-weight:800;color:var(--ink)}
+@media (max-width:900px){.bgi-grid{grid-template-columns:1fr}.bgi-sum .bgi-kv{border-left:0;padding-left:0}}
 .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
 @media (max-width:900px){.stat-row{grid-template-columns:repeat(2,1fr)}}
 .mini-stat{border-radius:11px;padding:12px;border:1px solid var(--line)}
@@ -3428,7 +3464,7 @@ function biRenderTable(){
   const pg=document.getElementById('biPagination'); if(pg) pg.innerHTML=acadPaginationHtml(page,totalPages,total,'biGotoPage');
 }
 function biGotoPage(p){ biPage=p; biRenderTable(); }
-function biOnFilterChange(){ biFilter={tanggal:document.getElementById('biTanggal').value,asrama:document.getElementById('biAsrama').value}; biPage=1; biRenderTable(); }
+function biOnFilterChange(){ biFilter={tanggal:document.getElementById('biTanggal').value,asrama:document.getElementById('biAsrama').value}; biPage=1; biRenderTable(); biRenderGrafik(); }
 function biStatsArray(){
   const rows=ksFilterByStudentId(worshipRecordsData); const fardu=BI_SHALAT.map(c=>c[0]);
   let rec=0,tw=0; rows.forEach(w=>fardu.forEach(f=>{ if(w[f]&&w[f]!=='-'){ rec++; if(w[f]==='Tepat Waktu') tw++; } }));
@@ -3439,8 +3475,104 @@ function biStatsArray(){
     {color:'green',val:rows.filter(w=>w.tilawah==='Hadir').length,label:'Dzikir Pagi'}
   ];
 }
+/* ---- GRAFIK PERKEMBANGAN IBADAH (menggantikan kartu statistik lama) ----
+   Sumber: worshipRecordsData (worship_records) yang sama dengan tabel di bawah; tidak ada data contoh.
+   Rumus mengikuti sistem yang sudah ada (lihat Dashboard Utama):
+   - Shalat Berjamaah = Tepat Waktu / seluruh catatan shalat yang terisi pada tanggal itu (kolom "-" tidak dihitung).
+   - Ibadah Lainnya   = Hadir / seluruh catatan yang terisi (Tahajud, Dhuha, Dzikir Pagi).
+   - Rata-rata periode = akumulasi seluruh catatan valid pada periode (bukan rata-rata dari rata-rata).
+   - Pembanding        = periode sebelumnya dengan jumlah hari yang sama. */
+let biPeriod=7; let biCharts={};
+const BI_G_WAJIB=[['subuh','Subuh','#2563EB'],['dzuhur','Dzuhur','#16A34A'],['ashar','Ashar','#F97316'],['maghrib','Maghrib','#7C3AED'],['isya','Isya','#06B6D4']];
+const BI_G_LAIN=[['tahajud','Tahajud','#7C3AED'],['witir','Witir','#2563EB'],['dhuha','Dhuha','#16A34A'],['tilawah','Dzikir Pagi','#F97316'],['dzikir','Dzikir Sore','#EAB308'],['puasaSenKam','Puasa Senin/Kamis','#DB2777']];
+const biGGoodLain=k=>k==='puasaSenKam'?'Puasa':'Hadir';   /* Rawatib berupa jumlah (bukan status) -> tidak dipersenkan, hanya ditampilkan total */
+const BI_G_HARI=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+const BI_G_BLN=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+function biGByDate(){
+  const asr=(biFilter&&biFilter.asrama)||''; const seen=new Set(); const by={};
+  ksFilterByStudentId(worshipRecordsData).forEach(w=>{
+    const st=studentOf(w.studentId); if(!st||(asr&&st.asrama!==asr)) return;
+    const k=w.studentId+'|'+w.tanggal; if(seen.has(k)) return; seen.add(k);
+    (by[w.tanggal]=by[w.tanggal]||[]).push(w);
+  });
+  return by;
+}
+function biGDates(n,off){ const a=[]; for(let i=off+n-1;i>=off;i--) a.push(bdSince(i)); return a; }
+function biGTally(dates,by,keys,good){
+  const o={}; keys.forEach(k=>o[k]={g:0,t:0});
+  dates.forEach(d=>(by[d]||[]).forEach(w=>keys.forEach(k=>{ const v=w[k]; if(v&&v!=='-'){ o[k].t++; if(v===(typeof good==='function'?good(k):good)) o[k].g++; } })));
+  return o;
+}
+const biGPct=(g,t)=>t>0?Math.round(g/t*100):null;
+function biGSum(tl){ let g=0,t=0; Object.keys(tl).forEach(k=>{ g+=tl[k].g; t+=tl[k].t; }); return {g,t,p:biGPct(g,t)}; }
+function biGCalc(){
+  const n=biPeriod, by=biGByDate(), dates=biGDates(n,0), prev=biGDates(n,n);
+  const kW=BI_G_WAJIB.map(c=>c[0]), kL=BI_G_LAIN.map(c=>c[0]);
+  const daily=(keys,good)=>keys.map(k=>dates.map(d=>{ const t=biGTally([d],by,[k],good)[k]; return biGPct(t.g,t.t); }));
+  const tW=biGTally(dates,by,kW,'Tepat Waktu'), tL=biGTally(dates,by,kL,biGGoodLain);
+  const pW=biGTally(prev,by,kW,'Tepat Waktu'), pL=biGTally(prev,by,kL,biGGoodLain);
+  let rwt=0,rwn=0; dates.forEach(d=>(by[d]||[]).forEach(w=>{ const v=w.rawatib; if(v!=='-'&&v!=null&&v!==''&&Number.isFinite(Number(v))){ rwt+=Number(v); rwn++; } }));
+  const sW=biGSum(tW), sL=biGSum(tL), spW=biGSum(pW), spL=biGSum(pL);
+  const all=biGPct(sW.g+sL.g,sW.t+sL.t), allPrev=biGPct(spW.g+spL.g,spW.t+spL.t);
+  const labels=dates.map(d=>{ const x=new Date(d+'T00:00:00'); return [BI_G_HARI[x.getDay()],x.getDate()+' '+BI_G_BLN[x.getMonth()]]; });
+  return {n,labels,dW:daily(kW,'Tepat Waktu'),dL:daily(kL,biGGoodLain),avgW:sW.p,avgL:sL.p,prevW:spW.p,prevL:spL.p,all,allPrev,
+    perL:kL.map(k=>biGPct(tL[k].g,tL[k].t)),rawatib:rwn?rwt:null};
+}
+function biGCat(p){ return p==null?null:p>=90?'sangat baik':p>=80?'baik':p>=70?'cukup':'perlu ditingkatkan'; }
+function biGDelta(cur,prev){ if(cur==null||prev==null) return {c:'na',t:''}; const d=cur-prev; return d>0?{c:'up',t:'▲ +'+d+'%'}:d<0?{c:'down',t:'▼ '+d+'%'}:{c:'flat',t:'● 0%'}; }
+const biGF=v=>v==null?'–':v+'%';
+function biGDeltaHtml(cur,prev){ const d=biGDelta(cur,prev); return d.t?`<span class="bgi-d ${d.c}">${d.t}</span>`:''; }
+function biGrafikHtml(){
+  const R=biGCalc(), n=R.n, per=[7,14,30];
+  const leg=a=>a.map(c=>`<span><i style="background:${c[2]}"></i>${c[1]}</span>`).join('');
+  const cat=biGCat(R.all);
+  const sum=cat?`Selama ${n} hari terakhir, pelaksanaan ibadah santri berada pada kategori <b>${cat}</b> dengan rata-rata keseluruhan <b>${R.all}%</b>.`:`Belum ada data presensi ibadah pada ${n} hari terakhir.`;
+  return `<div class="bgi-head"><div class="bgi-ttl"><div class="bgi-mosque">🕌</div><div><h2>Grafik Perkembangan Ibadah</h2><p>Pantau perkembangan pelaksanaan ibadah santri berdasarkan data presensi harian (${n} hari terakhir).</p></div></div>
+    <div class="bgi-per">${per.map(x=>`<button class="${x===n?'on':''}" onclick="biSetPeriod(${x})">${x} Hari Terakhir</button>`).join('')}</div></div>
+  <div class="bgi-grid">
+    <div class="bgi-box"><div class="bgi-ch"><h3><span class="bgi-ico">🕌</span>Shalat Berjamaah</h3><div class="bgi-leg">${leg(BI_G_WAJIB)}</div></div><div class="bgi-cv"><canvas id="biChW"></canvas></div></div>
+    <div class="bgi-box bgi-side"><h4>Rata-rata Shalat Berjamaah</h4><div class="bgi-big"><div><b>${biGF(R.avgW)}</b>${biGDeltaHtml(R.avgW,R.prevW)}<small>dari periode ${n} hari</small></div><div class="bgi-circ">🕌</div></div></div>
+    <div class="bgi-box"><div class="bgi-ch"><h3><span class="bgi-ico">★</span>Ibadah Lainnya</h3><div class="bgi-leg">${leg(BI_G_LAIN)}</div></div><div class="bgi-cv"><canvas id="biChL"></canvas></div></div>
+    <div class="bgi-box bgi-side"><h4>Rata-rata Ibadah Lainnya</h4><div class="bgi-big"><div><b>${biGF(R.avgL)}</b>${biGDeltaHtml(R.avgL,R.prevL)}<small>dari periode ${n} hari</small></div><div class="bgi-circ">📖</div></div>
+      <div style="margin-top:12px">${BI_G_LAIN.map((c,i)=>`<div class="bgi-li"><span><i style="background:${c[2]}"></i>${c[1]}</span><b>${biGF(R.perL[i])}</b></div>`).join('')}<div class="bgi-li"><span><i style="background:#64748B"></i>Rawatib (total)</span><b>${R.rawatib==null?'–':R.rawatib+'×'}</b></div></div></div>
+  </div>
+  <div class="bgi-sum"><div class="bgi-sico">▥</div><div class="bgi-stxt"><b class="t">Ringkasan Periode</b><span>${sum}</span></div>
+    <div class="bgi-kv"><small>Shalat Berjamaah</small><b>${biGF(R.avgW)}</b>${biGDeltaHtml(R.avgW,R.prevW)}</div>
+    <div class="bgi-kv"><small>Ibadah Lainnya</small><b>${biGF(R.avgL)}</b>${biGDeltaHtml(R.avgL,R.prevL)}</div></div>`;
+}
+function biGDraw(id,R,defs,data){
+  const cv=document.getElementById(id); if(!cv||typeof Chart==='undefined') return;
+  const cs=getComputedStyle(document.documentElement), tx=(cs.getPropertyValue('--sub')||'#5B7285').trim(), ln=(cs.getPropertyValue('--line')||'#E4EAEF').trim();
+  biCharts[id]=new Chart(cv,{type:'line',
+    data:{labels:R.labels,datasets:defs.map((c,i)=>({label:c[1],data:data[i],borderColor:c[2],backgroundColor:c[2],tension:.35,borderWidth:2.2,pointRadius:R.n>14?2:4,pointHoverRadius:6,pointBackgroundColor:c[2],spanGaps:true}))},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:x=>x.dataset.label+': '+(x.parsed.y==null?'-':x.parsed.y+'%')}}},
+      scales:{y:{min:0,max:100,ticks:{stepSize:20,callback:v=>v+'%',color:tx},grid:{color:ln}},x:{ticks:{color:tx,maxRotation:0,autoSkip:true},grid:{display:false}}}}});
+}
+function biRenderGrafik(){
+  const el=document.getElementById('biStats'); if(!el) return;
+  Object.values(biCharts).forEach(c=>{ try{c.destroy();}catch(e){} }); biCharts={};
+  try{
+    el.innerHTML=biGrafikHtml();
+    const R=biGCalc();
+    if(typeof Chart==='undefined'){ biEnsureChart(); return; }
+    biGDraw('biChW',R,BI_G_WAJIB,R.dW); biGDraw('biChL',R,BI_G_LAIN,R.dL);
+  }catch(e){ console.error('Grafik ibadah:',e); el.innerHTML='<p class="viewonly-banner">Grafik ibadah gagal dimuat.</p>'; }
+}
+/* Chart.js belum siap (script defer / CDN lambat): muat ulang bila perlu lalu gambar grafik. Bila tetap gagal, tampilkan pesan di area grafik. */
+let biChartWait=0;
+function biEnsureChart(){
+  const msg=t=>document.querySelectorAll('#biChW,#biChL').forEach(c=>{ const p=c.parentNode; if(p) p.innerHTML='<p class="desc" style="padding:70px 0;text-align:center">'+t+'</p>'; });
+  if(typeof Chart!=='undefined'){ biRenderGrafik(); return; }
+  if(!document.getElementById('biChartJs')&&!document.querySelector('script[src*="chart.umd"]')){
+    const sc=document.createElement('script'); sc.id='biChartJs'; sc.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js'; sc.onerror=()=>msg('Library grafik (Chart.js) gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.'); document.head.appendChild(sc);
+  }
+  if(++biChartWait>40){ biChartWait=0; msg('Library grafik (Chart.js) belum termuat. Periksa koneksi internet lalu muat ulang halaman.'); return; }
+  setTimeout(biEnsureChart,250);
+}
+function biSetPeriod(n){ biPeriod=n; biRenderGrafik(); }
 function biRefresh(){
-  const st=document.getElementById('biStats'); if(st) st.innerHTML=acadStatRowHtml(biStatsArray());
+  biRenderGrafik();
   kscFillSelect('biAsrama',bdUniq(bdBoardingStudents().map(s=>s.asrama)).map(a=>({value:a,label:a})));
   biRenderTable();
 }
@@ -3587,7 +3719,7 @@ async function biSaveRawatibConfig(){
 function boardingIbadahPageHtml(){
   biFilter={tanggal:'',asrama:''}; biTab='shalat'; biPage=1; const can=bdCanManage();
   return `${acadPageHeaderHtml('teal','Boarding / Asrama','Ibadah Harian','Pantau pelaksanaan ibadah dan pembiasaan ibadah santri (terpisah dari presensi kegiatan asrama).')}
-  <div id="biStats">${acadStatRowHtml(biStatsArray())}</div>${ksScopeNoticeHtml()}
+  <div id="biStats"></div>${ksScopeNoticeHtml()}
   <div class="panel">
     <div class="acad-toolrow">
       <input type="date" id="biTanggal" onchange="biOnFilterChange()">
@@ -11563,6 +11695,28 @@ function render(J,m,a){
     if(m.period.jenis==='Semester') box('Saran Kerja Sama Sekolah/Asrama dengan Orang Tua',m.ev.kerjasama);
     ensure((m.sign.kepsek?92:52)+12); sec('Pengesahan');
     sign();
+    lampiranPdf();
+  }
+  /* Lampiran Dokumentasi: halaman baru setelah Pengesahan, hanya bila ada foto */
+  function lampiranPdf(){
+    try{
+      const lp=((m.ev&&Array.isArray(m.ev.lampiran))?m.ev.lampiran:[]).filter(x=>x&&typeof x.src==='string'&&/^data:image\/(jpeg|png|webp);base64,/.test(x.src));
+      if(!lp.length) return;
+      newPage();
+      doc.setFillColor.apply(doc,BLUE); doc.rect(ML,y,1.4,5.8,'F');
+      F('bold',10,NAVY); const t=tx('Lampiran Dokumentasi'); doc.text(t,ML+4,y+4.4);
+      const tw=doc.getTextWidth(t); doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2); doc.line(ML+4+tw+3,y+3,PW-MR,y+3); y+=10;
+      const gw=(CW-6)/2, ih=52; let col=0;
+      lp.forEach((x,k)=>{
+        if(col===0) ensure(ih+12);
+        const px=ML+col*(gw+6);
+        doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.2); doc.rect(px,y,gw,ih+8);
+        let w=gw-4, h=ih-2; if(x.w&&x.h){ const r=x.w/x.h; if(r>w/h) h=w/r; else w=h*r; }
+        try{ doc.addImage(x.src,'JPEG',px+(gw-w)/2,y+2+(ih-2-h)/2,w,h); }catch(e){}
+        if(x.cap){ F('normal',7.6,SUB); doc.text(tx(String(x.cap)),px+gw/2,y+ih+5,{align:'center',maxWidth:gw-4}); }
+        col++; if(col===2||k===lp.length-1){ col=0; y+=ih+12; }
+      });
+    }catch(e){ console.warn('[rapor-pdf] lampiran',e); }
   }
   function sign(){
     const g=m.sign; ensure(g.kepsek?92:52);
@@ -12954,6 +13108,10 @@ function build(J,photo,det,status){
       <div class="mr2-sign" style="grid-template-columns:repeat(${Math.max(1,cols.length)},1fr)">${cols.map(sgn).join('')}</div>
       <div class="mr2-sign mr2-kepsek"><div><div class="role">Mengetahui,<br>Kepala Sekolah</div><div class="sp"></div><b>${has(sg.kepsek&&sg.kepsek.name)?X(sg.kepsek.name):'(.................................)'}</b></div></div></div>`,H));
 
+  /* Lampiran Dokumentasi (8 foto, dapat diedit di lembar) — setelah Pengesahan */
+  { const lp=window.AISLampiran?window.AISLampiran.html(J,typeof window.rpxSheetEditable==='function'&&!!window.rpxSheetEditable(J)):'';
+    if(lp) pages.push(sheet(sec(nx(),'Lampiran Dokumentasi','Foto kegiatan dan dokumentasi pendukung')+lp,H)); }
+
   /* Penutup */
   pages.push(`<section class="mr2-sheet mr2-close"><div class="mr2-logo">${L.wide?img(L.wide,'Logo '+school):`<b style="color:#0B2540">${X(school)}</b>`}</div>
     <h2>${X(school)}</h2>${sc.addr?`<p>${X(sc.addr)}</p>`:''}${sc.contact?`<p>${X(sc.contact)}</p>`:''}
@@ -13465,6 +13623,10 @@ function build(J,photo,det,status){
     (J.draft?'':'<div class="stamp"><b>Dokumen diterbitkan.</b> '+X(J.footerLeft||'')+'</div>')+
     '<div class="sg" style="grid-template-columns:repeat('+all.length+',1fr)">'+all.map(c=>'<div class="col"><div class="dt">'+(c.dt||'&nbsp;')+'</div><div class="lbl">'+(c.role?X(c.role).replace(/&lt;br&gt;/g,'<br>'):'')+'</div><div class="sp"></div><b>'+c.name+'</b></div>').join('')+'</div>'));
 
+  /* ===== LAMPIRAN DOKUMENTASI (8 foto, dapat diedit di lembar) ===== */
+  { const lp=window.AISLampiran?window.AISLampiran.html(J,EDIT):'';
+    if(lp) pages.push(page(sec(nx(),'Lampiran Dokumentasi','Foto kegiatan dan dokumentasi pendukung')+lp)); }
+
   /* ===== 6. PENUTUP ===== */
   pages.push(pageClose(J));
   return PX(pages.join(''));
@@ -13663,5 +13825,95 @@ background:linear-gradient(180deg,#FFF6D6,#F3DFA2 35%,#D8B45A 100%);box-shadow:0
 })(window);
 </script>
 
+<script id="lampiran-dokumentasi">
+/* =====================================================================
+   LAMPIRAN DOKUMENTASI RAPOR — halaman setelah Pengesahan, 8 slot foto.
+   - Foto & keterangan disimpan di isian rapor (ed.ev.lampiran -> report_documents.catatan),
+     sehingga ikut tersimpan sebagai draf dan ikut terbit/arsip (snapshot).
+   - Foto dikompres di browser (maks. 900 px, JPEG) agar ringan.
+   - Tombol edit hanya tampil di layar saat rapor bisa diedit; tidak ikut cetak/PDF.
+   ===================================================================== */
+(function(){
+'use strict';
+const N=8, MAXW=900, QUAL=0.72, MAXTOTAL=4000000;
+const OK=/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/;
+const X=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function norm(a){ a=Array.isArray(a)?a:[]; const o=[]; for(let i=0;i<N;i++){ const x=a[i]&&typeof a[i]==='object'?a[i]:{}; o.push({src:(typeof x.src==='string'&&OK.test(x.src))?x.src:'',cap:typeof x.cap==='string'?x.cap.slice(0,120):'',w:Number(x.w)||0,h:Number(x.h)||0}); } return o; }
+function slotInner(i,it,edit){
+  const has=!!it.src;
+  const fr='height:118px;border-radius:6px;overflow:hidden;background:#F3F7FA;display:flex;align-items:center;justify-content:center;position:relative';
+  let inner;
+  if(has) inner='<img src="'+it.src+'" alt="Dokumentasi '+(i+1)+'" style="width:100%;height:100%;object-fit:cover;display:block">'+
+    (edit?'<div class="lmp-ctl lmp-btns"><button type="button" data-lmp-pick="'+i+'">Ganti</button><button type="button" data-lmp-del="'+i+'">Hapus</button></div>':'');
+  else inner=edit?'<button type="button" class="lmp-ctl lmp-pick" data-lmp-pick="'+i+'">＋ Tambah foto '+(i+1)+'</button>':'';
+  const cap=edit?'<div class="lmp-cap" contenteditable="true" spellcheck="true" data-lmp-cap="'+i+'" data-ph="Keterangan foto '+(i+1)+'..." style="margin-top:5px;font-size:11px;line-height:1.35;text-align:center;color:#13283D;min-height:15px">'+X(it.cap)+'</div>'
+    :(it.cap?'<div style="margin-top:5px;font-size:11px;line-height:1.35;text-align:center;color:#13283D">'+X(it.cap)+'</div>':'');
+  return '<div style="'+fr+'">'+inner+'</div>'+cap;
+}
+function html(J,edit){
+  const L=norm(J&&J.ev&&J.ev.lampiran);
+  if(!edit&&!L.some(x=>x.src)) return '';
+  const cells=L.map((it,i)=>({it,i})).filter(o=>edit||o.it.src);
+  return '<div data-lmp-root="1" style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:8px">'+
+    cells.map(o=>'<div data-lmp-slot="'+o.i+'" class="lmp-s'+(o.it.src?'':' lmp-empty')+'" style="border:1px solid #D3DFE9;border-radius:8px;padding:6px;background:#fff;break-inside:avoid">'+slotInner(o.i,o.it,edit)+'</div>').join('')+'</div>'+
+    (edit?'<p class="lmp-ctl" style="margin:10px 0 0;font-size:11px;color:#5B7285">Maksimal 8 foto. Klik “Tambah foto” untuk memilih gambar, lalu tulis keterangan di bawahnya. Klik Simpan pada rapor agar tersimpan.</p>':'');
+}
+function curEd(){ const D=window.RPX_DEBUG, ed=D&&D.state&&D.state.ed; return (ed&&ed.ev&&!ed.loading&&ed.s&&typeof window.rpxSheetEditable==='function'&&window.rpxSheetEditable({s:ed.s}))?ed:null; }
+function toast(t){ try{ if(typeof showAcadToast==='function') return showAcadToast(t); }catch(e){} try{ alert(t); }catch(e){} }
+function refreshSlot(i,it){ document.querySelectorAll('[data-lmp-slot="'+i+'"]').forEach(el=>{ el.className='lmp-s'+(it.src?'':' lmp-empty'); el.innerHTML=slotInner(i,it,true); }); }
+function compress(file){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ try{ const sc=Math.min(1,MAXW/Math.max(im.naturalWidth,im.naturalHeight)), c=document.createElement('canvas');
+        c.width=Math.max(1,Math.round(im.naturalWidth*sc)); c.height=Math.max(1,Math.round(im.naturalHeight*sc));
+        const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(im,0,0,c.width,c.height);
+        URL.revokeObjectURL(u); res({src:c.toDataURL('image/jpeg',QUAL),w:c.width,h:c.height}); }catch(e){ URL.revokeObjectURL(u); rej(e); } };
+    im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('Gambar tidak dapat dibaca.')); };
+    im.src=u;
+  });
+}
+let target=-1, inp=null;
+function chooser(i){
+  if(!inp){ inp=document.createElement('input'); inp.type='file'; inp.accept='image/*'; inp.style.display='none'; document.body.appendChild(inp);
+    inp.addEventListener('change',async()=>{
+      const f=inp.files&&inp.files[0], i=target; inp.value=''; if(!f||i<0) return;
+      const ed=curEd(); if(!ed){ toast('Rapor ini tidak dapat diedit.'); return; }
+      if(!/^image\//.test(f.type)){ toast('File harus berupa gambar.'); return; }
+      if(f.size>15*1024*1024){ toast('Ukuran foto maksimal 15 MB.'); return; }
+      try{
+        const r=await compress(f), arr=norm(ed.ev.lampiran), total=arr.reduce((a,x,k)=>a+(k===i?0:x.src.length),0)+r.src.length;
+        if(total>MAXTOTAL){ toast('Total ukuran foto lampiran terlalu besar. Hapus atau ganti foto lain terlebih dulu.'); return; }
+        arr[i].src=r.src; arr[i].w=r.w; arr[i].h=r.h; ed.ev.lampiran=arr; ed.dirty=true; refreshSlot(i,arr[i]);
+      }catch(e){ console.error('[lampiran]',e); toast('Foto gagal diproses: '+((e&&e.message)||e)); }
+    });
+  }
+  target=i; inp.click();
+}
+document.addEventListener('click',function(e){
+  const b=e.target&&e.target.closest?e.target.closest('[data-lmp-pick],[data-lmp-del]'):null; if(!b) return;
+  e.preventDefault();
+  const ed=curEd(); if(!ed){ toast('Rapor ini tidak dapat diedit.'); return; }
+  if(b.hasAttribute('data-lmp-pick')){ chooser(Number(b.getAttribute('data-lmp-pick'))); return; }
+  const i=Number(b.getAttribute('data-lmp-del')), arr=norm(ed.ev.lampiran);
+  arr[i].src=''; arr[i].w=0; arr[i].h=0; ed.ev.lampiran=arr; ed.dirty=true; refreshSlot(i,arr[i]);
+},true);
+document.addEventListener('input',function(e){
+  const t=e.target; if(!t||!t.getAttribute) return; const k=t.getAttribute('data-lmp-cap'); if(k==null) return;
+  const ed=curEd(); if(!ed) return; const i=Number(k), arr=norm(ed.ev.lampiran);
+  arr[i].cap=String(t.innerText||'').replace(/\s+/g,' ').slice(0,120).trim(); ed.ev.lampiran=arr; ed.dirty=true;
+},true);
+document.addEventListener('paste',function(e){
+  const t=e.target; if(!t||!t.getAttribute||t.getAttribute('data-lmp-cap')==null) return;
+  e.preventDefault(); document.execCommand('insertText',false,((e.clipboardData||window.clipboardData).getData('text/plain')||'').replace(/\s+/g,' '));
+},true);
+const st=document.createElement('style'); st.id='lmp-css';
+st.textContent='.lmp-pick{width:100%;height:100%;border:2px dashed #9DB6CC;background:transparent;color:#1D6FA3;font-weight:700;font-size:12px;cursor:pointer;border-radius:6px}.lmp-pick:hover{background:#EAF3F8}'+
+ '.lmp-btns{position:absolute;top:4px;right:4px;display:flex;gap:4px}.lmp-btns button{border:0;border-radius:5px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;background:rgba(11,37,64,.85);color:#fff}'+
+ '.lmp-cap[contenteditable]{outline:none;border-bottom:1px dashed #9DB6CC}.lmp-cap:empty:before{content:attr(data-ph);color:#8A9BAB}'+
+ '@media print{.lmp-ctl{display:none!important}.lmp-empty{visibility:hidden}.lmp-cap:empty:before{content:""}.lmp-cap[contenteditable]{border-bottom:0}}';
+document.head.appendChild(st);
+window.AISLampiran={html:html,norm:norm};
+})();
+</script>
 </body>
 </html>
