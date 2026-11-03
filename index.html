@@ -3560,15 +3560,20 @@ function biRenderGrafik(){
   }catch(e){ console.error('Grafik ibadah:',e); el.innerHTML='<p class="viewonly-banner">Grafik ibadah gagal dimuat.</p>'; }
 }
 /* Chart.js belum siap (script defer / CDN lambat): muat ulang bila perlu lalu gambar grafik. Bila tetap gagal, tampilkan pesan di area grafik. */
-let biChartWait=0;
+let biChartLoading=false;
 function biEnsureChart(){
   const msg=t=>document.querySelectorAll('#biChW,#biChL').forEach(c=>{ const p=c.parentNode; if(p) p.innerHTML='<p class="desc" style="padding:70px 0;text-align:center">'+t+'</p>'; });
   if(typeof Chart!=='undefined'){ biRenderGrafik(); return; }
-  if(!document.getElementById('biChartJs')&&!document.querySelector('script[src*="chart.umd"]')){
-    const sc=document.createElement('script'); sc.id='biChartJs'; sc.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js'; sc.onerror=()=>msg('Library grafik (Chart.js) gagal dimuat. Periksa koneksi internet lalu muat ulang halaman.'); document.head.appendChild(sc);
-  }
-  if(++biChartWait>40){ biChartWait=0; msg('Library grafik (Chart.js) belum termuat. Periksa koneksi internet lalu muat ulang halaman.'); return; }
-  setTimeout(biEnsureChart,250);
+  if(biChartLoading) return; biChartLoading=true;
+  /* Sumber cadangan: bila cdnjs terblokir/lambat di jaringan pengguna, coba jsDelivr lalu unpkg. */
+  const urls=['https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js','https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js','https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js'];
+  const next=i=>{
+    if(typeof Chart!=='undefined'){ biChartLoading=false; biRenderGrafik(); return; }
+    if(i>=urls.length){ biChartLoading=false; msg('Library grafik (Chart.js) gagal dimuat dari semua sumber. Jika memakai VPN, pemblokir iklan, atau jaringan yang membatasi situs, nonaktifkan lalu muat ulang halaman.'); return; }
+    let done=false; const go=()=>{ if(done) return; done=true; clearTimeout(t); next(i+1); };
+    const sc=document.createElement('script'); sc.src=urls[i]; sc.onload=go; sc.onerror=go; const t=setTimeout(go,8000); document.head.appendChild(sc);
+  };
+  next(0);
 }
 function biSetPeriod(n){ biPeriod=n; biRenderGrafik(); }
 function biRefresh(){
