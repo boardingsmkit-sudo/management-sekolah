@@ -1462,8 +1462,8 @@ function pkRenderTable(){
   const el=document.getElementById('pkBody'); if(!el) return;
   const filtered=pkFilteredRows();
   const {rows,page,totalPages,total}=acadPaginate(filtered,pkPage,PK_PER_PAGE); pkPage=page;
-  el.innerHTML = rows.length? `<table><tr><th>No</th><th>Tanggal</th><th>Nama Siswa</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th><th>Status</th><th>Jam</th><th>Keterangan</th><th>Aksi</th></tr>
-    ${rows.map((r,i)=>`<tr><td>${(page-1)*PK_PER_PAGE+i+1}</td><td>${fmtTglID(r.tanggal)}</td><td><b>${r.nama}</b></td><td>${r.kelas}</td><td>${r.mapel}</td><td>${r.guru}</td><td>${acadStatusBadge(r.status)}</td><td>${r.jam}</td><td>${r.ket}${window.KBMD?KBMD.badges(r.kategori):''}</td>
+  el.innerHTML = rows.length? `<table><tr><th>No</th><th>Tanggal</th><th>Nama Siswa</th><th>Kelas</th><th>Mata Pelajaran</th><th>Guru</th><th>Status</th><th>Jam</th><th>Pelanggaran</th><th>Aksi</th></tr>
+    ${rows.map((r,i)=>`<tr><td>${(page-1)*PK_PER_PAGE+i+1}</td><td>${fmtTglID(r.tanggal)}</td><td><b>${r.nama}</b></td><td>${r.kelas}</td><td>${r.mapel}</td><td>${r.guru}</td><td>${acadStatusBadge(r.status)}</td><td>${r.jam}</td><td>${window.KBMD?(KBMD.badges(r.kategori)||'-'):'-'}</td>
     <td><div class="row-actions">${kscCan('pk','write')?`<button title="Edit sesi" onclick="pkOpenSession('${dkEsc(r.id)}')">✏️</button>`:''}${kscCan('pk','delete')?`<button title="Hapus" onclick="kscConfirmDelete('pk','${dkEsc(r.id)}')">🗑</button>`:''}</div></td></tr>`).join('')}
     </table>` : acadEmptyStateHtml('Tidak ada data presensi','Coba ubah filter tanggal, kelas, mata pelajaran, atau guru.');
   const pg=document.getElementById('pkPagination'); if(pg) pg.innerHTML=acadPaginationHtml(page,totalPages,total,'pkGotoPage');
@@ -1534,7 +1534,7 @@ async function initPresensiKbmPage(){ pkRefresh(); await kscLoad('pk',{silent:fa
 function pkExport(){
   const rows=pkFilteredRows();
   if(!rows.length){ showAcadToast('Tidak ada data presensi untuk diekspor.'); return; }
-  akDownloadCsv('presensi-kbm-'+ksToday()+'.csv',['Tanggal','Nama Siswa','Kelas','Mata Pelajaran','Guru','Status','Jam','Keterangan'],rows.map(r=>[r.tanggal,r.nama,r.kelas,r.mapel,r.guru,r.status,r.jam==='-'?'':r.jam,r.ket==='-'?'':r.ket]));
+  akDownloadCsv('presensi-kbm-'+ksToday()+'.csv',['Tanggal','Nama Siswa','Kelas','Mata Pelajaran','Guru','Status','Jam'],rows.map(r=>[r.tanggal,r.nama,r.kelas,r.mapel,r.guru,r.status,r.jam==='-'?'':r.jam]));
 }
 const pkFm=n=>String(Math.round(n*10)/10).replace('.',',');
 async function pkRekapData(){
@@ -1551,7 +1551,7 @@ async function pkOpenRekap(){
   openAcadDrawer('Rekap Presensi KBM',`<p class="dw-para">Berdasarkan filter yang sedang aktif (${rows.length} catatan, ${list.length} siswa). Periode nilai presensi mengikuti filter tanggal yang aktif.</p>
     <table><tr><th>Siswa</th><th>Kelas</th><th>H</th><th>I</th><th>S</th><th>A</th><th>% Hadir</th><th>Pelanggaran</th><th>Nilai Presensi</th></tr>
     ${list.map(b=>`<tr><td>${b.nama}</td><td>${b.kelas}</td><td>${b.Hadir}</td><td>${b.Izin}</td><td>${b.Sakit}</td><td>${b.Alpa}</td><td>${Math.round(b.Hadir/b.t*1000)/10}%</td><td>${b.kd&&b.kd.ada?b.kd.jumlah:'-'}</td><td>${b.kd&&b.kd.ada?pkFm(b.kd.akhir):'-'}</td></tr>`).join('')}</table>
-    <p class="dw-para">Nilai Presensi = nilai awal dikurangi bobot kategori pelanggaran. Keterangan bebas tidak mengurangi nilai; Alpa/Izin/Sakit tercermin pada % Hadir.</p>
+    <p class="dw-para">Nilai Presensi = nilai awal dikurangi bobot kategori pelanggaran yang dicentang. Alpa/Izin/Sakit tercermin pada % Hadir.</p>
     <div class="dw-formfoot"><button class="btn-outline-sm" onclick="pkExportRekap()">⬇️ Unduh Rekap (CSV)</button><button class="btn-primary-sm" onclick="closeAcadDrawer()">Tutup</button></div>`);
 }
 async function pkExportRekap(){
@@ -1615,10 +1615,9 @@ function pkSessRender(){
   const ex=pkSessExisting(tgl,cid,mapel); const nEx=Object.keys(ex).length;
   el.innerHTML=(nEx?`<p class="viewonly-banner">Presensi untuk kelas, mapel, dan tanggal ini sudah ada (${nEx} siswa) — menyimpan akan memperbarui data tersebut.</p>`:'')
     +`<div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0"><b style="font-size:12px">Daftar Siswa (${studs.length})</b><button class="btn-outline-sm" onclick="pkSessAll('Hadir')">Semua Hadir</button></div>
-    <table><tr><th>Siswa</th><th>Status</th><th>Pelanggaran</th><th>Keterangan</th></tr>${studs.map(s=>{ const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>
+    <table><tr><th>Siswa</th><th>Status</th><th>Pelanggaran</th></tr>${studs.map(s=>{ const e=ex[String(s.id)]; return `<tr><td>${s.nama}</td>
       <td><select id="pks_st_${dkEsc(s.id)}" onchange="KBMD.stChanged('${dkEsc(s.id)}')">${akOptHtml(['Hadir','Izin','Sakit','Alpa'],e?e.status:'Hadir')}</select></td>
-      <td>${window.KBMD?KBMD.pickHtml(dkEsc(s.id),e?e.kategori:[],(e?e.status:'Hadir')==='Hadir'):''}</td>
-      <td><input type="text" id="pks_kt_${dkEsc(s.id)}" maxlength="120" value="${e&&e.ket!=='-'?dkEsc(akUnesc(e.ket)):''}" style="width:100%"></td></tr>`; }).join('')}</table>`;
+      <td>${window.KBMD?KBMD.pickHtml(dkEsc(s.id),e?e.kategori:[],(e?e.status:'Hadir')==='Hadir'):''}</td></tr>`; }).join('')}</table>`;
 }
 function pkSessAll(st){ document.querySelectorAll('#pksList select[id^="pks_st_"]').forEach(s=>s.value=st); }
 async function pkSessSave(){
@@ -1633,11 +1632,10 @@ async function pkSessSave(){
   if(!pkMapelOfDay(classId,tanggal).some(m=>m.toLowerCase()===mapel.toLowerCase())){ akFormErr('akfError','Mata pelajaran "'+mapel+'" tidak dijadwalkan pada hari '+(pkHariOf(tanggal)||'tersebut')+' untuk kelas ini.'); return; }
   if(!guru){ akFormErr('akfError','Nama guru wajib diisi.'); return; }
   const studs=akStudentsOfClass(classId); if(!studs.length){ akFormErr('akfError','Tidak ada siswa aktif di kelas ini.'); return; }
-  const ex=pkSessExisting(tanggal,classId,mapel); const ins=[], upd=[], needKet=[];
+  const ex=pkSessExisting(tanggal,classId,mapel); const ins=[], upd=[];
   studs.forEach(s=>{
-    const row={student_id:s.id,class_id:classId,tanggal,mapel,guru,jam:jam||null,status:document.getElementById('pks_st_'+s.id).value,keterangan:(document.getElementById('pks_kt_'+s.id).value.trim())||null};
+    const row={student_id:s.id,class_id:classId,tanggal,mapel,guru,jam:jam||null,status:document.getElementById('pks_st_'+s.id).value};
     const e=ex[String(s.id)]; const kat=window.KBMD?KBMD.read(s.id,row.status):[];
-    if(kat.includes('lainnya')&&!row.keterangan) needKet.push(akUnesc(s.nama));
     const had=(e&&Array.isArray(e.kategori))?e.kategori:[];
     if(kat.length||had.length){
       row.kategori_pelanggaran=kat;
@@ -1646,7 +1644,6 @@ async function pkSessSave(){
     }
     if(e){ row.id=e.id; upd.push(row); } else ins.push(row);
   });
-  if(needKet.length){ akFormErr('akfError','Kategori "Pelanggaran lainnya" wajib disertai keterangan: '+needKet.slice(0,5).join(', ')+(needKet.length>5?' dan lainnya':'')+'.'); return; }
   akFormErr('akfError','');
   M.submitting=true; const btn=document.getElementById('pksSubmit'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   try{
@@ -10335,6 +10332,15 @@ window.cmUpdate=function(){
   set('cmS_att',S.attitude); set('cmS_ker',S.kerapian); set('cmS_ber',S.kebersihan); set('cmS_lea',S.leadership); set('cmS_tot',S.total);
 };
 window.cmAll=function(k,on){ document.querySelectorAll('#acadDrawer .cm-cb[data-g="'+k+'"]').forEach(c=>{ c.checked=on; }); cmUpdate(); };
+/* Catatan Pelanggaran (dipindahkan dari Presensi KBM): ditampilkan di bagian Akademik (Sekolah). Disimpan di jsonb `ceklis` (pel, pelKet); tidak memengaruhi skor checklist. */
+const PEL_DEFAULT=[['terlambat','Terlambat masuk kelas'],['kurang_aktif','Kurang aktif dalam pembelajaran'],['tanpa_perlengkapan','Tidak membawa perlengkapan belajar'],['mengganggu','Mengganggu pembelajaran'],['lainnya','Pelanggaran lainnya']];
+function pelList(){ try{ if(window.KBMD&&KBMD.cfg&&Array.isArray(KBMD.cfg.kategori)&&KBMD.cfg.kategori.length) return KBMD.cfg.kategori.map(k=>[k.k,k.label]); }catch(e){} return PEL_DEFAULT; }
+function pelHtml(c,can){
+  const sel=(c&&Array.isArray(c.pel))?c.pel:[];
+  return '<div class="cm-grp"><span>Catatan Pelanggaran (Akademik)</span><span></span></div>'
+    +pelList().map(p=>'<label class="cm-item"><input type="checkbox" class="cm-pel" value="'+E(p[0])+'"'+(sel.includes(p[0])?' checked':'')+(can?'':' disabled')+'> <span>'+E(p[1])+'</span></label>').join('')
+    +'<div class="dw-field" style="margin-top:6px"><label>Keterangan pelanggaran (opsional)</label><textarea id="cmPelKet" rows="2" maxlength="300" '+(can?'':'disabled')+'>'+E((c&&c.pelKet)||'')+'</textarea></div>';
+}
 bhOpenAssess=function(studentId){
   const s=studentOf(studentId); if(!s) return; const can=kscCan('bh','write');
   const ex=dailyDisciplineData.find(x=>bdEq(x.studentId,studentId)&&x.tanggal===bhFilter.tanggal)||{}, c=ex.ceklis||null;
@@ -10344,7 +10350,7 @@ bhOpenAssess=function(studentId){
       +g.items.map(it=>'<label class="cm-item"><input type="checkbox" class="cm-cb" data-g="'+k+'" value="'+it[0]+'"'+(okIds.includes(it[0])?' checked':'')+(can?'':' disabled')+' onchange="cmUpdate()"> <span>'+it[1]+'</span></label>').join(''); };
   const old=(!c&&ex.id)?'<p class="viewonly-banner" style="margin:8px 0">Penilaian tanggal ini masih format lama (pilihan Rapi/Bersih, dst.). Isi checklist lalu simpan untuk menggantinya.</p>':'';
   openAcadDrawer('Catatan Musyrif — '+akUnesc(s.nama),AK_ERRBOX+'<p class="desc" style="margin-bottom:4px">Tanggal: '+fmtTglID(bhFilter.tanggal)+' · Centang butir yang <b>terpenuhi</b>. Nilai dihitung otomatis.</p>'+old
-    +ASPEK.map(a=>'<div class="cm-sec"><span>'+a.label+'</span></div>'+a.groups.map(g=>grp(a,g)).join('')).join('')
+    +ASPEK.map(a=>'<div class="cm-sec"><span>'+a.label+'</span></div>'+a.groups.map(g=>grp(a,g)+((a.k==='kerapian'&&g.k==='akademik')?pelHtml(c,can):'')).join('')).join('')
     +'<div class="dw-field" style="margin-top:12px"><label>Catatan Musyrif (opsional)</label><textarea id="cmCatatan" rows="3" maxlength="500" '+(can?'':'disabled')+'>'+E((c&&c.catatan)||'')+'</textarea></div>'
     +'<div class="cm-sum"><div><b id="cmS_att">-</b>Attitude</div><div><b id="cmS_ker">-</b>Kerapian</div><div><b id="cmS_ber">-</b>Kebersihan</div><div><b id="cmS_lea">-</b>Leadership</div><div><b id="cmS_tot">-</b>Nilai Harian</div></div>'
     +(can?'<button class="btn-primary-sm" id="bhSave" style="margin-top:12px;width:100%" onclick="bhSaveAssess(\''+E(studentId)+'\')">Simpan Penilaian</button>'
@@ -10357,7 +10363,7 @@ bhSaveAssess=async function(studentId){
   const sb=dkClient(); if(!sb){ akFormErr('akfError','Supabase belum terhubung.'); return; }
   const g={}; ASPEK.forEach(a=>a.groups.forEach(gr=>{ const k=gkey(a,gr); g[k]={ok:[...document.querySelectorAll('#acadDrawer .cm-cb[data-g="'+k+'"]:checked')].map(c=>c.value),t:gr.items.length}; }));
   const S=aspectScores({g}), catatan=((document.getElementById('cmCatatan')||{}).value||'').trim().slice(0,500);
-  const payload=Object.assign({student_id:studentId,tanggal:bhFilter.tanggal},legacy(S),{ceklis:{v:1,g,catatan}});
+  const payload=Object.assign({student_id:studentId,tanggal:bhFilter.tanggal},legacy(S),{ceklis:{v:1,g,catatan,pel:[...document.querySelectorAll('#acadDrawer .cm-pel:checked')].map(c=>c.value),pelKet:((document.getElementById('cmPelKet')||{}).value||'').trim().slice(0,300)}});
   const ex=dailyDisciplineData.find(x=>bdEq(x.studentId,studentId)&&x.tanggal===bhFilter.tanggal);
   akFormErr('akfError',''); M.submitting=true; const btn=document.getElementById('bhSave'); if(btn){ btn.disabled=true; btn.textContent='Menyimpan...'; }
   const write=pl=>ex?sb.from('daily_discipline').update(pl).eq('id',ex.id).select():sb.from('daily_discipline').insert(pl).select();
@@ -10917,6 +10923,7 @@ window.rbComputeShared=rbCompute; window.rbPredShared=rbPred;
 const KEY='kbmDisiplin', clone=o=>JSON.parse(JSON.stringify(o)), num=(v,d)=>{ const n=Number(v); return Number.isFinite(n)?n:d; };
 const DEFAULT={awal:100,min:60,kategori:[
   {k:'terlambat',label:'Terlambat masuk kelas',bobot:2},
+  {k:'tidur_di_kelas',label:'Tidur di kelas',bobot:3},{k:'tidak_rapi',label:'Tidak rapi',bobot:1},
   {k:'kurang_aktif',label:'Kurang aktif dalam pembelajaran',bobot:1},{k:'tanpa_perlengkapan',label:'Tidak membawa perlengkapan belajar',bobot:1},
   {k:'mengganggu',label:'Mengganggu pembelajaran',bobot:5},{k:'lainnya',label:'Pelanggaran lainnya',bobot:2}]};
 const K={cfg:clone(DEFAULT),fromDb:false,missing:false,loadedAt:0};
@@ -10964,7 +10971,7 @@ K.compute=function(recs,cfg){
   catatan.sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal))); catatanGuru.sort((a,b)=>String(a.tanggal).localeCompare(String(b.tanggal)));
   return {ada,total:rows.length,dievaluasi,awal:cfg.awal,min:cfg.min,jumlah:catatan.length,rincian,potong,akhir:ada?Math.max(cfg.min,mentah):null,dibatasi:ada&&mentah<cfg.min,catatan,catatanGuru};
 };
-K.badges=function(arr){ if(Array.isArray(arr)) arr=arr.filter(k=>k!=='tidak_rapi'); if(!Array.isArray(arr)||!arr.length) return ''; const lab={}; K.cfg.kategori.forEach(k=>lab[k.k]=k.label); lab[K.NONE]=K.NONE_LABEL; return '<div class="rpx-sub">'+(arr.includes(K.NONE)?'✔ ':'⚠ ')+esc(arr.map(k=>lab[k]||k).join(', '))+'</div>'; };
+K.badges=function(arr){ if(!Array.isArray(arr)||!arr.length) return ''; const lab={}; K.cfg.kategori.forEach(k=>lab[k.k]=k.label); lab[K.NONE]=K.NONE_LABEL; return '<div class="rpx-sub">'+(arr.includes(K.NONE)?'✔ ':'⚠ ')+esc(arr.map(k=>lab[k]||k).join(', '))+'</div>'; };
 /* ---- komponen di form presensi ---- */
 K.sumText=function(a){ return a.includes(K.NONE)?'Tidak ada pelanggaran':(a.length?a.length+' dipilih':'Pilih'); };
 K.pickHtml=function(sid,sel,on){
