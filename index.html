@@ -9816,6 +9816,8 @@ window.pjSavePhoto=async function(sid){
     const res=await sb.from('student_photos').upsert({student_id:sid,foto_path:path},{onConflict:'student_id'}).select();
     if(res.error) throw res.error; if(!res.data||!res.data.length) throw {code:'42501',message:'Tidak ada baris yang berubah: diblokir RLS.'};
     if(old&&old!==path) try{ await sb.storage.from(PJ_BUCKET).remove([old]); }catch(x){}
+    { const rw=res.data[0]||{}, np=(typeof rw.foto_path==='string'&&rw.foto_path)?rw.foto_path:path, cur=studentPhotosData.find(x=>String(x.studentId)===String(sid));
+      if(cur) cur.path=np; else studentPhotosData.push({id:rw.id,studentId:sid,path:np}); }
     path=''; showAcadToast('Foto profil berhasil disimpan.'); await pjAfterPhoto(sid);
   }catch(e){
     console.error('pjSavePhoto',e);
@@ -9833,6 +9835,7 @@ window.pjDeletePhoto=async function(sid){
     const r=await sb.from('student_photos').delete().eq('student_id',sid).select();
     if(r.error) throw r.error; if(!r.data||!r.data.length) throw {code:'42501',message:'Penghapusan diblokir RLS.'};
     try{ await sb.storage.from(PJ_BUCKET).remove([old]); }catch(x){}
+    { const ix=studentPhotosData.findIndex(x=>String(x.studentId)===String(sid)); if(ix>=0) studentPhotosData.splice(ix,1); }
     showAcadToast('Foto profil dihapus.'); await pjAfterPhoto(sid);
   }catch(e){ console.error('pjDeletePhoto',e); akFormErr('akfError','Gagal menghapus foto: '+kscErrMsg(e,'hapus',M.cfg)); }
   finally{ M.submitting=false; const b=document.getElementById('pjfAvDel'); if(b){ b.disabled=false; b.textContent='Hapus Foto'; } }
@@ -11844,7 +11847,7 @@ async function assets(){
 /* Foto santri: foto profil yang sudah diunggah (student_photos, bucket privat) atau kolom foto_url di tabel students. */
 async function photoOf(sid){
   try{
-    if(KSC.pf&&!KSC.pf.cfg.arr.length&&dkClient()) await kscLoad('pf',{silent:true});
+    if(KSC.pf&&dkClient()){ for(let i=0;i<40&&KSC.pf.loading;i++) await new Promise(r=>setTimeout(r,150)); if(!KSC.pf.cfg.arr.length) await kscLoad('pf',{silent:true}); }
     let url='';
     const f=KSC.pf?KSC.pf.cfg.arr.find(x=>String(x.studentId)===String(sid)):null;
     if(f&&f.path&&dkClient()){ const r=await dkClient().storage.from('student-projects').createSignedUrl(f.path,300); if(!r.error&&r.data) url=r.data.signedUrl||r.data.signedURL||''; }
@@ -13174,7 +13177,7 @@ async function upgrade(){
       J=data.snapshot.model; photo=data.snapshot.photo||'';
     } else {
       if(!ed.D) return;
-      J=DBG.buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}); photo=ed.photo||oldPhoto; det=ibDetail(ed);
+      J=DBG.buildModel(ed.s,ed.P,ed.D,ed.ev,{draft:true}); photo=(ed.photo===undefined)?oldPhoto:ed.photo; det=ibDetail(ed);
     }
     try{ if(window.AISMonthlyDesign) await window.AISMonthlyDesign.prefetch(J); }catch(e){}
     if(my!==tok||RPX.ed!==ed) return;
