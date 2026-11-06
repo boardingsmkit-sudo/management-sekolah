@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -9792,6 +9793,7 @@ window.pjOpenPhotoForm=function(sid){
   openAcadDrawer('Edit Foto Profil',AK_ERRBOX+dwRow('Siswa',r.nama+' · '+r.kelas)+
     '<div class="pjf-avprev" id="pjfAvPrev">'+ini+pjAvatarImg(sid)+'</div>'+
     '<div class="dw-field"><label>Pilih Foto (JPG/PNG/WEBP)</label><input type="file" id="pjfAvFile" accept="image/jpeg,image/png,image/webp" onchange="pjPreviewPhoto(this)"></div>'+
+    '<label style="display:flex;gap:8px;align-items:flex-start;margin:6px 0 2px;font-size:13px;cursor:pointer"><input type="checkbox" id="pjfAvRm" checked style="margin-top:3px"><span><b>Hapus latar belakang otomatis</b> (hasil transparan). Cocok untuk foto berlatar polos/terang; bila latar tidak terdeteksi, foto disimpan apa adanya.</span></label>'+
     '<p class="dw-hint">Gunakan foto formal dengan wajah terlihat jelas. Foto dikompres otomatis dan disimpan privat.</p>'+
     '<div class="dw-formfoot">'+(has?'<button class="btn-outline-sm" style="color:var(--danger);margin-right:auto" id="pjfAvDel" onclick="pjDeletePhoto(\''+dkEsc(sid)+'\')">Hapus Foto</button>':'')+
     '<button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="pjfAvSubmit" onclick="pjSavePhoto(\''+dkEsc(sid)+'\')">Simpan Foto</button></div>');
@@ -9810,7 +9812,14 @@ window.pjSavePhoto=async function(sid){
   const old=pjPhotoPath(sid); let path='';
   akFormErr('akfError',''); M.submitting=true; const btn=document.getElementById('pjfAvSubmit'); if(btn){ btn.disabled=true; btn.textContent='Mengunggah...'; }
   try{
-    const c=await pjCompress(file,600);
+    let c=null; const rmb=document.getElementById('pjfAvRm');
+    if(rmb&&rmb.checked&&window.AISBgRemove){
+      if(btn) btn.textContent='Menghapus latar...';
+      try{ const rr=await window.AISBgRemove.process(file,1000); if(rr&&rr.ok) c={blob:rr.blob,type:rr.blob.type||'image/png'}; else if(rr&&rr.reason) showAcadToast('Latar tidak dihapus ('+rr.reason+'). Foto disimpan apa adanya.'); }
+      catch(e){ console.warn('[hapus-latar]',e); }
+      if(btn) btn.textContent='Mengunggah...';
+    }
+    if(!c) c=await pjCompress(file,600);
     path=sid+'/profil/'+Date.now()+(c.type==='image/jpeg'?'.jpg':'.'+(c.type.split('/')[1]||'img'));
     const up=await sb.storage.from(PJ_BUCKET).upload(path,c.blob,{upsert:false,contentType:c.type}); if(up.error) throw up.error;
     const res=await sb.from('student_photos').upsert({student_id:sid,foto_path:path},{onConflict:'student_id'}).select();
@@ -9826,6 +9835,88 @@ window.pjSavePhoto=async function(sid){
     akFormErr('akfError','Gagal menyimpan foto: '+(/bucket not found/i.test(raw)?'bucket Storage "student-projects" belum ada. Jalankan supabase-proyek-siswa-setup.sql.'
       :(e&&e.code)?kscErrMsg(e,'ubah',M.cfg):raw));
   }finally{ M.submitting=false; const b=document.getElementById('pjfAvSubmit'); if(b){ b.disabled=false; b.textContent='Simpan Foto'; } }
+};
+/* ---------- Foto Avatar (dada ke atas) di kartu Rapor: terpisah dari foto profil/cover ----------
+   Disimpan di bucket yang sama pada path tetap <id siswa>/avatar/foto.jpg (tanpa perubahan database). */
+const AV={urls:{},t:0,busy:false,saving:false};
+const avPath=sid=>sid+'/avatar/foto.jpg';
+(function(){ const st=document.createElement('style'); st.id='av-css';
+  st.textContent='.mrd-av{position:relative}.mrd-av .av-pen{position:absolute;right:2px;bottom:2px;width:22px;height:22px;border-radius:50%;border:0;padding:0;background:rgba(11,37,64,.92);color:#fff;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.35);z-index:2}.mrd-av .av-pen:hover{background:#1D6FA3}';
+  document.head.appendChild(st); })();
+function avFill(sid){
+  document.querySelectorAll('.mrd-av[data-av]').forEach(el=>{ if(el.getAttribute('data-av')!==String(sid)) return;
+    el.querySelectorAll('img.av-img').forEach(i=>i.remove());
+    const u=AV.urls[sid]; if(u){ const im=document.createElement('img'); im.className='av-img'; im.alt=''; im.style.cssText='position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 20%'; im.onerror=()=>im.remove(); im.src=u; el.insertBefore(im,el.firstChild); }
+    el.setAttribute('data-avd','1'); });
+}
+async function avHydrate(){
+  if(AV.busy) return; const sb=dkClient(); if(!sb) return;
+  const els=[...document.querySelectorAll('.mrd-av[data-av]:not([data-avd])')]; if(!els.length) return;
+  if(Date.now()-AV.t>50*60*1000){ AV.urls={}; AV.t=Date.now(); }
+  const sids=[...new Set(els.map(e=>e.getAttribute('data-av')))], need=sids.filter(s=>!(s in AV.urls));
+  AV.busy=true;
+  try{
+    for(let i=0;i<need.length;i+=100){ const part=need.slice(i,i+100);
+      try{ const r=await sb.storage.from(PJ_BUCKET).createSignedUrls(part.map(avPath),3600);
+        (r.data||[]).forEach(d=>{ const sid=d&&d.path?String(d.path).split('/')[0]:''; if(sid) AV.urls[sid]=(d.signedUrl&&!d.error)?d.signedUrl:null; }); }catch(e){}
+      part.forEach(s=>{ if(!(s in AV.urls)) AV.urls[s]=null; }); }
+  } finally { AV.busy=false; }
+  sids.forEach(avFill);
+}
+{ let tm=null; const start=()=>{ try{ new MutationObserver(()=>{ clearTimeout(tm); tm=setTimeout(avHydrate,150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){} };
+  if(document.body) start(); else document.addEventListener('DOMContentLoaded',start); }
+function avCompress(file){
+  return new Promise((res,rej)=>{
+    const u=URL.createObjectURL(file), im=new Image();
+    im.onload=()=>{ try{ const sw=im.naturalWidth, sh=im.naturalHeight, side=Math.min(sw,sh), sx=(sw-side)/2, sy=(sh-side)*0.12, o=Math.min(400,side), c=document.createElement('canvas');
+        c.width=o; c.height=o; const x=c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,o,o); x.drawImage(im,sx,sy,side,side,0,0,o,o);
+        URL.revokeObjectURL(u); c.toBlob(b=>b?res({blob:b}):rej(new Error('Gagal mengolah gambar.')),'image/jpeg',0.86); }catch(e){ URL.revokeObjectURL(u); rej(e); } };
+    im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('Gambar tidak dapat dibaca.')); };
+    im.src=u;
+  });
+}
+window.AISAvatar={
+  pencil:function(sid){ return pjCanWrite()?'<button type="button" class="av-pen" title="Ubah foto avatar (dada ke atas)" onclick="event.stopPropagation();AISAvatar.edit(\''+dkEsc(sid)+'\')">&#9998;</button>':''; },
+  edit:function(sid){
+    if(!pjCanWrite()){ showAcadToast('Anda tidak memiliki izin untuk mengubah foto avatar.'); return; }
+    if(!dkClient()){ showAcadToast('Mode demo: Supabase belum terhubung, foto tidak dapat disimpan.'); return; }
+    const r=studentOf(sid); if(!r){ showAcadToast('Data siswa tidak ditemukan. Muat ulang halaman.'); return; }
+    const ini=dkEsc(ksInitials(akUnesc(r.nama))), has=!!AV.urls[sid];
+    openAcadDrawer('Edit Foto Avatar',AK_ERRBOX+dwRow('Siswa',r.nama+' · '+(r.kelas||'-'))+
+      '<div class="pjf-avprev" id="avfPrev">'+ini+(has?'<img alt="" src="'+dkEsc(AV.urls[sid])+'" onerror="this.remove()">':'')+'</div>'+
+      '<div class="dw-field"><label>Pilih Foto (JPG/PNG/WEBP)</label><input type="file" id="avfFile" accept="image/jpeg,image/png,image/webp" onchange="AISAvatar.preview(this)"></div>'+
+      '<p class="dw-hint">Gunakan foto dari <b>dada ke atas</b> (rasio 1:1, minimal 400 × 400 px) dengan wajah di tengah. Foto ini hanya untuk avatar di kartu Rapor dan terpisah dari foto cover.</p>'+
+      '<div class="dw-formfoot">'+(has?'<button class="btn-outline-sm" style="color:var(--danger);margin-right:auto" id="avfDel" onclick="AISAvatar.del(\''+dkEsc(sid)+'\')">Hapus Foto</button>':'')+
+      '<button class="btn-outline-sm" onclick="closeAcadDrawer()">Batal</button><button class="btn-primary-sm" id="avfSubmit" onclick="AISAvatar.save(\''+dkEsc(sid)+'\')">Simpan Foto</button></div>');
+  },
+  preview:function(inp){
+    const f=inp.files&&inp.files[0], box=document.getElementById('avfPrev'); if(!f||!box) return;
+    if(box.__u) URL.revokeObjectURL(box.__u); box.__u=URL.createObjectURL(f);
+    box.querySelectorAll('img').forEach(i=>i.remove()); const im=document.createElement('img'); im.alt=''; im.src=box.__u; box.appendChild(im);
+  },
+  save:async function(sid){
+    if(AV.saving) return; const sb=dkClient(); if(!sb){ akFormErr('akfError','Supabase belum terhubung.'); return; }
+    const file=((document.getElementById('avfFile')||{}).files||[])[0]; if(!file){ akFormErr('akfError','Pilih foto terlebih dahulu.'); return; }
+    if(!/^image\//.test(file.type)){ akFormErr('akfError','File harus berupa gambar.'); return; }
+    if(file.size>15*1024*1024){ akFormErr('akfError','Ukuran foto maksimal 15 MB.'); return; }
+    akFormErr('akfError',''); AV.saving=true; const btn=document.getElementById('avfSubmit'); if(btn){ btn.disabled=true; btn.textContent='Mengunggah...'; }
+    try{
+      const c=await avCompress(file), path=avPath(sid);
+      try{ await sb.storage.from(PJ_BUCKET).remove([path]); }catch(x){}
+      const up=await sb.storage.from(PJ_BUCKET).upload(path,c.blob,{upsert:true,contentType:'image/jpeg'}); if(up.error) throw up.error;
+      const sg=await sb.storage.from(PJ_BUCKET).createSignedUrl(path,3600); AV.urls[sid]=(sg&&sg.data&&sg.data.signedUrl)||null;
+      closeAcadDrawer(); avFill(sid); showAcadToast('Foto avatar berhasil disimpan.');
+    }catch(e){
+      console.error('avatar',e); const raw=(e&&e.message)||String(e);
+      akFormErr('akfError','Gagal menyimpan foto avatar: '+(/row-level security|not authorized|403|violates/i.test(raw)?'ditolak oleh kebijakan Storage (role tidak berhak atau siswa di luar cakupan akun). Detail: '+raw:raw));
+    }finally{ AV.saving=false; const b=document.getElementById('avfSubmit'); if(b){ b.disabled=false; b.textContent='Simpan Foto'; } }
+  },
+  del:async function(sid){
+    if(AV.saving) return; const sb=dkClient(); if(!sb) return; AV.saving=true;
+    try{ const r=await sb.storage.from(PJ_BUCKET).remove([avPath(sid)]); if(r&&r.error) throw r.error; AV.urls[sid]=null; closeAcadDrawer(); avFill(sid); showAcadToast('Foto avatar dihapus.'); }
+    catch(e){ console.error('avatar',e); akFormErr('akfError','Gagal menghapus foto avatar: '+((e&&e.message)||e)); }
+    finally{ AV.saving=false; }
+  }
 };
 window.pjDeletePhoto=async function(sid){
   const M=KSC.pf; if(M.submitting) return;
@@ -11562,7 +11653,7 @@ function render(J,m,a){
     F('normal',8.8,SUB); doc.text(tx(m.period.coverLine2),PW/2,cy+12.6,{align:'center'});
     cy+=26;
     if(a.photo){ const w=30,h=40; doc.setDrawColor.apply(doc,LINE); doc.setLineWidth(0.4); doc.rect((PW-w)/2-0.8,cy-0.8,w+1.6,h+1.6);
-      try{ doc.addImage(a.photo,'JPEG',(PW-w)/2,cy,w,h); }catch(e){} cy+=h+8; }
+      try{ doc.addImage(a.photo,/^data:image\/png/i.test(a.photo)?'PNG':'JPEG',(PW-w)/2,cy,w,h); }catch(e){} cy+=h+8; }
     const s=m.s, rows=[['Nama Santri',s.nama],['NIS / NISN',[s.nis||'-',s.nisn||'-'].join(' / ')],['Kelas',s.kelas+(s.jurusan?' - '+s.jurusan:'')]];
     if(s.boarding) rows.push(['Asrama / Kamar',[s.asrama||'-',s.kamar||'-'].join(' / ')]);
     rows.push(['Orang Tua / Wali',s.ortu||'-']);
@@ -11823,8 +11914,14 @@ function imgData(src,o){
         if(o.cover){ const r=o.cover; if(cw/ch>r){ const w=ch*r; sx=(cw-w)/2; cw=w; } else { const h=cw/r; sy=(ch-h)/2; ch=h; } }
         const sc=Math.min(1,(o.maxW||800)/cw), c=document.createElement('canvas');
         c.width=Math.max(1,Math.round(cw*sc)); c.height=Math.max(1,Math.round(ch*sc));
-        const x=c.getContext('2d'); if(o.jpeg){ x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); }
+        const x=c.getContext('2d'); if(o.jpeg&&!o.alphaAuto){ x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); }
         x.drawImage(im,sx,sy,cw,ch,0,0,c.width,c.height);
+        if(o.alphaAuto){   /* foto bertransparan (latar sudah dihapus) tetap PNG transparan; selain itu JPEG berlatar putih */
+          let tr=false; try{ const d=x.getImageData(0,0,c.width,c.height).data; for(let i=3;i<d.length;i+=4){ if(d[i]<250){ tr=true; break; } } }catch(e){}
+          if(tr) return res({data:c.toDataURL('image/png'),ratio:c.height/c.width});
+          const c2=document.createElement('canvas'); c2.width=c.width; c2.height=c.height; const x2=c2.getContext('2d'); x2.fillStyle='#fff'; x2.fillRect(0,0,c.width,c.height); x2.drawImage(c,0,0);
+          return res({data:c2.toDataURL('image/jpeg',0.85),ratio:c.height/c.width});
+        }
         res({data:c.toDataURL(o.jpeg?'image/jpeg':'image/png',0.85),ratio:c.height/c.width});
       }catch(e){ res(null); } };
     im.onerror=()=>{ clearTimeout(to); res(null); };
@@ -11852,8 +11949,19 @@ async function photoOf(sid){
     const f=KSC.pf?KSC.pf.cfg.arr.find(x=>String(x.studentId)===String(sid)):null;
     if(f&&f.path&&dkClient()){ const r=await dkClient().storage.from('student-projects').createSignedUrl(f.path,300); if(!r.error&&r.data) url=r.data.signedUrl||r.data.signedURL||''; }
     if(!url&&typeof stState!=='undefined'&&stState.raw&&stState.raw[sid]){ const raw=stState.raw[sid], v=String(raw.foto_url||raw.photo_url||raw.foto||'').trim(); if(/^(https?:\/\/|data:image\/)/i.test(v)&&!/[\s<>"']/.test(v)) url=v; }
-    if(!url) return '';
-    const r=await imgData(url,{maxW:300,cover:0.75,jpeg:true}); return r?r.data:'';
+    const hasPath=!!(f&&f.path&&dkClient());
+    if(!url&&!hasPath) return '';
+    let r=url?await imgData(url,{maxW:750,cover:0.75,jpeg:true,alphaAuto:true}):null;
+    /* Cadangan: bila tautan bertanda tangan tidak bisa dibaca kanvas (CORS/ditolak), unduh berkasnya lewat API Storage lalu olah sebagai blob lokal. */
+    if(!r&&hasPath){
+      try{
+        const d=await dkClient().storage.from('student-projects').download(f.path);
+        if(d&&d.data){ const bu=URL.createObjectURL(d.data); try{ r=await imgData(bu,{maxW:750,cover:0.75,jpeg:true,alphaAuto:true}); } finally{ URL.revokeObjectURL(bu); } }
+        else if(d&&d.error) console.warn('[rapor-pdf] unduh foto',d.error);
+      }catch(e){ console.warn('[rapor-pdf] unduh foto',e); }
+    }
+    if(!r) console.warn('[rapor-pdf] foto santri tidak dapat dimuat untuk sampul (siswa '+sid+')');
+    return r?r.data:'';
   }catch(e){ console.warn('[rapor-pdf] foto',e); return ''; }
 }
 function saveBlob(blob,name){
@@ -12051,7 +12159,7 @@ window.rpxCheck=async function(auto){
     for(let i=0;i<studs.length;i+=40){
       if(btn){ btn.disabled=true; btn.textContent='Memeriksa '+Math.min(i+40,studs.length)+'/'+studs.length+'...'; }
       const part=studs.slice(i,i+40), D=await fetchDataset(part,P);
-      await Promise.all(part.map(async s=>{ const d=docOf(s.id), m=buildModel(s,P,D,d&&d.catatan), k=pkey(P)+'|'+s.id; RPX.checks[k]=m.gaps; RPX.sum[k]=mrdSummary(m,await photoOf(s.id)); }));
+      await Promise.all(part.map(async s=>{ const d=docOf(s.id), m=buildModel(s,P,D,d&&d.catatan), k=pkey(P)+'|'+s.id; RPX.checks[k]=m.gaps; RPX.sum[k]=mrdSummary(m,''); }));
     }
     if(!auto) toast('Ringkasan nilai dan kelengkapan dimuat untuk '+studs.length+' santri.');
   }catch(e){ console.error('[rapor-pdf] cek',e); toast('Ringkasan gagal dimuat: '+errMsg(e)); }
@@ -12390,7 +12498,7 @@ function mrdCardHtml(s,mode){
   const d=docOf(s.id), sid=E(s.id), sm=RPX.sum[pkey(curPeriod())+'|'+s.id]||null, gs=gapsFor(s.id);
   const st=d?d.status:'Belum Dibuat';
   return `<article class="mrd-card">
-    <div class="mrd-card-top"><div class="mrd-av">${sm&&sm.foto?`<img src="${sm.foto}" alt="">`:E(String(s.nama||'?').trim().charAt(0).toUpperCase())}</div>
+    <div class="mrd-card-top"><div class="mrd-av" data-av="${sid}">${E(String(s.nama||'?').trim().charAt(0).toUpperCase())}${window.AISAvatar?window.AISAvatar.pencil(s.id):''}</div>
       <div><b>${E(s.nama)}</b><span>NIS ${E(s.nis||'-')} · ${E(s.kelas||'-')}</span><span>${s.boarding?'Boarding':'Non-boarding'}${s.jurusan?' · '+E(s.jurusan):''}</span></div>
       ${badge(st)}</div>
     <div class="mrd-card-m">
@@ -13361,8 +13469,9 @@ const CSS=`.mrn-page{--navy:#0c2444;--navy2:#123764;--blue:#1b6aa5;--gold:#c9a22
 .mrn-page.mrn-cv,.mr2-sheet.mrn-page.mrn-cv{padding:0;color:#fff;font-family:"Segoe UI",Calibri,Arial,sans-serif;background:radial-gradient(ellipse at 50% 38%,#1c4585 0%,#14397a 32%,#0b2149 70%,#081a3a 100%)}
 .mrn-page h2,.mrn-page h3,.mrn-page h4,.mrn-page p,.mrn-page ul{letter-spacing:normal}
 .mrn-page small{font-size:inherit}
-.mrn-cv .mrn-phw{left:197px;top:316px;width:400px;height:534px;overflow:hidden}
-.mrn-cv .mrn-phw img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%),linear-gradient(180deg,transparent 0,#000 10%,#000 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%),linear-gradient(180deg,transparent 0,#000 10%,#000 100%);mask-composite:intersect}
+.mrn-cv .mrn-phw{left:197px;top:340px;width:400px;height:710px;overflow:hidden}
+.mrn-cv .mrn-phw img{width:100%;height:100%;object-fit:cover;object-position:50% 20%;display:block;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%),linear-gradient(180deg,transparent 0,#000 3%,#000 95%,transparent 100%);-webkit-mask-composite:source-in;mask-image:linear-gradient(90deg,transparent 0,#000 14%,#000 86%,transparent 100%),linear-gradient(180deg,transparent 0,#000 3%,#000 95%,transparent 100%);mask-composite:intersect}
+.mrn-cv .mrn-phw.mrn-tr{left:173px;top:284px;width:448px;height:800px;overflow:hidden}.mrn-cv .mrn-phw.mrn-tr img{object-fit:cover;object-position:50% 50%;-webkit-mask-image:none;mask-image:none}
 .mrn-cv .mrn-ncard .mrn-nm.md{font-size:22px}.mrn-cv .mrn-ncard .mrn-nm.sm{font-size:17px}
 .mrn-cv .mrn-ncard .mrn-nm{width:320px}
 .mrn-page .mrn-th{background:var(--navy);color:#fff}
@@ -13478,7 +13587,7 @@ function pageCover(J,photo){
    '<div class="tcard"><div class="lg"><img src="'+LOGO+'" alt="AIS Alhidayah Boarding School" style="height:100px;width:auto;display:block"></div><div class="mr">MONTHLY<br>REPORT</div></div>'+
    '<div class="gp" style="left:702px;top:142px;width:11px;height:54px"></div>'+
    (mEN?'<div class="for">REPORT FOR '+X((mEN+' '+yr).trim().toUpperCase())+'</div>':'')+
-   (ph?'<div class="phw"><img src="'+X(ph)+'" alt=""></div>':'<svg class="sil" viewBox="0 0 330 710"><circle cx="165" cy="67" r="64" fill="#5a7db3"/><path d="M46 380V215C46 168 100 146 165 146S284 168 284 215V380Z" fill="#5072a8"/><rect x="106" y="380" width="46" height="330" fill="#46608f"/><rect x="182" y="380" width="46" height="330" fill="#46608f"/></svg>')+
+   (ph?'<div class="phw'+(/^data:image\/png/i.test(ph)?' tr':'')+'"><img src="'+X(ph)+'" alt=""></div>':'<svg class="sil" viewBox="0 0 330 710"><circle cx="165" cy="67" r="64" fill="#5a7db3"/><path d="M46 380V215C46 168 100 146 165 146S284 168 284 215V380Z" fill="#5072a8"/><rect x="106" y="380" width="46" height="330" fill="#46608f"/><rect x="182" y="380" width="46" height="330" fill="#46608f"/></svg>')+
    '<div class="ncard"><div class="nm '+cls+'">'+X(nm)+'</div>'+(has(S.jurusan)?'<div class="rp">'+X(S.jurusan)+'</div>':'')+(has(S.nis)?'<div class="ni">NIS: '+X(S.nis)+'</div>':'')+
    (mID?'<div class="bd">'+X(mID.toUpperCase())+'<br>'+X(yr)+'</div>':'')+'</div>'+
    '<div class="gp" style="left:369px;top:711px;width:130px;height:12px;border-radius:7px"></div><div class="gp" style="left:103px;top:766px;width:10px;height:50px"></div>'+
@@ -13929,6 +14038,87 @@ st.textContent='.lmp-pick{width:100%;height:100%;border:2px dashed #9DB6CC;backg
 document.head.appendChild(st);
 window.AISLampiran={html:html,norm:norm};
 })();
+</script>
+<script id="hapus-latar">
+/* Penghapus latar otomatis untuk foto berlatar polos/terang (studio). Berjalan di browser, tanpa server.
+   Prinsip: bagian luar foto yang warnanya mirip warna latar (dibaca dari tepi foto) dan tersambung ke tepi dihapus;
+   tepi subjek dihaluskan. Bila latar tidak seragam, hasil ditolak dan foto disimpan apa adanya. */
+(function(g){
+'use strict';
+function removeBg(img,w,h){            // img: Uint8ClampedArray RGBA (w*h*4); mengubah kanal alpha di tempat
+  const N=w*h, px=img;
+  // 1. warna latar = median piksel tepi
+  const bw=Math.max(2,Math.round(Math.min(w,h)*0.015)), rs=[],gs=[],bs=[];
+  const take=(x,y)=>{ const i=(y*w+x)*4; rs.push(px[i]); gs.push(px[i+1]); bs.push(px[i+2]); };
+  for(let y=0;y<h;y+=2){ for(let x=0;x<bw;x++){ take(x,y); take(w-1-x,y); } }
+  for(let x=0;x<w;x+=2){ for(let y=0;y<bw;y++){ take(x,y); take(x,h-1-y); } }
+  const med=a=>{ a.sort((p,q)=>p-q); return a[a.length>>1]; };
+  const br=med(rs), bg=med(gs), bb=med(bs);
+  // 2. tepi harus relatif seragam (latar polos); kalau tidak, menyerah
+  let bad=0; for(let k=0;k<rs.length;k++){ if(Math.abs(rs[k]-br)+Math.abs(gs[k]-bg)+Math.abs(bs[k]-bb)>90) bad++; }
+  if(bad/rs.length>0.35) return {ok:false,reason:'tepi foto tidak polos'};
+  // 3. gradien (tepi objek) agar pengisian tidak menembus ke baju putih/kulit
+  const lum=new Float32Array(N); for(let i=0;i<N;i++){ const j=i*4; lum[i]=0.299*px[j]+0.587*px[j+1]+0.114*px[j+2]; }
+  const grad=new Float32Array(N);
+  for(let y=1;y<h-1;y++){ for(let x=1;x<w-1;x++){ const i=y*w+x;
+    const gx=(lum[i-w+1]+2*lum[i+1]+lum[i+w+1])-(lum[i-w-1]+2*lum[i-1]+lum[i+w-1]);
+    const gy=(lum[i+w-1]+2*lum[i+w]+lum[i+w+1])-(lum[i-w-1]+2*lum[i-w]+lum[i-w+1]);
+    grad[i]=Math.sqrt(gx*gx+gy*gy)/4; } }
+  // 4. pengisian dari tepi
+  const T_BG=46, T_STEP=14, T_EDGE=22;
+  const out=new Uint8Array(N); const q=new Int32Array(N); let qh=0,qt=0;
+  const dist=i=>{ const j=i*4; return Math.max(Math.abs(px[j]-br),Math.abs(px[j+1]-bg),Math.abs(px[j+2]-bb)); };
+  const seed=i=>{ if(!out[i]&&dist(i)<T_BG){ out[i]=1; q[qt++]=i; } };
+  for(let x=0;x<w;x++){ seed(x); seed((h-1)*w+x); } for(let y=0;y<h;y++){ seed(y*w); seed(y*w+w-1); }
+  while(qh<qt){ const i=q[qh++], x=i%w, y=(i/w)|0, j=i*4;
+    const nb=[x>0?i-1:-1,x<w-1?i+1:-1,y>0?i-w:-1,y<h-1?i+w:-1];
+    for(let k=0;k<4;k++){ const n=nb[k]; if(n<0||out[n]) continue; const m=n*4;
+      if(dist(n)>=T_BG) continue;
+      if(grad[n]>T_EDGE) continue;
+      if(Math.max(Math.abs(px[m]-px[j]),Math.abs(px[m+1]-px[j+1]),Math.abs(px[m+2]-px[j+2]))>T_STEP) continue;
+      out[n]=1; q[qt++]=n; } }
+  const removed=qt/N; if(removed<0.12||removed>0.9) return {ok:false,reason:'latar tidak terdeteksi dengan baik ('+Math.round(removed*100)+'%)'};
+  // 5. subjek = komponen terhubung terbesar dari bagian yang tidak dihapus (buang bintik sisa)
+  const lab=new Int32Array(N); let best=0,bestId=0,id=0; const st=new Int32Array(N);
+  for(let s=0;s<N;s++){ if(out[s]||lab[s]) continue; id++; let sp=0,cnt=0; st[sp++]=s; lab[s]=id;
+    while(sp){ const i=st[--sp]; cnt++; const x=i%w, y=(i/w)|0;
+      if(x>0&&!out[i-1]&&!lab[i-1]){ lab[i-1]=id; st[sp++]=i-1; } if(x<w-1&&!out[i+1]&&!lab[i+1]){ lab[i+1]=id; st[sp++]=i+1; }
+      if(y>0&&!out[i-w]&&!lab[i-w]){ lab[i-w]=id; st[sp++]=i-w; } if(y<h-1&&!out[i+w]&&!lab[i+w]){ lab[i+w]=id; st[sp++]=i+w; } }
+    if(cnt>best){ best=cnt; bestId=id; } }
+  const fg=new Float32Array(N); for(let i=0;i<N;i++) fg[i]=(lab[i]===bestId)?1:0;
+  // 6. haluskan tepi: erosi 2 px (membuang pinggiran terang) lalu blur kecil
+  let er=fg;
+  for(let pass=0;pass<2;pass++){ const nx=new Float32Array(N);
+    for(let y=1;y<h-1;y++){ for(let x=1;x<w-1;x++){ const i=y*w+x; nx[i]=(er[i]&&er[i-1]&&er[i+1]&&er[i-w]&&er[i+w])?1:0; } }
+    er=nx; }
+  const bl=new Float32Array(N);
+  for(let y=1;y<h-1;y++){ for(let x=1;x<w-1;x++){ const i=y*w+x;
+    bl[i]=(er[i]*4+er[i-1]*2+er[i+1]*2+er[i-w]*2+er[i+w]*2+er[i-w-1]+er[i-w+1]+er[i+w-1]+er[i+w+1])/16; } }
+  for(let i=0;i<N;i++){ px[i*4+3]=Math.round(bl[i]*255); }
+  return {ok:true,removed:removed};
+}
+g.AISBgCore={removeBg:removeBg};
+})(typeof window!=='undefined'?window:globalThis);
+
+/* Pembungkus: berkas gambar -> PNG/WebP transparan (sisi terpanjang maks. maxSide px) */
+(function(g){
+'use strict';
+function load(file){ return new Promise((res,rej)=>{ const u=URL.createObjectURL(file), im=new Image(); im.onload=()=>{ URL.revokeObjectURL(u); res(im); }; im.onerror=()=>{ URL.revokeObjectURL(u); rej(new Error('Gambar tidak dapat dibaca.')); }; im.src=u; }); }
+g.AISBgRemove={
+  process:async function(file,maxSide){
+    if(!file||!/^image\//.test(file.type)) return {ok:false,reason:'bukan gambar'};
+    const im=await load(file), sc=Math.min(1,(maxSide||600)/Math.max(im.naturalWidth,im.naturalHeight));
+    const w=Math.max(1,Math.round(im.naturalWidth*sc)), h=Math.max(1,Math.round(im.naturalHeight*sc)), c=document.createElement('canvas'); c.width=w; c.height=h;
+    const x=c.getContext('2d'); x.drawImage(im,0,0,w,h);
+    const d=x.getImageData(0,0,w,h), r=g.AISBgCore.removeBg(d.data,w,h);
+    if(!r.ok) return {ok:false,reason:r.reason};
+    x.putImageData(d,0,0);
+    const blob=await new Promise(res=>{ c.toBlob(b=>{ if(b&&b.type==='image/webp') return res(b); c.toBlob(res,'image/png'); },'image/webp',0.92); });
+    if(!blob) return {ok:false,reason:'gagal membuat gambar'};
+    return {ok:true,blob:blob,w:w,h:h};
+  }
+};
+})(window);
 </script>
 </body>
 </html>
